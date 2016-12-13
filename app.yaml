@@ -25,5 +25,5 @@ env_variables:
     CLOUDSQL_CONNECTION_NAME: free-ice-cream:europe-west1:free-ice-cream
     CLOUDSQL_USER: root
     CLOUDSQL_PASSWORD: foobar
- [END env_variables]
+# [END env_variables]
 
