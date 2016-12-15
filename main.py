@@ -56,7 +56,8 @@ def connect_to_cloudsql():
     #
     else:
         db = MySQLdb.connect(
-            host='127.0.0.1', user=CLOUDSQL_USER, passwd=CLOUDSQL_PASSWORD)
+            host='127.0.0.1', user=CLOUDSQL_USER, passwd=CLOUDSQL_PASSWORD,
+            db='freeicecream')
 
     return db
 
@@ -105,4 +106,10 @@ app = webapp2.WSGIApplication([
     ('/tick', Tick),
 ], debug=True)
 
-# [END all]
+def main():
+    from paste import httpserver
+    httpserver.serve(app, host='127.0.0.1', port='8080')
+
+if __name__ == '__main__':
+    main()
+
