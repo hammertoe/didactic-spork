@@ -61,60 +61,47 @@ class Node(Base):
         if commit:
             db_session.commit()
 
+    coins = relationship(
+        'Coin',
+        back_populates='location',
+        foreign_keys='Coin.location_id',
+        )
 
 class Policy(Node):
 
     __mapper_args__ = {
       'polymorphic_identity': 'Policy'
-   }
+      }
 
 
 class Goal(Node):
 
     __mapper_args__ = {
       'polymorphic_identity': 'Goal'
-   }
+      }
 
-class Player(Base):
-    __tablename__ = 'player'
 
-    id = Column(String(36), primary_key=True)
-    name = Column(String(100))
+class Player(Node):
+#    __tablename__ = 'player'
+
+#    id = Column(String(36), primary_key=True)
+#    name = Column(String(100))
+
+    __mapper_args__ = {
+      'polymorphic_identity': 'Player'
+    }    
+
+    coins = relationship(
+        'Coin',
+        back_populates='owner',
+        foreign_keys='Coin.owner_id',
+        )
 
     def __init__(self, name):
         self.id = str(uuid())
         self.name = name
 
-class Coin(Base):
-    __tablename__ = 'coin'
-
-    id = Column(String(36), primary_key=True)
-    
-    location_id = Column(
-        String(36),
-        ForeignKey('node.id'),
-        index=True)
-
-    owner_id = Column(
-        String(36),
-        ForeignKey('player.id'),
-        index=True)
-
-    location = relationship(
-        Node,
-        primaryjoin=location_id == Node.id,
-        backref='coins')
-
-    owner = relationship(
-        Player,
-        primaryjoin=owner_id == Player.id,
-        backref='coins')
-
-    def __init__(self, owner):
-        self.id = str(uuid())
-        self.owner = owner
-
-
+        
 
 class Edge(Base):
     __tablename__ = 'edge'
@@ -148,4 +135,36 @@ class Edge(Base):
         self.lower_node = n1
         self.higher_node = n2
         self.weight = weight
+
+
+class Coin(Base):
+    __tablename__ = 'coin'
+
+    id = Column(String(36), primary_key=True)
+    
+    location_id = Column(
+        String(36),
+        ForeignKey('node.id'),
+        index=True)
+
+    owner_id = Column(
+        String(36),
+        ForeignKey('node.id'),
+        index=True)
+
+    location = relationship(
+        'Node',
+        primaryjoin='Node.id == Coin.location_id',
+        back_populates='coins')
+
+    owner = relationship(
+        'Player',
+        primaryjoin='Player.id == Coin.owner_id',
+        back_populates='coins')
+
+    def __init__(self, owner):
+        self.id = str(uuid())
+        self.owner = owner
+
+
 

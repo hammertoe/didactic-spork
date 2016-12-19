@@ -171,11 +171,11 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n2.balance(), 1)
 
         self.game.do_leak()
-        self.assertEqual(n1.balance(), 1)
-        self.assertEqual(n2.balance(), 1)
+        self.assertEqual(n1.balance(), 0)
+        self.assertEqual(n2.balance(), 0)
 
         self.game.do_leak()
-        self.assertEqual(n1.balance(), 1)
+        self.assertEqual(n1.balance(), 0)
         self.assertEqual(n2.balance(), 0)
 
     def testNodeTransfer100(self):
@@ -297,12 +297,12 @@ class GameNetworkTests(unittest.TestCase):
         for x in range(50):
             self.game.do_transfer()
 
-        self.assertEqual(n1.balance(), 51)
-        self.assertEqual(n2.balance(), 0)
-        self.assertEqual(n3.balance(), 1)
+        self.assertEqual(n1.balance(), 53)
+        self.assertEqual(n2.balance(), 4)
+        self.assertEqual(n3.balance(), 0)
 
-        self.assertEqual(g1.balance(), 24)
-        self.assertEqual(g2.balance(), 13)
+        self.assertEqual(g1.balance(), 18)
+        self.assertEqual(g2.balance(), 14)
         self.assertEqual(g3.balance(), 11)
 
 
