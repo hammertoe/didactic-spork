@@ -41,17 +41,21 @@ class Policy(Node):
    }
 
 
-class Player(Node):
-
-    __mapper_args__ = {
-      'polymorphic_identity': 'Player'
-   }
-
 class Goal(Node):
 
     __mapper_args__ = {
       'polymorphic_identity': 'Goal'
    }
+
+class Player(Base):
+    __tablename__ = 'player'
+
+    id = Column(String(36), primary_key=True)
+    name = Column(String(100))
+
+    def __init__(self, name):
+        self.id = str(uuid())
+        self.name = name
 
 class Coin(Base):
     __tablename__ = 'coin'
@@ -65,7 +69,7 @@ class Coin(Base):
 
     owner_id = Column(
         String(36),
-        ForeignKey('node.id'),
+        ForeignKey('player.id'),
         unique=True)
 
     location = relationship(
@@ -74,9 +78,9 @@ class Coin(Base):
         backref='coins')
 
     owner = relationship(
-        Node,
-        primaryjoin=owner_id == Node.id,
-        backref='coins2')
+        Player,
+        primaryjoin=owner_id == Player.id,
+        backref='coins')
 
     def __init__(self, name, leak):
         self.id = str(uuid())

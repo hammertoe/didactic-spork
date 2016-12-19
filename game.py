@@ -19,7 +19,7 @@ class Game:
         do_add()
 
     def add_player(self, name):
-        p = Player(name, 0)
+        p = Player(name)
         db_session.add(p)
         db_session.commit()
         return p
