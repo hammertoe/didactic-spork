@@ -58,6 +58,57 @@ class GameNetworkTests(unittest.TestCase):
 
         self.assertEqual(n3, n1.children()[0].children()[0])
 
+    def testAddCoins(self):
+        n1 = self.game.add_policy('Policy 1', 0.1)
+        p1 = self.game.add_player('Matt')
+
+        self.assertEqual(n1.balance(), 0)
+
+        c1 = self.game.add_coin(p1)
+
+        self.assertEqual(n1.balance(), 0)
+
+        c1.location = n1
+
+        self.assertEqual(n1.balance(), 1)
+
+        c2 = self.game.add_coin(p1)
+        c2.location = n1
+
+        self.assertEqual(n1.balance(), 2)
+
+    def testNodeLeak100(self):
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        p1 = self.game.add_player('Matt')
+        c1 = self.game.add_coin(p1)
+        c1.location = n1
+        c2 = self.game.add_coin(p1)
+        c2.location = n1
+
+        self.assertEqual(n1.balance(), 2)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 1)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 0)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 0)        
+
+    def testNodeLeak0(self):
+        n1 = self.game.add_policy('Policy 1', 0.0)
+        p1 = self.game.add_player('Matt')
+        c1 = self.game.add_coin(p1)
+        c1.location = n1
+        c2 = self.game.add_coin(p1)
+        c2.location = n1
+
+        self.assertEqual(n1.balance(), 2)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 2)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 2)
+        n1.do_leak()
+        self.assertEqual(n1.balance(), 2)        
+
 if __name__ == '__main__':
     unittest.main()
 

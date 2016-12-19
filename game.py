@@ -1,6 +1,9 @@
+import random
+
 from database import db_session
-from models import Node, Player, Policy, Goal, Edge
+from models import Node, Player, Policy, Goal, Edge, Coin
 from utils import weighted_choice
+
 
 class Game:
 
@@ -53,3 +56,9 @@ class Game:
 
     def get_link(self, id):
         return Edge.query.filter(Edge.id == id).first()
+
+    def add_coin(self, player):
+        c = Coin(player)
+        db_session.add(c)
+        db_session.commit()
+        return c

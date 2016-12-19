@@ -1,5 +1,6 @@
 from uuid import uuid4 as uuid
 import enum
+import random
 
 from sqlalchemy import Column, Integer, String, ForeignKey, \
     Float, create_engine
@@ -34,6 +35,17 @@ class Node(Base):
 
     children = higher_neighbors
 
+    def balance(self):
+        return len(self.coins)
+
+    def do_leak(self):
+        if random.random() <= self.leak and self.balance() > 0:
+            coin = random.choice(self.coins)
+            db_session.delete(coin)
+            db_session.commit()
+            return True
+        return False
+
 class Policy(Node):
 
     __mapper_args__ = {
@@ -65,12 +77,12 @@ class Coin(Base):
     location_id = Column(
         String(36),
         ForeignKey('node.id'),
-        unique=True)
+        index=True)
 
     owner_id = Column(
         String(36),
         ForeignKey('player.id'),
-        unique=True)
+        index=True)
 
     location = relationship(
         Node,
@@ -82,8 +94,9 @@ class Coin(Base):
         primaryjoin=owner_id == Player.id,
         backref='coins')
 
-    def __init__(self, name, leak):
+    def __init__(self, owner):
         self.id = str(uuid())
+        self.owner = owner
 
 
 
