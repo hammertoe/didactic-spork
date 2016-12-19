@@ -13,7 +13,9 @@ class Game:
         db_session.commit()
 
     def do_transfer(self):
-        pass
+        for node in Node.query.all():
+            node.do_transfer(commit=False)
+        db_session.commit()
 
     def do_add(self):
         pass

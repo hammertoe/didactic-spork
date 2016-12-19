@@ -34,6 +34,7 @@ class Node(Base):
         return [x.lower_node for x in self.higher_edges]
 
     children = higher_neighbors
+    parents = lower_neighbors
 
     def balance(self):
         return len(self.coins)
@@ -46,6 +47,20 @@ class Node(Base):
                 db_session.commit()
             return True
         return False
+    
+    def do_transfer(self, commit=True, recurse=False):
+        for edge in self.lower_edges:
+            child = edge.higher_node
+            if random.random() <= edge.weight and self.balance() > 0:
+                coin = random.choice(self.coins)
+                coin.location = child
+
+            if recurse:
+                child.do_transfer(commit, recurse)
+
+        if commit:
+            db_session.commit()
+
 
 class Policy(Node):
 
