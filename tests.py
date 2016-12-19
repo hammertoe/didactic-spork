@@ -11,6 +11,8 @@ class GameNetworkTests(unittest.TestCase):
     def setUp(self):
         init_db()
         self.game = Game()
+        # Seed the RNG so that the tests below are deteministic
+        random.seed(0)
 
     def tearDown(self):
         clear_db()
@@ -149,9 +151,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n2.balance(), 0)
 
     def testGameLeak50(self):
-        # Seed the RNG so that the tests below are deteministic
-        random.seed(0)
-
         n1 = self.game.add_policy('Policy 1', 0.5)
         n2 = self.game.add_policy('Policy 2', 0.5)
         p1 = self.game.add_player('Matt')
@@ -246,9 +245,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n3.balance(), 1)
 
     def testGameTransfer50(self):
-        # Seed the RNG so that the tests below are deteministic
-        random.seed(0)
-
         n1 = self.game.add_policy('Policy 1', 0.5)
         n2 = self.game.add_policy('Policy 2', 0.5)
         n3 = self.game.add_policy('Policy 3', 0.5)
@@ -272,9 +268,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n3.balance(), 21)
 
     def testGameTransfer50_goal(self):
-        # Seed the RNG so that the tests below are deteministic
-        random.seed(0)
-
         n1 = self.game.add_policy('Policy 1', 0.5)
         n2 = self.game.add_policy('Policy 2', 0.5)
         n3 = self.game.add_policy('Policy 3', 0.5)
