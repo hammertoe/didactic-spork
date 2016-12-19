@@ -38,11 +38,12 @@ class Node(Base):
     def balance(self):
         return len(self.coins)
 
-    def do_leak(self):
+    def do_leak(self, commit=True):
         if random.random() <= self.leak and self.balance() > 0:
             coin = random.choice(self.coins)
             db_session.delete(coin)
-            db_session.commit()
+            if commit:
+                db_session.commit()
             return True
         return False
 

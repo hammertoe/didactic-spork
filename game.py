@@ -8,7 +8,9 @@ from utils import weighted_choice
 class Game:
 
     def do_leak(self):
-        pass
+        for node in Node.query.all():
+            node.do_leak(commit=False)
+        db_session.commit()
 
     def do_transfer(self):
         pass

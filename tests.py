@@ -109,6 +109,25 @@ class GameNetworkTests(unittest.TestCase):
         n1.do_leak()
         self.assertEqual(n1.balance(), 2)        
 
+    def testGameLeak100(self):
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        n2 = self.game.add_policy('Policy 2', 1.0)
+        p1 = self.game.add_player('Matt')
+        c1 = self.game.add_coin(p1)
+        c1.location = n1
+        c2 = self.game.add_coin(p1)
+        c2.location = n1
+        c3 = self.game.add_coin(p1)
+        c3.location = n2
+
+        self.assertEqual(n1.balance(), 2)
+        self.assertEqual(n2.balance(), 1)
+
+        self.game.do_leak()
+        self.assertEqual(n1.balance(), 1)
+        self.assertEqual(n2.balance(), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
 
