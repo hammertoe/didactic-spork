@@ -30,7 +30,8 @@ class Game:
         p = Player(name)
         db_session.add(p)
         for x in range(self.coins_per_player):
-            self.add_coin(p)
+            coin = self.add_coin(p)
+            coin.location_id = p.id
 
         return p
 
@@ -42,6 +43,7 @@ class Game:
         db_session.add(p)
         db_session.commit()
         return p
+
 
     def get_policy(self, id):
         return Policy.query.filter(Policy.id == id).first()

@@ -325,6 +325,11 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(g2.balance(), 16)
         self.assertEqual(g3.balance(), 11)
 
+    def testPlayerCoins(self):
+        p1 = self.game.add_player('Matt')
+        db_session.commit()
+        self.assertEqual(p1.balance(), self.game.coins_per_player)
+
 
 if __name__ == '__main__':
     unittest.main()

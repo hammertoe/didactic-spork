@@ -82,10 +82,6 @@ class Goal(Node):
 
 
 class Player(Node):
-#    __tablename__ = 'player'
-
-#    id = Column(String(36), primary_key=True)
-#    name = Column(String(100))
 
     __mapper_args__ = {
       'polymorphic_identity': 'Player'
