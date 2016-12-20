@@ -330,6 +330,21 @@ class GameNetworkTests(unittest.TestCase):
         db_session.commit()
         self.assertEqual(p1.balance(), self.game.coins_per_player)
 
+    def testSimplePlayerCoinsNetwork(self):
+        p1 = self.game.add_player('Matt')
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        l1 = self.game.add_link(p1, po1, 0.5)
+        db_session.commit()
+
+        self.assertEqual(p1.balance(), self.game.coins_per_player)
+        self.assertEqual(po1.balance(), 0)
+
+        for x in range(50):
+            self.game.do_transfer()
+
+        self.assertEqual(p1.balance(), 977)
+        self.assertEqual(po1.balance(), 23)
+
 
 if __name__ == '__main__':
     unittest.main()
