@@ -1,6 +1,5 @@
-from uuid import uuid4 as uuid
+from uuid import uuid1 as uuid
 import enum
-import random
 
 from sqlalchemy import Column, Integer, String, ForeignKey, \
     Float, create_engine
@@ -8,6 +7,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from database import Base
 from database import db_session
 
+from utils import random
 
 class Node(Base):
     __tablename__ = 'node'
@@ -121,11 +121,13 @@ class Edge(Base):
     lower_node = relationship(
         Node,
         primaryjoin=lower_id == Node.id,
+        order_by='Node.id',
         backref='lower_edges')
 
     higher_node = relationship(
         Node,
         primaryjoin=higher_id == Node.id,
+        order_by='Node.id',
         backref='higher_edges')
 
     weight = Column(Float())
