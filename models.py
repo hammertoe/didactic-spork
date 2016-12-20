@@ -96,7 +96,7 @@ class Player(Node):
     def __init__(self, name):
         self.id = str(uuid())
         self.name = name
-
+        self.leak = 0.0
         
 
 class Edge(Base):
