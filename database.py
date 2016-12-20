@@ -20,5 +20,6 @@ def init_db():
 
 def clear_db():
     import models
-    db_session.flush()
+    db_session.rollback()
     Base.metadata.drop_all(bind=engine)
+
