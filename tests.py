@@ -1,4 +1,3 @@
-import mock
 import unittest
 import os
 import random
