@@ -1,25 +1,29 @@
+import mock
 import unittest
 import os
 import random
+import utils
 
-os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
+    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
-from database import clear_db, init_db
+from database import clear_db, init_db, db_session
 
 class GameNetworkTests(unittest.TestCase):
 
     def setUp(self):
+        utils.random.seed(0)
         init_db()
         self.game = Game()
-        # Seed the RNG so that the tests below are deteministic
-        random.seed(0)
-
+ 
     def tearDown(self):
         clear_db()
 
     def testAddPlayer(self):
 
         p = self.game.add_player('Matt')
+        db_session.commit()
+
         self.assertEqual(self.game.get_player(p.id), p)
 
     def testAddPolicy(self):
@@ -90,6 +94,8 @@ class GameNetworkTests(unittest.TestCase):
         c2 = self.game.add_coin(p1)
         c2.location = n1
 
+        db_session.commit()
+
         self.assertEqual(n1.balance(), 2)
         n1.do_leak()
         self.assertEqual(n1.balance(), 1)
@@ -105,6 +111,8 @@ class GameNetworkTests(unittest.TestCase):
         c1.location = n1
         c2 = self.game.add_coin(p1)
         c2.location = n1
+
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 2)
         n1.do_leak()
@@ -125,6 +133,8 @@ class GameNetworkTests(unittest.TestCase):
         c3 = self.game.add_coin(p1)
         c3.location = n2
 
+        db_session.commit()
+
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
 
@@ -142,6 +152,8 @@ class GameNetworkTests(unittest.TestCase):
         c2.location = n1
         c3 = self.game.add_coin(p1)
         c3.location = n2
+
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
@@ -161,10 +173,13 @@ class GameNetworkTests(unittest.TestCase):
         c3 = self.game.add_coin(p1)
         c3.location = n2
 
+        db_session.commit()
+
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
 
         self.game.do_leak()
+
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
 
@@ -192,6 +207,8 @@ class GameNetworkTests(unittest.TestCase):
         c3.location = n2
         l1 = self.game.add_link(n1, n2, 1.0)
 
+        db_session.commit()
+
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
         
@@ -211,6 +228,8 @@ class GameNetworkTests(unittest.TestCase):
         c3 = self.game.add_coin(p1)
         c3.location = n2
         l1 = self.game.add_link(n1, n2, 0.0)
+
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
@@ -234,6 +253,8 @@ class GameNetworkTests(unittest.TestCase):
         l1 = self.game.add_link(n1, n2, 1.0)
         l2 = self.game.add_link(n1, n3, 1.0)
 
+        db_session.commit()
+
         self.assertEqual(n1.balance(), 2)
         self.assertEqual(n2.balance(), 1)
         self.assertEqual(n3.balance(), 0)
@@ -255,6 +276,8 @@ class GameNetworkTests(unittest.TestCase):
 
         l1 = self.game.add_link(n1, n2, 0.5)
         l2 = self.game.add_link(n1, n3, 0.5)
+
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 100)
         self.assertEqual(n2.balance(), 0)
@@ -289,6 +312,8 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n1.balance(), 100)
         self.assertEqual(n2.balance(), 0)
         self.assertEqual(n3.balance(), 0)
+
+        db_session.commit()
 
         for x in range(50):
             self.game.do_transfer()

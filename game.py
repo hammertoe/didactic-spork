@@ -2,18 +2,19 @@ import random
 
 from database import db_session
 from models import Node, Player, Policy, Goal, Edge, Coin
-from utils import weighted_choice
-
 
 class Game:
 
+    def __init__(self):
+        self.coins_per_player = 1000
+
     def do_leak(self):
-        for node in Node.query.all():
+        for node in Node.query.order_by(Node.id).all():
             node.do_leak(commit=False)
         db_session.commit()
 
     def do_transfer(self):
-        for node in Node.query.all():
+        for node in Node.query.order_by(Node.id).all():
             node.do_transfer(commit=False)
         db_session.commit()
 
@@ -28,7 +29,9 @@ class Game:
     def add_player(self, name):
         p = Player(name)
         db_session.add(p)
-        db_session.commit()
+        for x in range(self.coins_per_player):
+            self.add_coin(p)
+
         return p
 
     def get_player(self, id):
@@ -64,5 +67,4 @@ class Game:
     def add_coin(self, player):
         c = Coin(player)
         db_session.add(c)
-        db_session.commit()
         return c
