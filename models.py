@@ -51,12 +51,15 @@ class Node(Base):
     def do_transfer(self, commit=True, recurse=False):
         for edge in self.lower_edges:
             child = edge.higher_node
-            if random.random() <= edge.weight and self.balance() > 0:
-                coin = random.choice(self.coins)
-                coin.location = child
+            w = edge.weight
+            while w > 0:
+                if random.random() <= w and self.balance() > 0:
+                    coin = random.choice(self.coins)
+                    coin.location = child
+                    w -= 1
 
-            if recurse:
-                child.do_transfer(commit, recurse)
+                if recurse:
+                    child.do_transfer(commit, recurse)
 
         if commit:
             db_session.commit()
