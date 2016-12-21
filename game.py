@@ -1,3 +1,4 @@
+import json
 import random
 
 from database import db_session
@@ -72,3 +73,7 @@ class Game:
         c = Coin(player)
         db_session.add(c)
         return c
+
+    def load_json(self, json_file):
+        data = json.load(json_file)
+        

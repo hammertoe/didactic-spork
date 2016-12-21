@@ -429,6 +429,10 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(g1.balance(), 3)
         self.assertEqual(g2.balance(), 44)
 
+    def testLoadJsonFile(self):
+        json_file = open('example-graph.json', 'r')
+        self.game.load_json(json_file)
+
 if __name__ == '__main__':
     unittest.main()
 
