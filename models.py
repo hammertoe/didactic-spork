@@ -16,6 +16,8 @@ class Node(Base):
     name = Column(String(100))
     leak = Column(Float)
     node_type = Column(String(10))
+    activation = Column(Float)
+    max_level = Column(Integer)
 
     __mapper_args__ = {
         'polymorphic_on': node_type,
@@ -26,6 +28,7 @@ class Node(Base):
         self.id = str(uuid())
         self.name = name
         self.leak = leak
+        self.activation = 0.0
 
     def higher_neighbors(self):
         return [x.higher_node for x in self.lower_edges]
@@ -49,6 +52,13 @@ class Node(Base):
         return False
     
     def do_transfer(self, commit=True, recurse=False):
+        # Check activation
+        total = 0
+        for edge in self.higher_edges:
+            total += edge.weight
+        if total < self.activation:
+            return
+
         for edge in self.lower_edges:
             child = edge.higher_node
             w = edge.weight

@@ -7,6 +7,7 @@ if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
 from database import clear_db, init_db, db_session
+from models import Edge, Node, Player
 
 class GameNetworkTests(unittest.TestCase):
 
@@ -448,9 +449,52 @@ class GameNetworkTests(unittest.TestCase):
 
         self.assertEqual(po1.balance(), 200)
 
+
+    def testActivationLevelLow(self):
+        p1 = self.game.add_player('Matt')
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        po1.activation = 0.7
+        g1 = self.game.add_goal('World Peace', 0.5)
+        l1 = self.game.add_link(p1, po1, 0.5)
+        l2 = self.game.add_link(po1, g1, 1.0)
+
+        db_session.commit()
+
+        self.assertEqual(po1.balance(), 0)
+
+        for x in range(100):
+            self.game.do_transfer()
+
+        self.assertEqual(p1.balance(), 956)
+        self.assertEqual(po1.balance(), 44)
+        self.assertEqual(g1.balance(), 0)
+
+    def testActivationLevelHigh(self):
+        p1 = self.game.add_player('Matt')
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        po1.activation = 0.2
+        g1 = self.game.add_goal('World Peace', 0.5)
+        l1 = self.game.add_link(p1, po1, 0.5)
+        l2 = self.game.add_link(po1, g1, 1.0)
+
+        db_session.commit()
+
+        self.assertEqual(po1.balance(), 0)
+
+        for x in range(100):
+            self.game.do_transfer()
+
+        self.assertEqual(p1.balance(), 955)
+        self.assertEqual(po1.balance(), 0)
+        self.assertEqual(g1.balance(), 45)
+
     def testLoadJsonFile(self):
         json_file = open('example-graph.json', 'r')
         self.game.load_json(json_file)
+        self.assertEqual(34, Edge.query.count())
+        self.assertEqual(50, Node.query.count())
+        
+
 
 if __name__ == '__main__':
     unittest.main()
