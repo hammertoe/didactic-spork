@@ -77,3 +77,7 @@ class Game:
     def load_json(self, json_file):
         data = json.load(json_file)
         
+        goals = data['Goals']
+        policies = data['Policies']
+
+        
