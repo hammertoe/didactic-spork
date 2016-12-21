@@ -372,8 +372,8 @@ class GameNetworkTests(unittest.TestCase):
         for x in range(50):
             self.game.do_transfer()
 
-        self.assertEqual(p1.balance(), 800)
-        self.assertEqual(po1.balance(), 200)
+        self.assertEqual(p1.balance(), 829)
+        self.assertEqual(po1.balance(), 171)
         
     def testMoreComplexPlayerCoinsNetwork(self):
         p1 = self.game.add_player('Matt')
