@@ -375,6 +375,32 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p1.balance(), 800)
         self.assertEqual(po1.balance(), 200)
         
+    def testMoreComplexPlayerCoinsNetwork(self):
+        p1 = self.game.add_player('Matt')
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        l1 = self.game.add_link(p1, po1, 0.5)
+        po2 = self.game.add_policy('Pollution control', 0.1)
+        l2 = self.game.add_link(p1, po2, 1.0)
+
+        g1 = self.game.add_goal('World Peace', 0.5)
+        g2 = self.game.add_goal('Clean Water', 0.5)
+        l3 = self.game.add_link(po1, g1, 1.0)
+        l4 = self.game.add_link(po2, g2, 2.0)
+
+        db_session.commit()
+
+        self.assertEqual(p1.balance(), self.game.coins_per_player)
+        self.assertEqual(po1.balance(), 0)
+
+        for x in range(100):
+            self.game.do_transfer()
+
+        self.assertEqual(p1.balance(), 853)
+        self.assertEqual(po1.balance(), 0)
+        self.assertEqual(po2.balance(), 0)
+
+        self.assertEqual(g1.balance(), 47)
+        self.assertEqual(g2.balance(), 100)
 
 if __name__ == '__main__':
     unittest.main()
