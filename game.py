@@ -19,12 +19,14 @@ class Game:
         db_session.commit()
 
     def do_add(self):
+        # at the moment, adding coins is done as part of the transfer
+        # step above as we treat adding coins with the same logic
         pass
 
     def tick(self):
-        do_leak()
-        do_transfer()
-        do_add()
+        self.do_leak()
+        self.do_transfer()
+        self.do_add()
 
     def add_player(self, name):
         p = Player(name)
