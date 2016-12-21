@@ -56,7 +56,7 @@ class Node(Base):
                 if random.random() <= w and self.balance() > 0:
                     coin = random.choice(self.coins)
                     coin.location = child
-                    w -= 1
+                w -= 1
 
                 if recurse:
                     child.do_transfer(commit, recurse)
