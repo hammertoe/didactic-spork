@@ -429,6 +429,25 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(g1.balance(), 3)
         self.assertEqual(g2.balance(), 44)
 
+    def testTwoPlayersFundAPolicyEqually(self):
+        p1 = self.game.add_player('Matt')
+        p2 = self.game.add_player('Simon')
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        l1 = self.game.add_link(p1, po1, 1.0)
+        l1 = self.game.add_link(p2, po1, 1.0)
+
+        db_session.commit()
+
+        self.assertEqual(po1.balance(), 0)
+
+        for x in range(100):
+            self.game.do_transfer()
+
+        self.assertEqual(p1.balance(), 900)
+        self.assertEqual(p2.balance(), 900)
+
+        self.assertEqual(po1.balance(), 200)
+
     def testLoadJsonFile(self):
         json_file = open('example-graph.json', 'r')
         self.game.load_json(json_file)
