@@ -29,12 +29,16 @@ class GameNetworkTests(unittest.TestCase):
     def testAddPolicy(self):
 
         p = self.game.add_policy('Arms Embargo', 0.1)
+        db_session.commit()
+
         self.assertEqual(self.game.get_policy(p.id), p)
         self.assertEqual(self.game.get_policy(p.id).leak, 0.1)
 
     def testAddGoal(self):
 
         g = self.game.add_goal('World Peace', 0.5)
+        db_session.commit()
+
         self.assertEqual(self.game.get_goal(g.id), g)
         self.assertEqual(self.game.get_goal(g.id).leak, 0.5)
 
@@ -42,6 +46,8 @@ class GameNetworkTests(unittest.TestCase):
 
         p1 = self.game.add_policy('Policy 1', 0.1)
         p2 = self.game.add_policy('Policy 2', 0.2)
+        db_session.commit()
+
         self.assertEqual(self.game.get_policy(p1.id).leak, 0.1)
 
         p1.leak = 0.3
@@ -51,10 +57,11 @@ class GameNetworkTests(unittest.TestCase):
     def testSimpleNetwork(self):
         n1 = self.game.add_policy('Policy 1', 0.1)
         n2 = self.game.add_goal('Goal 1', 0.2)
-        
         l1 = self.game.add_link(n1, n2, 0.5)
-        self.assertEqual(self.game.get_link(l1.id), l1)
 
+        db_session.commit()
+
+        self.assertEqual(self.game.get_link(l1.id), l1)
         self.assertIn(n2, n1.children())
         
     def testMultiLevelNetwork(self):
@@ -65,15 +72,19 @@ class GameNetworkTests(unittest.TestCase):
         l1 = self.game.add_link(n1, n2, 0.5)
         l2 = self.game.add_link(n2, n3, 0.5)
 
+        db_session.commit()
+
         self.assertEqual(n3, n1.children()[0].children()[0])
 
     def testAddCoins(self):
         n1 = self.game.add_policy('Policy 1', 0.1)
         p1 = self.game.add_player('Matt')
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 0)
 
         c1 = self.game.add_coin(p1)
+        db_session.commit()
 
         self.assertEqual(n1.balance(), 0)
 
