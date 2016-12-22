@@ -44,7 +44,6 @@ class Game:
     def add_policy(self, name, leak):
         p = Policy(name, leak)
         db_session.add(p)
-        db_session.commit()
         return p
 
 
@@ -54,7 +53,6 @@ class Game:
     def add_goal(self, name, leak):
         g = Goal(name, leak)
         db_session.add(g)
-        db_session.commit()
         return g
 
     def get_goal(self, id):
@@ -63,7 +61,6 @@ class Game:
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)
         db_session.add(l)
-        db_session.commit()
         return l
 
     def get_link(self, id):
@@ -80,4 +77,30 @@ class Game:
         goals = data['Goals']
         policies = data['Policies']
 
+        id_mapping = {}
+        links = []
         
+        for policy in policies:
+            p = self.add_policy(policy['Name'], policy['Leakage'])
+            p.max_level = policy['MaxAmount']
+            p.activation = policy['ActivationAmount']
+            id_mapping[policy['Id']] = p
+
+        for goal in goals:
+            g = self.add_goal(goal['Name'], goal['Leakage'])
+            g.max_level = goal['MaxAmount'] 
+            g.activation = goal['ActivationAmount']  
+            id_mapping[goal['Id']] = g
+
+            for conn in goal['Connections']:
+                a = conn['FromId']
+                b = conn['ToId']
+                w = conn['Weight']
+                links.append((a,b,w))
+
+        for a,b,w in links:
+            a = id_mapping[a]
+            b = id_mapping[b]
+            self.add_link(a,b,w)
+
+        db_session.commit()

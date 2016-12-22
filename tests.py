@@ -7,7 +7,7 @@ if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
 from database import clear_db, init_db, db_session
-from models import Edge, Node, Player
+from models import Edge, Node, Player, Goal, Policy
 
 class GameNetworkTests(unittest.TestCase):
 
@@ -491,8 +491,10 @@ class GameNetworkTests(unittest.TestCase):
     def testLoadJsonFile(self):
         json_file = open('example-graph.json', 'r')
         self.game.load_json(json_file)
-        self.assertEqual(34, Edge.query.count())
-        self.assertEqual(50, Node.query.count())
+        self.assertEqual(61, Edge.query.count())
+        self.assertEqual(36, Node.query.count())
+        self.assertEqual(30, Policy.query.count())
+        self.assertEqual(6, Goal.query.count())
         
 
 
