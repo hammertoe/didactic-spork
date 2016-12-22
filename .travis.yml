@@ -7,3 +7,5 @@ install:
 # command to run tests
 script:
  - python tests.py
+notifications:
+  slack: quernus:FSJYjitrzrSX83EAcD8MyNuE
