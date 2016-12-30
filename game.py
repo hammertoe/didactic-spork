@@ -2,12 +2,13 @@ import json
 import random
 
 from database import db_session
-from models import Node, Player, Policy, Goal, Edge, Coin
+from models import Node, Player, Policy, Goal, Edge, Wallet
 
 class Game:
 
     def __init__(self):
-        self.coins_per_player = 1000
+        self.coins_per_budget_cycle = 150000
+        self.standard_max_player_outflow = 100
 
     def do_leak(self):
         for node in Node.query.order_by(Node.id).all():
@@ -15,27 +16,21 @@ class Game:
         db_session.commit()
 
     def do_transfer(self):
-        for node in Node.query.order_by(Node.id).all():
+        for node in Policy.query.order_by(Node.id).all():
             node.do_transfer(commit=False)
         db_session.commit()
 
-    def do_add(self):
-        # at the moment, adding coins is done as part of the transfer
-        # step above as we treat adding coins with the same logic
-        pass
+    def do_fund_players(self):
+        for player in Player.query.all():
+            player.balance = self.coins_per_budget_cycle
 
     def tick(self):
         self.do_leak()
         self.do_transfer()
-        self.do_add()
 
     def add_player(self, name):
         p = Player(name)
         db_session.add(p)
-        for x in range(self.coins_per_player):
-            coin = self.add_coin(p)
-            coin.location_id = p.id
-
         return p
 
     def get_player(self, id):
@@ -48,7 +43,7 @@ class Game:
 
 
     def get_policy(self, id):
-        return Policy.query.filter(Policy.id == id).first()
+        return db_session.query(Policy).filter(Policy.id == id).first()
 
     def add_goal(self, name, leak):
         g = Goal(name, leak)
@@ -66,10 +61,10 @@ class Game:
     def get_link(self, id):
         return Edge.query.filter(Edge.id == id).first()
 
-    def add_coin(self, player):
-        c = Coin(player)
-        db_session.add(c)
-        return c
+    def add_wallet(self, player, amount=None):
+        w = Wallet(player, amount)
+        db_session.add(w)
+        return w
 
     def load_json(self, json_file):
         data = json.load(json_file)
