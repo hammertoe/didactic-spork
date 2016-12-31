@@ -6,7 +6,7 @@ from sqlalchemy import Column, String
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 
-engine = create_engine(os.environ['SQLALCHEMY_DATABASE_URI'], convert_unicode=True)
+engine = create_engine(os.environ['SQLALCHEMY_DATABASE_URI'], convert_unicode=True, echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=True,
                                          bind=engine))
@@ -22,7 +22,7 @@ class Base(object):
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
-    id = Column(String(36), primary_key=True)
+    id = Column(String(36), primary_key=True, default=default_uuid)
 
 Base = declarative_base(cls=Base)
 Base.query = db_session.query_property()

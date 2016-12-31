@@ -116,33 +116,28 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 0.1)
         p1 = self.game.add_player('Matt')
 
-        import pdb; pdb.set_trace()
-
         self.assertEqual(n1.balance, 0)
 
         w1 = self.game.add_wallet(p1, 5.0)
-
         self.assertEqual(n1.balance, 0)
-
-        w1.location = n1
-
+        n1.wallets.append(w1)
         self.assertEqual(n1.balance, 5.0)
 
         w2 = self.game.add_wallet(p1, 10.0)
-
-        w2.location = n1
-
+        self.assertEqual(n1.balance, 5.0)
+        n1.wallets.append(w2)
         self.assertEqual(n1.balance, 15.0)
+
+        db_session.commit()
+
 
     def testNodeLeak100(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        w1.location = n1
+        n1.wallets.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        w2.location = n1
-
-        db_session.commit()
+        n1.wallets.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -154,11 +149,9 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 0.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        w1.location = n1
+        n1.wallets.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        w2.location = n1
-
-        db_session.commit()
+        n1.wallets.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -170,11 +163,9 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 0.2)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        w1.location = n1
+        n1.wallets.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        w2.location = n1
-
-        db_session.commit()
+        n1.wallets.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -204,30 +195,24 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 100)
-        w1.location = n1
+        n1.wallets.append(w1)
+
         n2 = self.game.add_policy('Policy 2', 1.0)
 
         self.assertAlmostEqual(n1.balance, 100.0)
         self.assertAlmostEqual(n2.balance, 0.0)
 
-        db_session.commit()
-
         self.assertEqual(Wallet.query.count(), 1)
 
+        import pdb; pdb.set_trace()
         w1.transfer_to_node(n2, 70.0)
-
-        db_session.commit()
 
         self.assertAlmostEqual(n1.balance, 30.0)
         self.assertAlmostEqual(n2.balance, 70.0)
 
-        db_session.commit()
-
         self.assertEqual(Wallet.query.count(), 2)
 
         w1.transfer_to_node(n2, 10.0)
-
-        db_session.commit()
 
         self.assertAlmostEqual(n1.balance, 20.0)
         self.assertAlmostEqual(n2.balance, 80.0)
@@ -235,8 +220,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(Wallet.query.count(), 2)
 
         w1.transfer_to_node(n2, 20.0)
-
-        db_session.commit()
 
         self.assertAlmostEqual(n1.balance, 0.0)
         self.assertAlmostEqual(n2.balance, 100.0)
@@ -248,7 +231,7 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 100)
-        w1.location = n1
+        n1.wallets.append(w1)
         n2 = self.game.add_policy('Policy 2', 1.0)
 
         self.assertAlmostEqual(n1.balance, 100.0)
@@ -443,7 +426,6 @@ class GameNetworkTests(unittest.TestCase):
 
     def testSimplePlayerCoinsNetwork(self):
         p1 = self.game.add_player('Matt')
-        import pdb; pdb.set_trace()
         p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         l1 = self.game.add_link(p1, po1, 50)
@@ -452,7 +434,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p1.balance, self.game.coins_per_budget_cycle)
         self.assertEqual(po1.balance, 0)
 
-        import pdb; pdb.set_trace()
         p1.fund(po1, 60)
         self.assertEqual(po1.balance, 60)
 

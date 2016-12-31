@@ -20,27 +20,15 @@ class WalletAssociation(Base):
 
     __tablename__ = "wallet_association"
 
-    @classmethod
-    def creator(cls, discriminator):
-        """Provide a 'creator' function to use with 
-        the association proxy."""
-
-        return lambda wallets: WalletAssociation(
-                               wallets=wallets,
-                               discriminator=discriminator)
-
     discriminator = Column(String)
     """Refers to the type of parent."""
 
-    @property
-    def location(self):
-        """Return the parent object."""
-        return getattr(self, "%s_parent" % self.discriminator)
+    __mapper_args__ = {"polymorphic_on": discriminator}
 
 
 class Wallet(Base):
 
-    association_id = Column(Integer, 
+    association_id = Column(String(32), 
                             ForeignKey("wallet_association.id")
                             )
     
@@ -58,7 +46,7 @@ class Wallet(Base):
 
     association = relationship(
         "WalletAssociation", 
-        backref="wallets")
+        backref=backref("wallets", uselist=False))
 
     location = association_proxy("association", "location")
 
@@ -106,20 +94,32 @@ class HasWallets(object):
     """
     @declared_attr
     def wallet_association_id(cls):
-        return Column(Integer, 
+        return Column(String(32), 
                       ForeignKey("wallet_association.id"))
 
     @declared_attr
     def wallet_association(cls):
-        discriminator = cls.__name__.lower()
+        name = cls.__name__
+        discriminator = name.lower()
+
+        assoc_cls = type(
+            "%sWalletAssociation" % name,
+            (WalletAssociation, ),
+            dict(
+                __tablename__=None,
+                __mapper_args__={
+                    "polymorphic_identity": discriminator
+                    }
+                )
+            )
+
         cls.wallets = association_proxy(
             "wallet_association", "wallets",
-            creator=WalletAssociation.creator(discriminator)
+            creator=lambda wallets: assoc_cls(wallets=wallets)
             )
-        return relationship("WalletAssociation", 
+        return relationship(assoc_cls,
                             uselist=True,
-                            backref=backref("%s_parent" % discriminator, 
-                                            uselist=False))
+                            backref=backref("location", uselist=False))
 
 
 class Node(HasWallets, Base):
@@ -156,21 +156,17 @@ class Node(HasWallets, Base):
     def balance(self):
         return float(sum([ wallet.balance for wallet in self.wallets ]))
 
-    def do_leak(self, commit=True):
+    def do_leak(self):
         total = self.balance
         for wallet in self.wallets:
             amount = wallet.balance * self.leak
             wallet.balance -= amount
 
-        if commit:
-            db_session.commit()
-
     def get_wallet_by_owner(self, owner, create=True):
-        wallet = db_session.query(Wallet).filter_by(location=self,
-                                                    owner=owner).first()        
+        wallet = db_session.query(Wallet).filter(Wallet.association.has(Node.id==self.id), 
+                                                 Wallet.owner==owner).first()
         if wallet is None and create:
             wallet = Wallet(owner)
-#            wallet.location_id = self.id
             self.wallets.append(wallet)
             db_session.add(wallet)
 
