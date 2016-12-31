@@ -135,7 +135,7 @@ class Node(Base):
         return wallet
     
     
-    def do_transfer(self, commit=True, recurse=False):
+    def do_transfer(self, recurse=False):
         # Check activation
         # no activation for now
 
@@ -151,8 +151,6 @@ class Node(Base):
             if recurse:
                 child.do_transfer(commit, recurse)
 
-        if commit:
-            db_session.commit()
 
 class Policy(Node):
 

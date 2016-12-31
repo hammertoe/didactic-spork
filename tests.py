@@ -393,7 +393,7 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 50)
+        f1 = self.game.add_fund(p1, po1, 50)
 
         self.assertEqual(p1.balance, self.game.coins_per_budget_cycle)
         self.assertEqual(po1.balance, 0)
@@ -410,9 +410,9 @@ class GameNetworkTests(unittest.TestCase):
 
     def testTransferGreaterThan100_300(self):
         p1 = self.game.add_player('Matt')
-        p1.balance(self.game.coins_per_budget_cycle)
+        p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 3.0)
+        f1 = self.game.add_fund(p1, po1, 3.0)
 
         self.assertEqual(p1.balance, self.game.coins_per_budget_cycle)
         self.assertEqual(po1.balance, 0)
@@ -425,9 +425,9 @@ class GameNetworkTests(unittest.TestCase):
 
     def testTransferGreaterThan100_350(self):
         p1 = self.game.add_player('Matt')
-        p1.balance(self.game.coins_per_budget_cycle)
+        p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 3.5)
+        f1 = self.game.add_fund(p1, po1, 3.5)
 
         self.assertEqual(p1.balance, self.game.coins_per_budget_cycle)
         self.assertEqual(po1.balance, 0)
@@ -440,11 +440,11 @@ class GameNetworkTests(unittest.TestCase):
         
     def testMoreComplexPlayerCoinsNetwork(self):
         p1 = self.game.add_player('Matt')
-        p1.balance(self.game.coins_per_budget_cycle)
+        p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 0.5)
+        f1 = self.game.add_fund(p1, po1, 0.5)
         po2 = self.game.add_policy('Pollution control', 0.1)
-        l2 = self.game.add_link(p1, po2, 1.0)
+        f2 = self.game.add_fund(p1, po2, 1.0)
 
         g1 = self.game.add_goal('World Peace', 0.5)
         g2 = self.game.add_goal('Clean Water', 0.5)
@@ -466,11 +466,11 @@ class GameNetworkTests(unittest.TestCase):
 
     def testMoreComplexPlayerCoinsNetworkWithFullTick(self):
         p1 = self.game.add_player('Matt')
-        p1.balance(self.game.coins_per_budget_cycle)
+        p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 0.5)
+        f1 = self.game.add_fund(p1, po1, 0.5)
         po2 = self.game.add_policy('Pollution control', 0.1)
-        l2 = self.game.add_link(p1, po2, 1.0)
+        f2 = self.game.add_fund(p1, po2, 1.0)
 
         g1 = self.game.add_goal('World Peace', 0.5)
         g2 = self.game.add_goal('Clean Water', 0.5)
@@ -494,8 +494,8 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p2 = self.game.add_player('Simon')
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        l1 = self.game.add_link(p1, po1, 1.0)
-        l1 = self.game.add_link(p2, po1, 1.0)
+        l1 = self.game.add_fund(p1, po1, 1.0)
+        l1 = self.game.add_fund(p2, po1, 1.0)
 
         self.assertEqual(po1.balance, 0)
 
@@ -513,7 +513,7 @@ class GameNetworkTests(unittest.TestCase):
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         po1.activation = 0.7
         g1 = self.game.add_goal('World Peace', 0.5)
-        l1 = self.game.add_link(p1, po1, 0.5)
+        f1 = self.game.add_fund(p1, po1, 0.5)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
@@ -546,10 +546,10 @@ class GameNetworkTests(unittest.TestCase):
     def testLoadJsonFile(self):
         json_file = open('example-graph.json', 'r')
         self.game.load_json(json_file)
-        self.assertEqual(61, Edge.query.count())
-        self.assertEqual(36, Node.query.count())
-        self.assertEqual(30, Policy.query.count())
-        self.assertEqual(6, Goal.query.count())
+        self.assertEqual(61, db_session.query(Edge).count())
+        self.assertEqual(36, db_session.query(Node).count())
+        self.assertEqual(30, db_session.query(Policy).count())
+        self.assertEqual(6, db_session.query(Goal).count())
         
 
 
