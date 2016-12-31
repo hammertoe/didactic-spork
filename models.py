@@ -185,9 +185,14 @@ class Player(Base):
         self.name = name
         self.leak = 0.0
 
+        # create a wallet for the player
+        w = Wallet(self, 0.0)
+        db_session.add(w)
+        w.location_id = self.id
+
     @property
     def wallet(self):
-        return self.get_wallet_by_owner(self)
+        return db_session.query(Wallet).filter(Wallet.location_id == self.id).one()
 
     @property
     def balance(self):
@@ -225,7 +230,7 @@ class Fund(Base):
     rate = Column(Float())
 
     def __init__(self, player, node, rate):
-        self.id = str(uuid())
+        self.id = default_uuid()
         self.player = player
         self.node = node
         self.rate = rate

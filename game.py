@@ -2,7 +2,7 @@ import json
 import random
 
 from database import db_session
-from models import Node, Player, Policy, Goal, Edge, Wallet
+from models import Node, Player, Policy, Goal, Edge, Wallet, Fund
 
 class Game:
 
@@ -34,7 +34,7 @@ class Game:
         return p
 
     def get_player(self, id):
-        return db_session.query(Player).filter(Player.id == id).first()
+        return db_session.query(Player).filter(Player.id == id).one()
 
     def add_policy(self, name, leak):
         p = Policy(name, leak)
@@ -43,7 +43,7 @@ class Game:
 
 
     def get_policy(self, id):
-        return db_session.query(Policy).filter(Policy.id == id).first()
+        return db_session.query(Policy).filter(Policy.id == id).one()
 
     def add_goal(self, name, leak):
         g = Goal(name, leak)
@@ -51,7 +51,7 @@ class Game:
         return g
 
     def get_goal(self, id):
-        return db_session.query(Goal).filter(Goal.id == id).first()
+        return db_session.query(Goal).filter(Goal.id == id).one()
 
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)
@@ -59,7 +59,15 @@ class Game:
         return l
 
     def get_link(self, id):
-        return db_session.query(Edge).filter(Edge.id == id).first()
+        return db_session.query(Edge).filter(Edge.id == id).one()
+
+    def add_fund(self, player, node, amount):
+        f = Fund(player, node, amount)
+        db_session.add(f)
+        return f
+
+    def get_fund(self, id):
+        return db_session.query(Fund).filter(Fund.id == id).one()
 
     def add_wallet(self, player, amount=None):
         w = Wallet(player, amount)

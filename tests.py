@@ -7,7 +7,7 @@ if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
 from database import clear_db, init_db, db_session
-from models import Edge, Node, Player, Goal, Policy, Wallet
+from models import Edge, Node, Player, Goal, Policy, Wallet, Fund
 
 class GameNetworkTests(unittest.TestCase):
 
@@ -25,14 +25,12 @@ class GameNetworkTests(unittest.TestCase):
 
         self.assertEqual(self.game.get_player(p.id), p)
 
-    def testAddWalletToPlayer(self):
+    def testPlayerHasWallet(self):
 
         p = self.game.add_player('Matt')
-        w1 = self.game.add_wallet(p, 5.0)
-        w1.location_id = p.id
 
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertAlmostEqual(p.balance, 5.0)
+        self.assertAlmostEqual(p.balance, 0.0)
 
     def testPlayerSetBalance(self):
 
@@ -529,11 +527,11 @@ class GameNetworkTests(unittest.TestCase):
 
     def testActivationLevelHigh(self):
         p1 = self.game.add_player('Matt')
-        p1.balance(self.game.coins_per_budget_cycle)
+        p1.balance = self.game.coins_per_budget_cycle
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         po1.activation = 0.2
         g1 = self.game.add_goal('World Peace', 0.5)
-        l1 = self.game.add_link(p1, po1, 0.5)
+        l1 = self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
