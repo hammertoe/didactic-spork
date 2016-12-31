@@ -11,17 +11,17 @@ class Game:
         self.standard_max_player_outflow = 100
 
     def do_leak(self):
-        for node in Node.query.order_by(Node.id).all():
-            node.do_leak(commit=False)
+        for node in db_session.query(Node).order_by(Node.id).all():
+            node.do_leak()
         db_session.commit()
 
     def do_transfer(self):
-        for node in Policy.query.order_by(Node.id).all():
-            node.do_transfer(commit=False)
+        for node in db_session.query(Node).order_by(Node.id).all():
+            node.do_transfer()
         db_session.commit()
 
     def do_fund_players(self):
-        for player in Player.query.all():
+        for player in db_session.query(Player).all():
             player.balance = self.coins_per_budget_cycle
 
     def tick(self):
@@ -34,7 +34,7 @@ class Game:
         return p
 
     def get_player(self, id):
-        return Player.query.filter(Player.id == id).first()
+        return db_session.query(Player).filter(Player.id == id).first()
 
     def add_policy(self, name, leak):
         p = Policy(name, leak)
@@ -51,7 +51,7 @@ class Game:
         return g
 
     def get_goal(self, id):
-        return Goal.query.filter(Goal.id == id).first()
+        return db_session.query(Goal).filter(Goal.id == id).first()
 
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)
@@ -59,7 +59,7 @@ class Game:
         return l
 
     def get_link(self, id):
-        return Edge.query.filter(Edge.id == id).first()
+        return db_session.query(Edge).filter(Edge.id == id).first()
 
     def add_wallet(self, player, amount=None):
         w = Wallet(player, amount)

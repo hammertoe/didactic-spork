@@ -3,35 +3,30 @@ import enum
 from sqlalchemy import Column, Integer, String, ForeignKey, \
     Float, create_engine
 from sqlalchemy.orm import relationship, sessionmaker, backref
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
-from database import Base
 from database import db_session
 from database import default_uuid
 
 from utils import random
 
 
+@as_declarative()
+class Base(object):
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+    id = Column(String(36), primary_key=True, default=default_uuid)
 
-
-    
-class WalletAssociation(Base):
-    """Associates a collection of wallets to a particular parent"""
-
-    __tablename__ = "wallet_association"
-
+class WalletInterface(Base):
     discriminator = Column(String)
-    """Refers to the type of parent."""
 
     __mapper_args__ = {"polymorphic_on": discriminator}
 
 
+
 class Wallet(Base):
 
-    association_id = Column(String(32), 
-                            ForeignKey("wallet_association.id")
-                            )
-    
     owner_id = Column(
         String(36),
         ForeignKey('player.id'),
@@ -39,16 +34,18 @@ class Wallet(Base):
 
     owner = relationship(
         'Player',
-        primaryjoin='Player.id == Wallet.owner_id',
-        back_populates='wallets')
+        backref='wallets')
+
+    location_id = Column(
+        String(36),
+        ForeignKey('node.id'),
+        index=True)
+
+    location = relationship(
+        'Node',
+        backref='wallets')
 
     balance = Column(Float)
-
-    association = relationship(
-        "WalletAssociation", 
-        backref=backref("wallets", uselist=False))
-
-    location = association_proxy("association", "location")
 
     def __init__(self, owner, balance=None):
         self.id = default_uuid()
@@ -87,55 +84,20 @@ class Wallet(Base):
             db_session.delete(self)
             
 
-class HasWallets(object):
-    """HasWallets mixin, creates a relationship to
-    the wallet_association table for each parent.
-    
-    """
-    @declared_attr
-    def wallet_association_id(cls):
-        return Column(String(32), 
-                      ForeignKey("wallet_association.id"))
 
-    @declared_attr
-    def wallet_association(cls):
-        name = cls.__name__
-        discriminator = name.lower()
+class Node(Base):
 
-        assoc_cls = type(
-            "%sWalletAssociation" % name,
-            (WalletAssociation, ),
-            dict(
-                __tablename__=None,
-                __mapper_args__={
-                    "polymorphic_identity": discriminator
-                    }
-                )
-            )
+    discriminator = Column(String)
+    __mapper_args__ = {"polymorphic_on": discriminator}
 
-        cls.wallets = association_proxy(
-            "wallet_association", "wallets",
-            creator=lambda wallets: assoc_cls(wallets=wallets)
-            )
-        return relationship(assoc_cls,
-                            uselist=True,
-                            backref=backref("location", uselist=False))
-
-
-class Node(HasWallets, Base):
-
-    __tablename__ = 'node'
+    id = Column(String(36), ForeignKey(WalletInterface.id), 
+                primary_key=True, default=default_uuid)
 
     name = Column(String(100))
     leak = Column(Float)
     node_type = Column(String(10))
     activation = Column(Float)
     max_level = Column(Integer)
-
-    __mapper_args__ = {
-        'polymorphic_on': node_type,
-        'polymorphic_identity': 'Node'
-    }
 
     def __init__(self, name, leak):
         self.id = default_uuid()
@@ -163,7 +125,7 @@ class Node(HasWallets, Base):
             wallet.balance -= amount
 
     def get_wallet_by_owner(self, owner, create=True):
-        wallet = db_session.query(Wallet).filter(Wallet.association.has(Node.id==self.id), 
+        wallet = db_session.query(Wallet).filter(Wallet.location==self, 
                                                  Wallet.owner==owner).first()
         if wallet is None and create:
             wallet = Wallet(owner)
@@ -198,6 +160,9 @@ class Policy(Node):
       'polymorphic_identity': 'Policy'
       }
 
+    id = Column(String(36), ForeignKey(Node.id), 
+                primary_key=True, default=default_uuid)
+
 
 class Goal(Node):
 
@@ -205,17 +170,15 @@ class Goal(Node):
       'polymorphic_identity': 'Goal'
       }
 
+    id = Column(String(36), ForeignKey(Node.id),
+                primary_key=True, default=default_uuid)
+
 
 class Player(Base):
 
     name = Column(String(100))
     leak = Column(Float)
 
-    wallets = relationship(
-        'Wallet',
-        back_populates='owner',
-        foreign_keys='Wallet.owner_id',
-        )
 
     def __init__(self, name):
         self.id = default_uuid()
@@ -238,9 +201,6 @@ class Player(Base):
         self.wallet.transfer(node, amount)
 
 class Fund(Base):
-    __tablename__ = 'fund'
-
-    id = Column(String(36), primary_key=True)
 
     player_id = Column(
         String(36),
