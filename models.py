@@ -89,7 +89,6 @@ class Node(Base):
 
     discriminator = Column(String)
     __mapper_args__ = {"polymorphic_on": discriminator}
-
     id = Column(String(36), ForeignKey(WalletInterface.id), 
                 primary_key=True, default=default_uuid)
 
@@ -146,7 +145,8 @@ class Node(Base):
             total = self.balance
             for wallet in self.wallets:
                 foo = (wallet.balance / total) * amount
-                wallet.transfer(child, foo)
+                if foo > 0.0 and foo <= wallet.balance:
+                    wallet.transfer(child, foo)
 
             if recurse:
                 child.do_transfer(commit, recurse)
@@ -200,8 +200,27 @@ class Player(Base):
     def balance(self, amount):
         self.wallet.balance = amount
 
-    def fund(self, node, amount):
+    def transfer_funds_to_node(self, node, amount):
         self.wallet.transfer(node, amount)
+
+    def fund(self, node, rate):
+        # Do we already fund this node? If so change value
+        f = db_session.query(Fund).filter(Fund.node == node,
+                                          Fund.player == self).one_or_none()
+        if f is not None:
+            f.rate = rate
+            if rate == 0.0:
+                # if we set funding level to 0 then delete fund link
+                db_session.delete(f)
+        else: # create new fund link
+            f = Fund(self, node, rate)
+            db_session.add(f)
+            
+
+    def transfer_funds(self):
+        for fund in self.funds:
+            self.transfer_funds_to_node(fund.node, fund.rate)
+
 
 class Fund(Base):
 

@@ -13,19 +13,22 @@ class Game:
     def do_leak(self):
         for node in db_session.query(Node).order_by(Node.id).all():
             node.do_leak()
-        db_session.commit()
 
     def do_transfer(self):
         for node in db_session.query(Node).order_by(Node.id).all():
             node.do_transfer()
-        db_session.commit()
 
-    def do_fund_players(self):
+    def do_replenish_budget(self):
         for player in db_session.query(Player).all():
             player.balance = self.coins_per_budget_cycle
 
+    def do_transfer_funds(self):
+        for player in db_session.query(Player).all():
+            player.transfer_funds()
+
     def tick(self):
         self.do_leak()
+        self.do_transfer_funds()
         self.do_transfer()
 
     def add_player(self, name):
