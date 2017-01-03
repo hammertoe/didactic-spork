@@ -10,29 +10,34 @@ class Game:
         self.coins_per_budget_cycle = 150000
         self.standard_max_player_outflow = 100
 
+    @property
+    def num_players(self):
+        return db_session.query(Player).count()
+
     def do_leak(self):
         for node in db_session.query(Node).order_by(Node.id).all():
             node.do_leak()
 
-    def do_transfer(self):
+    def do_propogate_funds(self):
         for node in db_session.query(Node).order_by(Node.id).all():
-            node.do_transfer()
+            node.do_propogate_funds()
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
             player.balance = self.coins_per_budget_cycle
 
-    def do_transfer_funds(self):
+    def do_inject_funds(self):
         for player in db_session.query(Player).all():
             player.transfer_funds()
 
     def tick(self):
         self.do_leak()
-        self.do_transfer_funds()
-        self.do_transfer()
+        self.do_inject_funds()
+        self.do_propogate_funds()
 
     def add_player(self, name):
         p = Player(name)
+        p.max_outflow = self.standard_max_player_outflow
         db_session.add(p)
         return p
 

@@ -114,6 +114,25 @@ class Node(Base):
     parents = lower_neighbors
 
     @property
+    def current_outflow(self):
+        if not self.active:
+            return 0.0
+        return sum([x.rate for x in self.lower_edges])
+
+    @property
+    def current_inflow(self):
+        # the amount coming in from players
+        from_players = sum([x.rate for x in self.funded_by])
+        # plus the amount coming in from other nodes
+        from_nodes = sum([x.current_flow for x in self.higher_edges])
+
+        return from_nodes + from_players
+
+    @property
+    def active(self):
+        return self.current_inflow >= self.activation
+
+    @property
     def balance(self):
         return float(sum([ wallet.balance for wallet in self.wallets ]))
 
@@ -134,9 +153,10 @@ class Node(Base):
         return wallet
     
     
-    def do_transfer(self, recurse=False):
+    def do_propogate_funds(self, recurse=False):
         # Check activation
-        # no activation for now
+        if not self.active:
+            return
 
         for edge in self.lower_edges:
             child = edge.higher_node
@@ -149,7 +169,7 @@ class Node(Base):
                     wallet.transfer(child, foo)
 
             if recurse:
-                child.do_transfer(commit, recurse)
+                child.do_propogate_funds(commit, recurse)
 
 
 class Policy(Node):
@@ -182,6 +202,7 @@ class Player(Base):
         self.id = default_uuid()
         self.name = name
         self.leak = 0.0
+        self.max_outflow = 0.0
 
         # create a wallet for the player
         w = Wallet(self, 0.0)
@@ -207,6 +228,14 @@ class Player(Base):
         # Do we already fund this node? If so change value
         f = db_session.query(Fund).filter(Fund.node == node,
                                           Fund.player == self).one_or_none()
+        # check we are not exceeding our max fund outflow rate
+        tmp_rate = self.current_outflow
+        if f is not None:
+            tmp_rate -= f.rate
+        tmp_rate += rate
+        if tmp_rate > self.max_outflow:
+            raise ValueError, "Exceeded max outflow rate"
+
         if f is not None:
             f.rate = rate
             if rate == 0.0:
@@ -215,7 +244,11 @@ class Player(Base):
         else: # create new fund link
             f = Fund(self, node, rate)
             db_session.add(f)
-            
+
+    @property
+    def current_outflow(self):
+        funds = db_session.query(Fund).filter(Fund.player == self).all()
+        return sum([fund.rate for fund in funds])
 
     def transfer_funds(self):
         for fund in self.funds:
@@ -284,3 +317,10 @@ class Edge(Base):
         self.lower_node = n1
         self.higher_node = n2
         self.weight = weight
+
+    @property
+    def current_flow(self):
+        if self.lower_node.active \
+                and self.weight <= self.lower_node.balance:
+            return self.weight
+        return 0.0
