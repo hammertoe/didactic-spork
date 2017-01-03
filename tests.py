@@ -902,6 +902,12 @@ class GameNetworkTests(unittest.TestCase):
 
             print
 
+        for node in [n2, n5, n6]:
+            print node.name
+            print "----"
+            for wallet in node.wallets:
+                print "{:.2f} {}".format(wallet.balance, wallet.owner.name)
+            print
 
 if __name__ == '__main__':
     unittest.main()
