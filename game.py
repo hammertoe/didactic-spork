@@ -19,7 +19,8 @@ class Game:
             node.do_leak()
 
     def do_propogate_funds(self):
-        for node in db_session.query(Node).order_by(Node.id).all():
+        nodes = db_session.query(Node).all()
+        for node in sorted(nodes, key=lambda n: n.rank):
             node.do_propogate_funds()
 
     def do_replenish_budget(self):

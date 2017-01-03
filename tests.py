@@ -371,7 +371,6 @@ class GameNetworkTests(unittest.TestCase):
 
         l1.weight = 30.0
         self.assertTrue(po1.active)
-        import pdb; pdb.set_trace()
         self.assertTrue(po2.active)
 
     def testTwoPlayersFundPolicy(self):
@@ -865,6 +864,43 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(30, db_session.query(Policy).count())
         self.assertEqual(6, db_session.query(Goal).count())
         
+
+    def testNetworkPropogation(self):
+        p1 = self.game.add_player('A')
+        p1.balance = 1000
+        p2 = self.game.add_player('B')
+        p2.balance = 1000
+        n1 = self.game.add_policy('C', 0.0)
+        n1.activation = 20.0
+        n2 = self.game.add_policy('D', 0.0)
+        n3 = self.game.add_policy('E', 0.0)
+        n4 = self.game.add_policy('F', 0.0)
+        n4.max_level = 30.0
+        n5 = self.game.add_policy('G', 0.0)
+        n6 = self.game.add_policy('H', 0.0)
+
+        p1.fund(n1, 20.0)
+        p1.fund(n3, 10.0)
+        p2.fund(n3, 10.0)
+        p2.fund(n4, 10.0)
+        p2.fund(n6, 10.0)
+
+        l1 = self.game.add_link(n1, n2, 5.0)
+        l2 = self.game.add_link(n3, n5, 5.0)
+        l1 = self.game.add_link(n3, n4, 5.0)
+        l1 = self.game.add_link(n4, n5, 5.0)
+
+        
+        for i in range(10):
+            self.game.do_inject_funds()
+            self.game.do_propogate_funds()
+
+            nodes = db_session.query(Node).all()
+            for node in sorted(nodes, key=lambda n: n.rank):
+                print node.rank, node.name, node.balance
+
+
+            print
 
 
 if __name__ == '__main__':

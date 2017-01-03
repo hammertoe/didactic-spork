@@ -171,6 +171,14 @@ class Node(Base):
             if recurse:
                 child.do_propogate_funds(commit, recurse)
 
+    @property
+    def rank(self):
+        rank = len(self.funded_by)
+        for parent in self.parents():
+            rank += parent.rank + 1
+
+        return rank
+
 
 class Policy(Node):
 
