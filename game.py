@@ -28,13 +28,8 @@ class Game:
         for player in db_session.query(Player).all():
             player.balance = self.coins_per_budget_cycle
 
-    def do_inject_funds(self):
-        for player in db_session.query(Player).all():
-            player.transfer_funds()
-
     def tick(self):
         self.do_leak()
-        self.do_inject_funds()
         self.do_propogate_funds()
 
     def add_player(self, name):

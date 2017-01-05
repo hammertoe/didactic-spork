@@ -92,7 +92,7 @@ class Node(Base):
             amount = edge.weight
 
             total = self.balance
-            for wallet in self.wallets:
+            for wallet in self.wallets_here:
                 foo = (wallet.balance / total) * amount
                 if foo > 0.0 and foo <= wallet.balance:
                     wallet.transfer(child, foo)
@@ -102,7 +102,7 @@ class Node(Base):
 
     @property
     def rank(self):
-        rank = len(self.funded_by)
+        rank = len(self.parents())
         for parent in self.parents():
             rank += parent.rank + 1
 
