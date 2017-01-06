@@ -7,9 +7,10 @@ if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
 from database import clear_db, init_db, db_session
-from models import Edge, Node, Player, Goal, Policy, Wallet, Fund
+from models import Node, Player, Goal, Policy, Wallet, Edge
 
 class GameNetworkTests(unittest.TestCase):
+
 
     def setUp(self):
         utils.random.seed(0)
@@ -18,6 +19,31 @@ class GameNetworkTests(unittest.TestCase):
  
     def tearDown(self):
         clear_db()
+
+    def testRefactorLinks(self):
+        p1 = Player('Player 1')
+        n1 = Policy('Policy A', leak=1.0)
+        g1 = Goal('Goal B', leak=1.0)
+        w1 = Wallet(p1)
+        w2 = Wallet(p1)
+        
+        l1 = Edge(p1, n1, 1)
+        l2 = Edge(n1, g1, 1)
+
+        n1.wallets_here.append(w1)
+        p1.wallets_here.append(w2)
+
+        db_session.add_all([p1, n1, g1, l1, l2, w1, w2])
+
+        self.assertEquals(len(p1.wallets_owned), 3)
+        self.assertIn(w1, p1.wallets_owned)
+        self.assertIn(w2, p1.wallets_owned)
+        self.assertEquals(w1.location, n1)
+
+        self.assertEquals(w2.location, p1)
+        self.assertEquals(w2.owner, p1)
+
+        self.assertIn(p1.wallets_here[0], p1.wallets_owned)
 
     def testAddPlayer(self):
 
@@ -53,10 +79,10 @@ class GameNetworkTests(unittest.TestCase):
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         p1 = self.game.add_player('Matt')
         w1 = Wallet(p1)
-        po1.wallets = [w1,]
+        po1.wallets_here.append(w1)
 
         self.assertEqual(w1.location, po1)
-        self.assertEqual(po1.wallets, [w1,])
+        self.assertEqual(po1.wallets_here, [w1,])
 
 
     def testAddGoal(self):
@@ -71,11 +97,10 @@ class GameNetworkTests(unittest.TestCase):
         g = self.game.add_goal('World Peace', 0.5)
         p1 = self.game.add_player('Matt')
         w1 = Wallet(p1)
-        g.wallets.append(w1)
+        g.wallets_here.append(w1)
 
         self.assertEqual(w1.location, g)
-        self.assertEqual(g.wallets, [w1,])
-
+        self.assertEqual(g.wallets_here, [w1,])
 
     def testModifyPolicies(self):
 
@@ -114,22 +139,21 @@ class GameNetworkTests(unittest.TestCase):
 
         w1 = self.game.add_wallet(p1, 5.0)
         self.assertEqual(n1.balance, 0)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
         self.assertEqual(n1.balance, 5.0)
 
         w2 = self.game.add_wallet(p1, 10.0)
         self.assertEqual(n1.balance, 5.0)
-        n1.wallets.append(w2)
+        n1.wallets_here.append(w2)
         self.assertEqual(n1.balance, 15.0)
-
 
     def testNodeLeak100(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets.append(w2)
+        n1.wallets_here.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -141,9 +165,9 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 0.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets.append(w2)
+        n1.wallets_here.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -155,9 +179,9 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 0.2)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
         w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets.append(w2)
+        n1.wallets_here.append(w2)
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -187,7 +211,7 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 100)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
 
         n2 = self.game.add_policy('Policy 2', 1.0)
 
@@ -217,12 +241,11 @@ class GameNetworkTests(unittest.TestCase):
 
         self.assertEqual(db_session.query(Wallet).count(), 2)
 
-
     def testTransferToWalletInsufficientFunds(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.add_player('Matt')
         w1 = self.game.add_wallet(p1, 100)
-        n1.wallets.append(w1)
+        n1.wallets_here.append(w1)
         n2 = self.game.add_policy('Policy 2', 1.0)
 
         self.assertAlmostEqual(n1.balance, 100.0)
@@ -248,7 +271,7 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p1.balance, 1000.0)
         self.assertEqual(n1.balance, 0.0)
 
-        p1.fund(n1, 100)
+        self.game.add_fund(p1, n1, 100)
 
         p1.transfer_funds()
 
@@ -260,13 +283,13 @@ class GameNetworkTests(unittest.TestCase):
         p1.balance = 1000.0
         n1 = self.game.add_policy('Policy 1', 1.0)
 
-        p1.fund(n1, 60)
+        self.game.add_fund(p1, n1, 60)
         p1.transfer_funds()
 
         self.assertEqual(p1.balance, 940.0)
         self.assertEqual(n1.balance, 60.0)
 
-        p1.fund(n1, 80)
+        self.game.add_fund(p1, n1, 80)
         p1.transfer_funds()
 
         self.assertEqual(p1.balance, 860.0)
@@ -277,13 +300,13 @@ class GameNetworkTests(unittest.TestCase):
         p1.balance = 1000.0
         n1 = self.game.add_policy('Policy 1', 1.0)
 
-        p1.fund(n1, 100)
+        self.game.add_fund(p1, n1, 100)
         p1.transfer_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
-        p1.fund(n1, 0)
+        self.game.add_fund(p1, n1, 0)
         # needed to get delete to show
         db_session.commit()
         p1.transfer_funds()
@@ -291,24 +314,24 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
-        self.assertEqual(len(p1.funds), 0)
+        self.assertEqual(len(p1.children()), 0)
 
     def testPlayerCurrentOutflow(self):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
-        p1.fund(po1, 10)
+        self.game.add_fund(p1, po1, 10)
         po2 = self.game.add_policy('Policy 2', 1.0)
-        p1.fund(po2, 20)
+        self.game.add_fund(p1, po2, 20)
         po3 = self.game.add_policy('Policy 3', 1.0)
-        p1.fund(po3, 30)
+        self.game.add_fund(p1, po3, 30)
 
         self.assertEqual(p1.current_outflow, 60)
 
-        p1.fund(po3, 10)
+        self.game.add_fund(p1, po3, 10)
         self.assertEqual(p1.current_outflow, 40)
 
-        p1.fund(po2, 0)
+        self.game.add_fund(p1, po2, 0)
         self.assertEqual(p1.current_outflow, 20)
 
     def testPlayerMaxOutflow(self):
@@ -319,17 +342,17 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
-        p1.fund(po1, 10)
+        self.game.add_fund(p1, po1, 10)
         po2 = self.game.add_policy('Policy 2', 1.0)
-        p1.fund(po2, 20)
+        self.game.add_fund(p1, po2, 20)
         po3 = self.game.add_policy('Policy 3', 1.0)
 
         with self.assertRaises(ValueError):
-            p1.fund(po3, 80)
+            self.game.add_fund(p1, po3, 80)
 
         self.assertEqual(p1.current_outflow, 30)
 
-        p1.fund(po3, 70)
+        self.game.add_fund(p1, po3, 70)
         self.assertEqual(p1.current_outflow, 100)
 
     def testNodeActivationFromPlayer(self):
@@ -339,7 +362,7 @@ class GameNetworkTests(unittest.TestCase):
         po1.activation = 2.0
 
         self.assertFalse(po1.active)
-        p1.fund(po1, 10.0)
+        self.game.add_fund(p1, po1, 10.0)
         
         self.assertTrue(po1.active)
 
@@ -357,21 +380,21 @@ class GameNetworkTests(unittest.TestCase):
 
         self.assertFalse(po1.active)
 
-        p1.fund(po1, 10.0)
+        self.game.add_fund(p1, po1, 10.0)
         for x in range(5):
-            self.game.do_inject_funds()
             self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
         self.assertFalse(po2.active)
 
-        p1.fund(po1, 20.0)
+        self.game.add_fund(p1, po1, 20.0)
         self.assertTrue(po1.active)
         self.assertFalse(po2.active)
 
         l1.weight = 30.0
         self.assertTrue(po1.active)
         self.assertTrue(po2.active)
+
 
     def testTwoPlayersFundPolicy(self):
         p1 = self.game.add_player('Matt')
@@ -380,8 +403,8 @@ class GameNetworkTests(unittest.TestCase):
         p2.balance = 1000.0
         n1 = self.game.add_policy('Policy 1', 1.0)
 
-        p1.fund(n1, 100)
-        p2.fund(n1, 90)
+        self.game.add_fund(p1, n1, 100)
+        self.game.add_fund(p2, n1, 90)
         p1.transfer_funds()
         p2.transfer_funds()
 
@@ -389,7 +412,7 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p2.balance, 910.0)
         self.assertEqual(n1.balance, 190.0)
 
-        self.assertEqual(len(n1.funded_by), 2)
+        self.assertEqual(len(n1.parents()), 2)
 
     def testGameTransferFunds(self):
         p1 = self.game.add_player('Matt')
@@ -401,18 +424,18 @@ class GameNetworkTests(unittest.TestCase):
     
         n1 = self.game.add_policy('Policy 1', 1.0)
 
-        p1.fund(n1, 10)
-        p2.fund(n1, 20)
-        p3.fund(n1, 50)
+        self.game.add_fund(p1, n1, 10)
+        self.game.add_fund(p2, n1, 20)
+        self.game.add_fund(p3, n1, 50)
 
-        self.game.do_inject_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 990.0)
         self.assertEqual(p2.balance, 980.0)
         self.assertEqual(p3.balance, 950.0)
         self.assertEqual(n1.balance, 80.0)
 
-        self.assertEqual(len(n1.funded_by), 3)
+        self.assertEqual(len(n1.parents()), 3)
 
     def testGameTransferFundsComplex(self):
         p1 = self.game.add_player('Matt')
@@ -425,14 +448,14 @@ class GameNetworkTests(unittest.TestCase):
         n1 = self.game.add_policy('Policy 1', 1.0)
         n2 = self.game.add_policy('Policy 2', 1.0)
 
-        p1.fund(n1, 10)
-        p2.fund(n1, 20)
-        p3.fund(n1, 50)
+        self.game.add_fund(p1, n1, 10)
+        self.game.add_fund(p2, n1, 20)
+        self.game.add_fund(p3, n1, 50)
 
-        p2.fund(n2, 50)
-        p3.fund(n2, 40)
+        self.game.add_fund(p2, n2, 50)
+        self.game.add_fund(p3, n2, 40)
 
-        self.game.do_inject_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 990.0)
         self.assertEqual(p2.balance, 930.0)
@@ -440,8 +463,8 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n1.balance, 80.0)
         self.assertEqual(n2.balance, 90.0)
 
-        self.assertEqual(len(n1.funded_by), 3)
-        self.assertEqual(len(n2.funded_by), 2)
+        self.assertEqual(len(n1.parents()), 3)
+        self.assertEqual(len(n2.parents()), 2)
 
 
     def testAllocateFundsMultiplePolicies(self):
@@ -460,15 +483,14 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n1.balance, 0.0)
         self.assertEqual(n2.balance, 0.0)
 
-        p1.fund(n1, 10)
-        p1.fund(n2, 30)
+        self.game.add_fund(p1, n1, 10)
+        self.game.add_fund(p1, n2, 30)
 
         p1.transfer_funds()
 
         self.assertEqual(p1.balance, 960.0)
         self.assertEqual(n1.balance, 10.0)
         self.assertEqual(n2.balance, 30.0)
-
 
     def testGameLeak100(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
@@ -629,7 +651,7 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 50)
+        self.game.add_fund(p1, po1, 50)
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
@@ -640,17 +662,47 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(p1.balance, 940)
         self.assertEqual(po1.balance, 60)
 
+    def testTransferPartialFunds(self):
+        p1 = self.game.add_player('Matt')
+        p1.balance = 1000
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        self.game.add_fund(p1, po1, 100.0)
+
+        g1 = self.game.add_goal('World Peace', 1.0)
+        l1 = self.game.add_link(po1, g1, 1.0)
+
+        self.game.do_propogate_funds()
+        
+        self.assertEqual(p1.balance, 900)
+        self.assertEqual(po1.balance, 99.0)
+        self.assertEqual(g1.balance, 1.0)
+
+    def testTransferFullFunds(self):
+        p1 = self.game.add_player('Matt')
+        p1.balance = 1000
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        self.game.add_fund(p1, po1, 100.0)
+
+        g1 = self.game.add_goal('World Peace', 1.0)
+        l1 = self.game.add_link(po1, g1, 2.0)
+
+        self.game.do_propogate_funds()
+        
+        self.assertEqual(p1.balance, 900)
+        self.assertEqual(po1.balance, 98.0)
+        self.assertEqual(g1.balance, 2.0)
+        
+
     def testTransferGreaterThan100_300(self):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 3.0)
+        self.game.add_fund(p1, po1, 3.0)
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
 
         for x in range(50):
-            self.game.do_inject_funds()
             self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 850)
@@ -661,98 +713,88 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 1.0)
+        self.game.add_fund(p1, po1, 1.0)
 
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
         
         self.assertEqual(p1.balance, 999)
-        self.assertEqual(po1.balance, 1.0)
-        self.assertEqual(g1.balance, 0.0)
+        self.assertEqual(po1.balance, 0.0)
+        self.assertEqual(g1.balance, 1.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 998)
         self.assertEqual(po1.balance, 0.0)
         self.assertEqual(g1.balance, 2.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 997)
-        self.assertEqual(po1.balance, 1.0)
-        self.assertEqual(g1.balance, 2.0)
+        self.assertEqual(po1.balance, 0.0)
+        self.assertEqual(g1.balance, 3.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 996)
         self.assertEqual(po1.balance, 0.0)
         self.assertEqual(g1.balance, 4.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 995)
-        self.assertEqual(po1.balance, 1.0)
-        self.assertEqual(g1.balance, 4.0)
+        self.assertEqual(po1.balance, 0.0)
+        self.assertEqual(g1.balance, 5.0)
         
     def testTransferFastFunds(self):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 3.0)
+        self.game.add_link(p1, po1, 3.0)
 
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
         
         self.assertEqual(p1.balance, 997)
         self.assertEqual(po1.balance, 2.0)
         self.assertEqual(g1.balance, 1.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 994)
         self.assertEqual(po1.balance, 4.0)
         self.assertEqual(g1.balance, 2.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 991)
         self.assertEqual(po1.balance, 6.0)
         self.assertEqual(g1.balance, 3.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 988)
         self.assertEqual(po1.balance, 8.0)
         self.assertEqual(g1.balance, 4.0)
 
-        self.game.do_inject_funds()
         self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 985)
         self.assertEqual(po1.balance, 10.0)
         self.assertEqual(g1.balance, 5.0)
         
-        
+
     def testMoreComplexPlayerCoinsNetwork(self):
         p1 = self.game.add_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 0.5)
+        self.game.add_fund(p1, po1, 0.5)
         po2 = self.game.add_policy('Pollution control', 0.1)
-        p1.fund(po2, 1.0)
+        self.game.add_fund(p1, po2, 1.0)
 
         g1 = self.game.add_goal('World Peace', 0.5)
         g2 = self.game.add_goal('Clean Water', 0.5)
@@ -763,7 +805,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(po1.balance, 0)
 
         for x in range(100):
-            self.game.do_inject_funds()
             self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 850)
@@ -777,9 +818,9 @@ class GameNetworkTests(unittest.TestCase):
         p1 = self.game.add_player('Matt')
         p1.balance = 5000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 10.0)
+        self.game.add_fund(p1, po1, 10.0)
         po2 = self.game.add_policy('Pollution control', 0.1)
-        p1.fund(po2, 15.0)
+        self.game.add_fund(p1, po2, 15.0)
 
         g1 = self.game.add_goal('World Peace', 0.5)
         g2 = self.game.add_goal('Clean Water', 0.5)
@@ -805,13 +846,12 @@ class GameNetworkTests(unittest.TestCase):
         p2 = self.game.add_player('Simon')
         p2.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 1.0)
-        p2.fund(po1, 1.0)
+        self.game.add_fund(p1, po1, 1.0)
+        self.game.add_fund(p2, po1, 1.0)
 
         self.assertEqual(po1.balance, 0)
 
         for x in range(100):
-            self.game.do_inject_funds()
             self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900)
@@ -822,10 +862,11 @@ class GameNetworkTests(unittest.TestCase):
 
     def testActivationLevelLow(self):
         p1 = self.game.add_player('Matt')
+        p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        po1.activation = 0.7
+        po1.activation = 6.0
         g1 = self.game.add_goal('World Peace', 0.5)
-        p1.fund(po1, 0.5)
+        self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
@@ -833,9 +874,9 @@ class GameNetworkTests(unittest.TestCase):
         for x in range(100):
             self.game.do_propogate_funds()
 
-        self.assertEqual(p1.balance, 956)
-        self.assertEqual(po1.balance, 44)
-        self.assertEqual(g1.balance, 0)
+        self.assertEqual(p1.balance, 500.0)
+        self.assertEqual(po1.balance, 500.0)
+        self.assertEqual(g1.balance, 0.0)
 
     def testActivationLevelHigh(self):
         p1 = self.game.add_player('Matt')
@@ -843,72 +884,17 @@ class GameNetworkTests(unittest.TestCase):
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         po1.activation = 0.2
         g1 = self.game.add_goal('World Peace', 0.5)
-        p1.fund(po1, 5.0)
+        self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
 
         for x in range(100):
-            self.game.do_inject_funds()
             self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 500)
-        self.assertEqual(po1.balance, 0)
-        self.assertEqual(g1.balance, 45)
-
-    def testLoadJsonFile(self):
-        json_file = open('example-graph.json', 'r')
-        self.game.load_json(json_file)
-        self.assertEqual(61, db_session.query(Edge).count())
-        self.assertEqual(36, db_session.query(Node).count())
-        self.assertEqual(30, db_session.query(Policy).count())
-        self.assertEqual(6, db_session.query(Goal).count())
-        
-
-    def testNetworkPropogation(self):
-        p1 = self.game.add_player('A')
-        p1.balance = 1000
-        p2 = self.game.add_player('B')
-        p2.balance = 1000
-        n1 = self.game.add_policy('C', 0.0)
-        n1.activation = 20.0
-        n2 = self.game.add_policy('D', 0.0)
-        n3 = self.game.add_policy('E', 0.0)
-        n4 = self.game.add_policy('F', 0.0)
-        n4.max_level = 30.0
-        n5 = self.game.add_policy('G', 0.0)
-        n6 = self.game.add_policy('H', 0.0)
-
-        p1.fund(n1, 20.0)
-        p1.fund(n3, 10.0)
-        p2.fund(n3, 10.0)
-        p2.fund(n4, 10.0)
-        p2.fund(n6, 10.0)
-
-        l1 = self.game.add_link(n1, n2, 5.0)
-        l2 = self.game.add_link(n3, n5, 5.0)
-        l1 = self.game.add_link(n3, n4, 5.0)
-        l1 = self.game.add_link(n4, n5, 5.0)
-
-        
-        for i in range(10):
-            self.game.do_inject_funds()
-            self.game.do_propogate_funds()
-
-            nodes = db_session.query(Node).all()
-            for node in sorted(nodes, key=lambda n: n.rank):
-                print node.rank, node.name, node.balance
-
-
-            print
-
-        for node in [n2, n5, n6]:
-            print node.name
-            print "----"
-            for wallet in node.wallets:
-                print "{:.2f} {}".format(wallet.balance, wallet.owner.name)
-            print
+        self.assertEqual(po1.balance, 400)
+        self.assertEqual(g1.balance, 100)
 
 if __name__ == '__main__':
     unittest.main()
-
