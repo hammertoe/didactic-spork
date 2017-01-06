@@ -2,8 +2,7 @@ import json
 import random
 
 from database import db_session
-from models2 import Node, Player, Policy, Goal, Edge, Wallet
-#from models import Fund
+from models import Node, Player, Policy, Goal, Edge, Wallet
 
 class Game:
 
