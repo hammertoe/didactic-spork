@@ -67,9 +67,7 @@ class Game:
         return db_session.query(Edge).filter(Edge.id == id).one()
 
     def add_fund(self, player, node, amount):
-        f = Fund(player, node, amount)
-        db_session.add(f)
-        return f
+        return player.fund(node, amount)
 
     def get_fund(self, id):
         return db_session.query(Fund).filter(Fund.id == id).one()

@@ -51,7 +51,8 @@ class Node(Base):
     def current_outflow(self):
         if not self.active:
             return 0.0
-        return sum([x.weight for x in self.lower_edges])
+        total = sum([x.weight for x in self.lower_edges])
+        return total if total < self.balance else self.balance
 
     @property
     def current_inflow(self):
@@ -82,7 +83,7 @@ class Node(Base):
         return wallet
     
     
-    def do_propogate_funds(self, recurse=False):
+    def do_propogate_funds(self):
         # Check activation
         if not self.active:
             return
@@ -91,14 +92,16 @@ class Node(Base):
             child = edge.higher_node
             amount = edge.weight
 
+            # if the amount is greater than the balance, then
+            # transfer what we can.
+            if amount > self.balance:
+                amount = self.balance
+
             total = self.balance
             for wallet in self.wallets_here:
-                foo = (wallet.balance / total) * amount
-                if foo > 0.0 and foo <= wallet.balance:
-                    wallet.transfer(child, foo)
-
-            if recurse:
-                child.do_propogate_funds(commit, recurse)
+                subamount = (wallet.balance / total) * amount
+                if subamount > 0.0 and subamount <= wallet.balance:
+                    wallet.transfer(child, subamount)
 
     @property
     def rank(self):
@@ -223,10 +226,7 @@ class Edge(Base):
 
     @property
     def current_flow(self):
-        if self.lower_node.active \
-                and self.weight <= self.lower_node.balance:
-            return self.weight
-        return 0.0
+        return self.lower_node.current_outflow
 
 
 class Wallet(Base):
