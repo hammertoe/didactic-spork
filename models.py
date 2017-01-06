@@ -21,7 +21,7 @@ class Base(object):
 
 class Node(Base):
 
-    discriminator = Column(String)
+    discriminator = Column(String(32))
     __mapper_args__ = {"polymorphic_on": discriminator}
     id = Column(String(36),
                 primary_key=True, default=default_uuid)
