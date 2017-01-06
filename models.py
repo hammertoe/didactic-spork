@@ -182,7 +182,7 @@ class Player(Node):
             f.weight = rate
             if rate == 0.0:
                 # if we set funding level to 0 then delete fund link
-                db_session.delete(f)
+                self.lower_edges.remove(f)
         else: # create new fund link
             f = Edge(self, node, rate)
             db_session.add(f)

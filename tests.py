@@ -6,19 +6,41 @@ import utils
 if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
-from database import clear_db, init_db, db_session
+from database import clear_db, init_db, db_session, engine
 from models import Node, Player, Goal, Policy, Wallet, Edge
+
+from sqlalchemy import event
+
+@event.listens_for(engine, "connect")
+def do_connect(dbapi_connection, connection_record):
+    # disable pysqlite's emitting of the BEGIN statement entirely.
+    # also stops it from emitting COMMIT before any DDL.
+    dbapi_connection.isolation_level = None
+
+@event.listens_for(engine, "begin")
+def do_begin(conn):
+    # emit our own BEGIN
+    conn.execute("BEGIN")
 
 class GameNetworkTests(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        db_session.begin(subtransactions=True)
+        init_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        db_session.rollback()
+        db_session.close()
 
     def setUp(self):
+        db_session.begin_nested()
         utils.random.seed(0)
-        init_db()
         self.game = Game()
- 
+
     def tearDown(self):
-        clear_db()
+        db_session.rollback()
 
     def testRefactorLinks(self):
         p1 = Player('Player 1')
@@ -307,8 +329,6 @@ class GameNetworkTests(unittest.TestCase):
         self.assertEqual(n1.balance, 100.0)
 
         self.game.add_fund(p1, n1, 0)
-        # needed to get delete to show
-        db_session.commit()
         p1.transfer_funds()
 
         self.assertEqual(p1.balance, 900.0)
