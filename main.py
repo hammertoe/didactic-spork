@@ -19,16 +19,20 @@ import socket
 
 from flask import Flask, request
 
+os.environ['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:foobar@104.199.96.2:3306/freeicecream'
+
 from database import db_session
-from models import Node
+from game import Game
 
 app = Flask(__name__)
 
-@app.route('/')
-def index():
+@app.route('/tick')
+def tick():
 
-    results = [ n.id for n in Node.query.all() ]
-    output = 'node ids:\n{}'.format('\n'.join(results))
+    game = Game()
+    game.tick()
+
+    output = "tick!"
 
     return output, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 # [END example]
