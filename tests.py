@@ -6,10 +6,13 @@ import utils
 if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
     os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from game import Game
-from database import clear_db, init_db, db_session, engine
 from models import Node, Player, Goal, Policy, Wallet, Edge
-
 from sqlalchemy import event
+
+from database import app, db, init_db
+
+db_session = db.session
+engine = db.engine
 
 @event.listens_for(engine, "connect")
 def do_connect(dbapi_connection, connection_record):

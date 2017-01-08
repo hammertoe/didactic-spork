@@ -16,7 +16,8 @@ from flask import Flask
 
 app = Flask('didactic_spork')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
-db = SQLAlchemy(app)
+app.config['SQLALCHEMY_ECHO'] = True
+db = SQLAlchemy(app, session_options={'autoflush':False})
 
 def default_uuid():
     return str(uuid())
@@ -27,10 +28,11 @@ def init_db():
     # they will be registered properly on the metadata.  Otherwise
     # you will have to import them first before calling init_db()
     import models
-    models.Base.metadata.create_all(bind=engine)
+    db.create_all()
+    db.session.flush()
 
 def clear_db():
     import models
-    db_session.rollback()
-    models.Base.metadata.drop_all(bind=engine)
+    db.session.rollback()
+    db.drop_all()
 
