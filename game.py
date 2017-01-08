@@ -1,8 +1,11 @@
 import json
 import random
 
-from database import db_session
+#from database import db_session
+from database import db
 from models import Node, Player, Policy, Goal, Edge, Wallet
+
+db_session = db.session
 
 class Game:
 

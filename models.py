@@ -5,11 +5,13 @@ from sqlalchemy import Column, Integer, String, ForeignKey, \
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
-from database import db_session
 from database import default_uuid
+
+from database import db
 
 from utils import random
 
+db_session = db.session
 
 @as_declarative()
 class Base(object):
