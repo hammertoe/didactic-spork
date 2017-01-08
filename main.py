@@ -19,8 +19,6 @@ import socket
 
 from flask import Flask, request
 
-os.environ['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:foobar@104.199.96.2:3306/freeicecream'
-
 from database import db_session
 from game import Game
 
