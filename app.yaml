@@ -11,7 +11,7 @@ threadsafe: yes
 handlers:
 
 - url: (.*)
-  script: main.app
+  script: gameserver.app.app
 
 
 libraries:

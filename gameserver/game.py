@@ -2,8 +2,8 @@ import json
 import random
 
 #from database import db_session
-from database import db
-from models import Node, Player, Policy, Goal, Edge, Wallet
+from gameserver.database import db
+from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet
 
 db_session = db.session
 
@@ -34,11 +34,14 @@ class Game:
         self.do_leak()
         self.do_propogate_funds()
 
-    def add_player(self, name):
+    def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
         db_session.add(p)
         return p
+
+    def get_players(self):
+        return db_session.query(Player).all()
 
     def get_player(self, id):
         return db_session.query(Player).filter(Player.id == id).one()

@@ -8,20 +8,11 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
-#engine = create_engine(os.environ['SQLALCHEMY_DATABASE_URI'], convert_unicode=True, echo=False)
-#db_session = scoped_session(sessionmaker(autocommit=False,
-#                                         autoflush=True,
-#                                         bind=engine))
 
-
-app = Flask('didactic_spork')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+db = SQLAlchemy()
 
 def default_uuid():
     return str(uuid())
-
 
 def init_db():
     # import all modules here that might define models so that
