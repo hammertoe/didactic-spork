@@ -1,5 +1,3 @@
-import enum
-
 from sqlalchemy import Column, Integer, String, ForeignKey, \
     Float, create_engine
 from sqlalchemy.orm import relationship, sessionmaker, backref
