@@ -18,11 +18,11 @@ import os
 import socket
 
 from flask import Flask, request
+from flask_sqlalchemy import SQLAlchemy
 
-from database import db_session
+from database import app, db
+
 from game import Game
-
-app = Flask(__name__)
 
 @app.route('/tick')
 def tick():
