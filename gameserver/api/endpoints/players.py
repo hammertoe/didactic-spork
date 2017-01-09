@@ -9,9 +9,15 @@ from gameserver.models import Player
 from gameserver.api.restplus import api
 from gameserver.api.serializers import player
 
+from gameserver.database import db
+
+db_session = db.session
+
 log = logging.getLogger(__name__)
 
 ns = api.namespace('players', description='Operations related to players')
+
+game = Game()
 
 @ns.route('/')
 class PlayerCollection(Resource):
@@ -19,20 +25,21 @@ class PlayerCollection(Resource):
     @api.marshal_list_with(player)
     def get(self):
         """
-        Returns list of blog categories.
+        Returns list of players.
         """
-        players = Game().get_players()
+        players = game.get_players()
         return players
 
-    @api.response(201, 'Category successfully created.')
+    @api.response(201, 'Player successfully created.')
     @api.expect(player)
     def post(self):
         """
-        Creates a new blog category.
+        Creates a new game player.
         """
         data = request.json
-        p1 = Game().add_player(data['name'])
-        return p1.id, 201
+        player = game.create_player(data['name'])
+        db_session.commit()
+        return player.id, 201
 
 
 
