@@ -21,8 +21,4 @@ def init_db():
     import models
     models.Base.metadata.create_all(bind=db.engine)
 
-def clear_db():
-    import models
-    db.session.rollback()
-    models.Base.metadata.drop_all(bind=db.engine)
 
