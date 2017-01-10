@@ -21,7 +21,6 @@ def configure_app(flask_app):
     flask_app.config['ERROR_404_HELP'] = settings.RESTPLUS_ERROR_404_HELP
     flask_app.config['DEBUG'] = True
 
-
 def initialize_app(flask_app):
     configure_app(flask_app)
 

@@ -3,13 +3,17 @@ import os
 import random
 import utils
 
-if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
-    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
-from game import Game
-from models import Node, Player, Goal, Policy, Wallet, Edge
+#if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
+#    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+from gameserver.game import Game
+from gameserver.models import Node, Player, Goal, Policy, Wallet, Edge
 from sqlalchemy import event
 
-from gameserver.database import app, db, init_db
+from gameserver.database import db
+from gameserver.app import app, create_app
+from flask_testing import TestCase
+
+db.app = app
 
 db_session = db.session
 engine = db.engine
@@ -25,12 +29,19 @@ def do_begin(conn):
     # emit our own BEGIN
     conn.execute("BEGIN")
 
-class GameNetworkTests(unittest.TestCase):
+class GameNetworkTests(TestCase):
+
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
+    TESTING = True
+
+    def create_app(self):
+        # pass in test configuration
+        return app
 
     @classmethod
     def setUpClass(cls):
         db_session.begin(subtransactions=True)
-        init_db()
+        db.create_all()
 
     @classmethod
     def tearDownClass(cls):
@@ -44,7 +55,7 @@ class GameNetworkTests(unittest.TestCase):
 
     def tearDown(self):
         db_session.rollback()
-
+        
     def testRefactorLinks(self):
         p1 = Player('Player 1')
         n1 = Policy('Policy A', leak=1.0)
