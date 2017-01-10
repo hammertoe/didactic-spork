@@ -25,7 +25,7 @@ class Node(Base):
     id = Column(String(36),
                 primary_key=True, default=default_uuid)
 
-    name = Column(String(100))
+    name = Column(String(200))
     leak = Column(Float)
     node_type = Column(String(10))
     activation = Column(Float)
