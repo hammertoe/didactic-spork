@@ -4,8 +4,11 @@ python:
 cache: pip
 install: 
  - pip install -r requirements.txt
+ - pip install coveralls
 # command to run tests
 script:
  - PYTHONPATH=${PYTHONPATH}:. python gameserver/tests.py
 notifications:
-  slack: quernus:FSJYjitrzrSX83EAcD8MyNuE
+ - slack: quernus:FSJYjitrzrSX83EAcD8MyNuE
+after_success:
+ - coveralls
