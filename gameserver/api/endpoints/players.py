@@ -40,7 +40,7 @@ class PlayerCollection(Resource):
         data = request.json
         player = game.create_player(data['name'])
         db_session.commit()
-        return player.id, 201
+        return dict(id=player.id), 201
 
 
 @ns.route('/<string:id>')
@@ -51,8 +51,8 @@ class Player(Resource):
     @api.response(200, 'Success')
     @api.marshal_with(player_get)
     def get(self, id):
-        """                                                                                                                                                                            
-        Returns the specified player.                                                                                                                                                       
+        """
+        Returns the specified player.
         """
         player = game.get_player(id)
         if not player:
