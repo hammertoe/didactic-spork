@@ -29,7 +29,7 @@ def do_begin(conn):
     # emit our own BEGIN
     conn.execute("BEGIN")
 
-class GameNetworkTests(TestCase):
+class DBTestCase(TestCase):
 
     SQLALCHEMY_DATABASE_URI = "sqlite://"
     TESTING = True
@@ -55,6 +55,8 @@ class GameNetworkTests(TestCase):
 
     def tearDown(self):
         db_session.rollback()
+
+class CoreGameTests(DBTestCase):
         
     def testRefactorLinks(self):
         p1 = Player('Player 1')
@@ -929,6 +931,8 @@ class GameNetworkTests(TestCase):
         self.assertEqual(p1.balance, 500)
         self.assertEqual(po1.balance, 400)
         self.assertEqual(g1.balance, 100)
+
+class DataLoadTests(DBTestCase):
 
     def testLoadJsonFile(self):
         json_file = open('example-graph.json', 'r')
