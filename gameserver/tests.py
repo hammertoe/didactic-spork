@@ -942,5 +942,11 @@ class DataLoadTests(DBTestCase):
         self.assertEqual(30, db_session.query(Policy).count())
         self.assertEqual(6, db_session.query(Goal).count())
 
+class RestAPITests(DBTestCase):
+
+    def testGetEmptyPlayersList(self):
+        response = self.client.get("/api/players/")
+        self.assertEquals(response.json, [])
+
 if __name__ == '__main__':
     unittest.main()
