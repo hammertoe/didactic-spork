@@ -1,6 +1,8 @@
+import json
 import unittest
 import os
 import random
+import time
 import utils
 
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
@@ -946,7 +948,52 @@ class RestAPITests(DBTestCase):
 
     def testGetEmptyPlayersList(self):
         response = self.client.get("/api/players/")
+        self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, [])
+
+    def testGetNonEmptyPlayersList(self):
+        names = ['Matt', 'Simon', 'Richard']
+        cp = self.game.create_player
+        players = [ cp(name) for name in names ]
+        data = [ dict(name=p.name, id=p.id) for p in players ]
+
+        response = self.client.get("/api/players/")
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json, data)
+
+    def testGetSpecificPlayer(self):
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+        response = self.client.get("/api/players/{}".format(id))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json, dict(name=name, id=id))
+
+    def testGetNonExistentPlayer(self):
+        response = self.client.get("/api/players/nobody")
+        self.assertEquals(response.status_code, 404)
+
+    def testCreateNewPlayer(self):
+        data = dict(name='Matt')
+        response = self.client.post("/api/players/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+        id = response.json['id']
+
+        player = self.game.get_player(id)
+        self.assertEquals(id, player.id)
+
+    def testCreateThenGetNewPlayer(self):
+        name = 'Matt {}'.format(time.time())
+        data = dict(name=name)
+        response = self.client.post("/api/players/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+        id = response.json['id']
+
+        response = self.client.get("/api/players/{}".format(id))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json, dict(name=name, id=id))
 
 if __name__ == '__main__':
     unittest.main()
