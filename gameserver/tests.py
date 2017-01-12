@@ -944,20 +944,29 @@ class DataLoadTests(DBTestCase):
         self.assertEqual(30, db_session.query(Policy).count())
         self.assertEqual(6, db_session.query(Goal).count())
 
+class GameTests(DBTestCase):
+    
+    def testGetNonexistantPlayer(self):
+        player = self.game.get_player('nonexistant')
+        self.assertIsNone(player)
+
 class RestAPITests(DBTestCase):
 
+    @unittest.skip("not implemented")
     def testGetEmptyPlayersList(self):
-        response = self.client.get("/api/players/")
+        response = self.client.get("/v1/players/")
+        import pdb; pdb.set_trace()
         self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, [])
 
+    @unittest.skip("not implemented")
     def testGetNonEmptyPlayersList(self):
         names = ['Matt', 'Simon', 'Richard']
         cp = self.game.create_player
         players = [ cp(name) for name in names ]
         data = [ dict(name=p.name, id=p.id) for p in players ]
 
-        response = self.client.get("/api/players/")
+        response = self.client.get("/v1/players/")
         self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, data)
 
@@ -965,35 +974,40 @@ class RestAPITests(DBTestCase):
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
-        response = self.client.get("/api/players/{}".format(id))
+        response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json, dict(name=name, id=id))
+        self.assertDictContainsSubset(dict(name=name, id=id), response.json)
+        self.assertFalse(response.json.has_key('token'))
 
     def testGetNonExistentPlayer(self):
-        response = self.client.get("/api/players/nobody")
+        response = self.client.get("/v1/players/nobody")
         self.assertEquals(response.status_code, 404)
 
     def testCreateNewPlayer(self):
         data = dict(name='Matt')
-        response = self.client.post("/api/players/", data=json.dumps(data),
+
+        response = self.client.post("/v1/players/", data=json.dumps(data),
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
+        token = response.json['token']
 
         player = self.game.get_player(id)
         self.assertEquals(id, player.id)
+        self.assertEquals(token, player.token)
 
     def testCreateThenGetNewPlayer(self):
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
-        response = self.client.post("/api/players/", data=json.dumps(data),
+        response = self.client.post("/v1/players/", data=json.dumps(data),
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
 
-        response = self.client.get("/api/players/{}".format(id))
+        response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json, dict(name=name, id=id))
+        self.assertDictContainsSubset(dict(name=name, id=id), response.json)
+        self.assertFalse(response.json.has_key('token'))
 
 if __name__ == '__main__':
     unittest.main()

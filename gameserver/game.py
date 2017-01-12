@@ -44,7 +44,7 @@ class Game:
         return db_session.query(Player).all()
 
     def get_player(self, id):
-        return db_session.query(Player).filter(Player.id == id).one()
+        return db_session.query(Player).filter(Player.id == id).one_or_none()
 
     def add_policy(self, name, leak):
         p = Policy(name, leak)

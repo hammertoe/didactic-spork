@@ -1,0 +1,365 @@
+---
+swagger: "2.0"
+info:
+  description: "An API for the game server allowing mobile app to interact with players,\
+    \ etc"
+  version: "1.0"
+  title: "Game Server API"
+basePath: "/v1"
+tags:
+- name: "default"
+  description: "Default namespace"
+- name: "players"
+  description: "Operations related to players"
+- name: "network"
+  description: "Operations related to the game network"
+- name: "table"
+  description: "Operations related to the game tables"
+consumes:
+- "application/json"
+produces:
+- "application/json"
+security:
+- UserSecurity: []
+paths:
+  /network/:
+    get:
+      tags:
+      - "network"
+      summary: "Returns a JSON representation of the network"
+      operationId: "controllers.network_controller.get_network"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Network"
+      x-tags:
+      - tag: "network"
+    post:
+      tags:
+      - "network"
+      summary: "Creates a network from a JSON upload"
+      operationId: "controllers.network_controller.create_network"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Network"
+      x-tags:
+      - tag: "network"
+  /players/:
+    post:
+      tags:
+      - "players"
+      summary: "Creates a new game player"
+      operationId: "controllers.players_controller.create_player"
+      parameters:
+      - in: "body"
+        name: "player"
+        description: "The player to create."
+        required: false
+        schema:
+          $ref: "#/definitions/PlayerCreation"
+      responses:
+        201:
+          description: "Player successfully created."
+      x-tags:
+      - tag: "players"
+  /players/{id}:
+    get:
+      tags:
+      - "players"
+      summary: "Returns the specified player"
+      operationId: "controllers.players_controller.get_player"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Player"
+        404:
+          description: "Player not found"
+      x-tags:
+      - tag: "players"
+  /players/{id}/funding:
+    post:
+      tags:
+      - "players"
+      summary: "Sets the funding of the policies for this player"
+      operationId: "controllers.players_controller.set_funding"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "funding"
+        description: "The details of the funding to apply."
+        required: false
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/Connection"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Player"
+        404:
+          description: "Player not found"
+      x-tags:
+      - tag: "players"
+  /tables/:
+    get:
+      tags:
+      - "table"
+      summary: "Returns a list of the tables"
+      operationId: "controllers.table_controller.get_tables"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Id"
+      x-tags:
+      - hasMore: "true"
+        tag: "table"
+      - tag: "network"
+    post:
+      tags:
+      - "table"
+      summary: "Create a new gaming table"
+      description: "Success"
+      operationId: "controllers.table_controller.create_table"
+      parameters:
+      - in: "body"
+        name: "table"
+        description: "The details of the table to create."
+        required: false
+        schema:
+          $ref: "#/definitions/Table"
+      responses:
+        204:
+          description: "Table succesfully created."
+          schema:
+            $ref: "#/definitions/Id"
+        400:
+          description: "Table couldn't have been created."
+        500:
+          description: "An unexpected error occured."
+          schema:
+            $ref: "#/definitions/Error"
+      x-tags:
+      - tag: "table"
+  /tables/{id}:
+    get:
+      tags:
+      - "table"
+      summary: "Return the network of a specific table"
+      operationId: "controllers.table_controller.get_table"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The id of this object"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Table"
+      x-tags:
+      - hasMore: "true"
+        tag: "table"
+      - tag: "network"
+securityDefinitions:
+  UserSecurity:
+    type: "apiKey"
+    name: "X-API-KEY"
+    in: "header"
+  AdminSecurity:
+    type: "apiKey"
+    name: "X-ADMIN-API-KEY"
+    in: "header"
+definitions:
+  Id:
+    properties:
+      id:
+        type: "string"
+        description: "Id of this object"
+  PlayerCreation:
+    required:
+    - "name"
+    properties:
+      name:
+        type: "string"
+        description: "The name of this player"
+  Player:
+    type: "object"
+    required:
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "Id of this player"
+      name:
+        type: "string"
+        description: "Player name"
+      goal:
+        type: "array"
+        items:
+          $ref: "#/definitions/Goal"
+      policies:
+        type: "array"
+        items:
+          $ref: "#/definitions/Policy"
+      table:
+        type: "string"
+        description: "Id of the table this player is on"
+      token:
+        type: "string"
+        description: "Secret token used for auth"
+        readOnly: true
+  Connection:
+    properties:
+      from_id:
+        type: "string"
+        description: "id of source node"
+      to_id:
+        type: "string"
+        description: "id of destination node"
+      weight:
+        type: "number"
+        description: "weight of this connection"
+  Goal:
+    type: "object"
+    required:
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "id of this goal"
+      name:
+        type: "string"
+        description: "Goal name"
+      balance:
+        type: "number"
+        description: "Goal current balance"
+      activation_amount:
+        type: "number"
+        description: "The amount required for this node to be active"
+      max_amount:
+        type: "number"
+        description: "The maximum amount this node can hold"
+      leakage:
+        type: "number"
+        description: "The rate this node leaks"
+      connections:
+        type: "array"
+        description: "this nodes connections"
+        items:
+          $ref: "#/definitions/Connection"
+  Policy:
+    type: "object"
+    required:
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "id of this policy"
+      name:
+        type: "string"
+        description: "Policy name"
+      balance:
+        type: "number"
+        description: "Policy current balance"
+      activation_amount:
+        type: "number"
+        description: "The amount required for this node to be active"
+      max_amount:
+        type: "number"
+        description: "The maximum amount this node can hold"
+      leakage:
+        type: "number"
+        description: "The rate this node leaks"
+      players:
+        type: "array"
+        description: "players funding this policy"
+        items:
+          $ref: "#/definitions/Connection"
+  Network:
+    type: "object"
+    properties:
+      goals:
+        type: "array"
+        description: "Goals of this network"
+        items:
+          $ref: "#/definitions/Goal"
+      policies:
+        type: "array"
+        description: "Policies of this network"
+        items:
+          $ref: "#/definitions/Policy"
+  Table:
+    properties:
+      id:
+        type: "string"
+        description: "id of this table"
+      name:
+        type: "string"
+        description: "Table name"
+      players:
+        type: "array"
+        description: "Players on this table"
+        items:
+          $ref: "#/definitions/Player"
+      network:
+        $ref: "#/definitions/Network"
+  ErrorMessage:
+    properties:
+      longMessage:
+        type: "string"
+      shortMessage:
+        type: "string"
+  MultilingualErrorMessage:
+    type: "object"
+    properties:
+      defaultLanguage:
+        $ref: "#/definitions/ErrorMessage"
+    additionalProperties:
+      $ref: "#/definitions/ErrorMessage"
+  Error:
+    required:
+    - "code"
+    - "message"
+    properties:
+      code:
+        type: "string"
+        enum:
+        - "DBERR"
+        - "NTERR"
+        - "UNERR"
+      message:
+        $ref: "#/definitions/MultilingualErrorMessage"
+parameters:
+  id:
+    name: "id"
+    in: "path"
+    description: "The id of this object"
+    required: true
+    type: "string"
+responses:
+  Standard500ErrorResponse:
+    description: "An unexpected error occured."
+    schema:
+      $ref: "#/definitions/Error"

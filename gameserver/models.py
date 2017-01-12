@@ -139,11 +139,15 @@ class Player(Node):
     id = Column(String(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
+    token = Column(String(36),
+                index=True, default=default_uuid)
+
     def __init__(self, name):
         self.id = default_uuid()
         self.name = name
         self.leak = 0.0
         self.max_outflow = 0.0
+        self.token = default_uuid()
 
         # create a wallet for the player
         w = Wallet(self, 0.0)
