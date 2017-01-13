@@ -974,6 +974,26 @@ class DataLoadTests(DBTestCase):
 
         # todo: add more tests here
 
+    def testCreateNetwork(self):
+        data = json.load(open('network.json', 'r'))
+
+        self.game.create_network(data)
+
+        self.assertEqual(61, db_session.query(Edge).count())
+        self.assertEqual(36, db_session.query(Node).count())
+        self.assertEqual(30, db_session.query(Policy).count())
+        self.assertEqual(6, db_session.query(Goal).count())
+
+
+    def testCreateThenGetNetwork(self):
+        data = json.load(open('network.json', 'r'))
+
+        self.game.create_network(data)
+        network = self.game.get_network()
+
+        self.assertEqual(data, network)
+
+
 class GameTests(DBTestCase):
     
     def testGetNonexistantPlayer(self):
@@ -1063,7 +1083,19 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response.status_code, 200)
         self.assertEquals(len(response.json['policies']), 2)
         self.assertEquals(len(response.json['goals']), 3)
-        
+
+
+class Utils(DBTestCase):
+
+    def GenNetFile(self):
+        json_file = open('example-graph.json', 'r')
+        self.game.load_json(json_file)
+
+        response = self.client.get("/v1/network/")
+
+        outfile = open('network.json', 'w')
+        outfile.write(response.data)
+        outfile.close()
 
 if __name__ == '__main__':
     unittest.main()

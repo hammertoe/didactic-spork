@@ -41,12 +41,16 @@ paths:
       - "network"
       summary: "Creates a network from a JSON upload"
       operationId: "controllers.network_controller.create_network"
-      parameters: []
+      parameters:
+        - in: body
+          name: network
+          description: JSON file of the network to create.
+          required: true
+          schema:
+            $ref: "#/definitions/Network"
       responses:
         200:
           description: "Success"
-          schema:
-            $ref: "#/definitions/Network"
       x-tags:
       - tag: "network"
   /players/:

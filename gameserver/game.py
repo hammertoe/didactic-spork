@@ -146,3 +146,44 @@ class Game:
         return dict(goals=goals, policies=policies)
 
 
+
+    def create_network(self, network):
+        
+        goals = network['goals']
+        policies = network['policies']
+
+        id_mapping = {}
+        links = []
+        
+        for policy in policies:
+            p = self.add_policy(policy['name'], policy['leakage'])
+            p.id = policy['id']
+            p.max_level = policy['max_amount']
+            p.activation = policy['activation_amount']
+            id_mapping[p.id] = p
+
+            for conn in policy['connections']:
+                a = conn['from_id']
+                b = conn['to_id']
+                w = conn['weight']
+                links.append((a,b,w))
+
+        for goal in goals:
+            g = self.add_goal(goal['name'], goal['leakage'])
+            g.id = goal['id']
+            g.max_level = goal['max_amount']
+            g.activation = goal['activation_amount']
+            id_mapping[g.id] = g
+
+            for conn in goal['connections']:
+                a = conn['from_id']
+                b = conn['to_id']
+                w = conn['weight']
+                links.append((a,b,w))
+
+        for a,b,w in links:
+            a = id_mapping[a]
+            b = id_mapping[b]
+            self.add_link(a,b,w)
+
+        db_session.commit()
