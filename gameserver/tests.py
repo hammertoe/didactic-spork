@@ -944,6 +944,36 @@ class DataLoadTests(DBTestCase):
         self.assertEqual(30, db_session.query(Policy).count())
         self.assertEqual(6, db_session.query(Goal).count())
 
+    def testGetNetwork(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 5000
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        self.game.add_fund(p1, po1, 10.0)
+        po2 = self.game.add_policy('Pollution control', 0.1)
+        self.game.add_fund(p1, po2, 15.0)
+
+        g1 = self.game.add_goal('World Peace', 0.5)
+        g2 = self.game.add_goal('Clean Water', 0.5)
+        g3 = self.game.add_goal('Equal Rights', 0.2)
+        l3 = self.game.add_link(po1, g1, 5.0)
+        l4 = self.game.add_link(po2, g2, 9.0)
+
+        self.assertEqual(p1.balance, 5000)
+        self.assertEqual(po1.balance, 0)
+
+        for x in range(20):
+            self.game.tick()
+        
+        network = self.game.get_network()
+
+        policies = network['policies']
+        goals = network['goals']
+
+        self.assertEqual(len(policies), 2)
+        self.assertEqual(len(goals), 3)
+
+        # todo: add more tests here
+
 class GameTests(DBTestCase):
     
     def testGetNonexistantPlayer(self):
@@ -1008,6 +1038,32 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertFalse(response.json.has_key('token'))
+
+    def testGetNetwork(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 5000
+        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        self.game.add_fund(p1, po1, 10.0)
+        po2 = self.game.add_policy('Pollution control', 0.1)
+        self.game.add_fund(p1, po2, 15.0)
+
+        g1 = self.game.add_goal('World Peace', 0.5)
+        g2 = self.game.add_goal('Clean Water', 0.5)
+        g3 = self.game.add_goal('Equal Rights', 0.2)
+        l3 = self.game.add_link(po1, g1, 5.0)
+        l4 = self.game.add_link(po2, g2, 9.0)
+
+        self.assertEqual(p1.balance, 5000)
+        self.assertEqual(po1.balance, 0)
+
+        for x in range(20):
+            self.game.tick()
+
+        response = self.client.get("/v1/network/")
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(len(response.json['policies']), 2)
+        self.assertEquals(len(response.json['goals']), 3)
+        
 
 if __name__ == '__main__':
     unittest.main()

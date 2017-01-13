@@ -115,3 +115,34 @@ class Game:
             self.add_link(a,b,w)
 
         db_session.commit()
+
+    def node_to_dict(self, goal):
+        connections = []
+        for edge in goal.higher_edges:
+            connections.append(
+                {"from_id": goal.id,
+                 "to_id": edge.lower_node.id,
+                 "weight": edge.weight,
+                 }
+                )
+
+        data = {"id": goal.id,
+                "name": goal.name,
+                "leakage": goal.leak,
+                "max_amount": goal.max_level,
+                "activation_amount": goal.activation,
+                "balance": goal.balance,
+                "connections": connections
+                }
+
+        return data
+
+
+    def get_network(self):
+        goals = db_session.query(Goal).all()
+        policies = db_session.query(Policy).all()
+        goals = [self.node_to_dict(g) for g in goals ]
+        policies = [self.node_to_dict(p) for p in policies ]
+        return dict(goals=goals, policies=policies)
+
+
