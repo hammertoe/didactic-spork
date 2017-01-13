@@ -153,6 +153,14 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.get_policy(p1.id).leak, 0.3)
         self.assertEqual(self.game.get_policy(p2.id).leak, 0.2)
 
+    def testChildParentRelationship(self):
+        a = Node('A', 0.1)
+        b = Node('B', 0.1)
+
+        l = self.game.add_link(a, b, 1.0)
+        self.assertIn(a, b.parents())
+        self.assertIn(b, a.children())
+
     def testSimpleNetwork(self):
         n1 = self.game.add_policy('Policy 1', 0.1)
         n2 = self.game.add_goal('Goal 1', 0.2)
@@ -1005,7 +1013,6 @@ class RestAPITests(DBTestCase):
     @unittest.skip("not implemented")
     def testGetEmptyPlayersList(self):
         response = self.client.get("/v1/players/")
-        import pdb; pdb.set_trace()
         self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, [])
 
@@ -1096,6 +1103,7 @@ class Utils(DBTestCase):
         outfile = open('network.json', 'w')
         outfile.write(response.data)
         outfile.close()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -116,22 +116,22 @@ class Game:
 
         db_session.commit()
 
-    def node_to_dict(self, goal):
+    def node_to_dict(self, node):
         connections = []
-        for edge in goal.higher_edges:
+        for edge in node.higher_edges:
             connections.append(
-                {"from_id": goal.id,
-                 "to_id": edge.lower_node.id,
+                {"from_id": edge.lower_node.id,
+                 "to_id": node.id,
                  "weight": edge.weight,
                  }
                 )
 
-        data = {"id": goal.id,
-                "name": goal.name,
-                "leakage": goal.leak,
-                "max_amount": goal.max_level,
-                "activation_amount": goal.activation,
-                "balance": goal.balance,
+        data = {"id": node.id,
+                "name": node.name,
+                "leakage": node.leak,
+                "max_amount": node.max_level,
+                "activation_amount": node.activation,
+                "balance": node.balance,
                 "connections": connections
                 }
 
