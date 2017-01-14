@@ -1091,6 +1091,34 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(response.json['policies']), 2)
         self.assertEquals(len(response.json['goals']), 3)
 
+    def testCreateNetwork(self):
+        data = json.load(open('network.json', 'r'))
+
+        response = self.client.post("/v1/network/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+
+        self.assertEqual(61, db_session.query(Edge).count())
+        self.assertEqual(36, db_session.query(Node).count())
+        self.assertEqual(30, db_session.query(Policy).count())
+        self.assertEqual(6, db_session.query(Goal).count())
+
+
+    def testCreateThenGetNetwork(self):
+        data = json.load(open('network.json', 'r'))
+
+
+        response = self.client.post("/v1/network/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+
+        response = self.client.get("/v1/network/")
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(len(response.json['policies']), 30)
+        self.assertEquals(len(response.json['goals']), 6)
+
+        self.assertEqual(data, response.json)
+
 
 class Utils(DBTestCase):
 
