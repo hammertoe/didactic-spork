@@ -8,7 +8,7 @@ import utils
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from gameserver.game import Game
-from gameserver.models import Node, Player, Goal, Policy, Wallet, Edge
+from gameserver.models import Base, Node, Player, Goal, Policy, Wallet, Edge
 from sqlalchemy import event
 
 from gameserver.database import db
@@ -52,7 +52,6 @@ class DBTestCase(TestCase):
 
     def setUp(self):
         db_session.begin_nested()
-        utils.random.seed(0)
         self.game = Game()
 
     def tearDown(self):
@@ -92,6 +91,17 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.get_player(p.id), p)
         self.assertEqual(self.game.num_players, 1)
 
+    def testGameCreatePlayer(self):
+        
+        for x in range(20):
+            self.game.add_goal("G{}".format(x), 0.5)
+            self.game.add_policy("P{}".format(x), 0.5)
+
+        random.seed(0)
+        p = self.game.create_player('Matt')
+        self.assertEqual(self.game.get_player(p.id), p)
+        self.assertEqual(p.goal.name, 'G5')
+        self.assertEqual([x.name for x in p.children()], ['P0', 'P11', 'P19', 'P1', 'P16'])
 
     def testPlayerHasWallet(self):
 
@@ -132,6 +142,25 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.get_goal(g.id), g)
         self.assertEqual(self.game.get_goal(g.id).leak, 0.5)
 
+    def testGetRandomGoal(self):
+        
+        for x in range(20):
+            self.game.add_goal(str(x), 0.5)
+
+        random.seed(1)
+        self.assertEqual(self.game.get_random_goal().name, '2')
+        self.assertEqual(self.game.get_random_goal().name, '16')
+        
+
+    def testAddPlayerAndGoal(self):
+        
+        p1 = self.game.create_player('Matt')
+        g1 = self.game.add_goal('World Peace', 0.5)
+        p1.goal = g1
+
+        self.assertEqual(p1.goal, g1)
+        self.assertIn(p1, g1.players)
+
     def testAddWalletToGoal(self):
 
         g = self.game.add_goal('World Peace', 0.5)
@@ -142,6 +171,15 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(w1.location, g)
         self.assertEqual(g.wallets_here, [w1,])
 
+    def getNPolicies(self):
+        g1 = self.game.add_goal('A', 0.5)
+        for x in range(20):
+            self.game.add_policy(str(x), 0.5)
+
+        random.seed(1)
+        policies = ['18', '11', '5', '15', '17']
+        self.assertEqual([x.name for x in self.game.get_n_policies(g1)], policies)
+        
     def testModifyPolicies(self):
 
         p1 = self.game.add_policy('Policy 1', 0.1)
@@ -360,7 +398,8 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
-        self.assertEqual(len(p1.children()), 0)
+        # test that we keep the link even when funding stopped
+        self.assertEqual(len(p1.children()), 1)
 
     def testPlayerCurrentOutflow(self):
         p1 = self.game.create_player('Matt')
@@ -1066,6 +1105,43 @@ class RestAPITests(DBTestCase):
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertFalse(response.json.has_key('token'))
 
+    def testCreateThenGetNewPlayerWithNodes(self):
+        # create some nodes first
+        for x in range(20):
+            g = self.game.add_goal("G{}".format(x), 0.5)
+            g.id = "G{}".format(x)
+            p = self.game.add_policy("P{}".format(x), 0.5)
+            p.id = "P{}".format(x)
+
+        random.seed(0)
+        name = 'Matt {}'.format(time.time())
+        data = dict(name=name)
+        response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+        id = response.json['id']
+
+        response = self.client.get("/v1/players/{}".format(id))
+        self.assertEquals(response.status_code, 200)
+        self.assertDictContainsSubset(dict(name=name, id=id), response.json)
+        self.assertEquals(response.json['goal'], 'G5')
+        self.assertEquals(response.json['policies'], ['P0', 'P11', 'P19', 'P1', 'P16'])
+        self.assertFalse(response.json.has_key('token'))
+
+        name = 'Simon {}'.format(time.time())
+        data = dict(name=name)
+        response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+        id = response.json['id']
+
+        response = self.client.get("/v1/players/{}".format(id))
+        self.assertEquals(response.status_code, 200)
+        self.assertDictContainsSubset(dict(name=name, id=id), response.json)
+        self.assertEquals(response.json['goal'], 'G17')
+        self.assertEquals(response.json['policies'], ['P3', 'P10', 'P4', 'P13', 'P7'])
+        self.assertFalse(response.json.has_key('token'))
+
     def testGetNetwork(self):
         p1 = self.game.create_player('Matt')
         p1.balance = 5000
@@ -1121,6 +1197,9 @@ class RestAPITests(DBTestCase):
 
 
 class Utils(DBTestCase):
+
+    def createDB(self):
+        Base.metadata.create_all(bind=engine)
 
     def GenNetFile(self):
         json_file = open('example-graph.json', 'r')

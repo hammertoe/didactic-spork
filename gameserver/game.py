@@ -37,6 +37,10 @@ class Game:
     def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
+        p.goal = self.get_random_goal()
+        for policy in self.get_n_policies(5):
+            self.add_fund(p, policy, 0)
+
         db_session.add(p)
         return p
 
@@ -51,9 +55,11 @@ class Game:
         db_session.add(p)
         return p
 
-
     def get_policy(self, id):
         return db_session.query(Policy).filter(Policy.id == id).one()
+
+    def get_policies(self):
+        return db_session.query(Policy).all()
 
     def add_goal(self, name, leak):
         g = Goal(name, leak)
@@ -61,7 +67,20 @@ class Game:
         return g
 
     def get_goal(self, id):
-        return db_session.query(Goal).filter(Goal.id == id).one()
+        return db_session.query(Goal).filter(Goal.id == id).one()        
+
+    def get_goals(self):
+        return db_session.query(Goal).all()
+
+    def get_random_goal(self):
+        goals = self.get_goals()
+        return(random.choice(goals))
+
+    def get_n_policies(self, goal, n=5):
+        # for now just get n random policies
+        policies = self.get_policies()
+        random.shuffle(policies)
+        return policies[:n]
 
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)

@@ -139,6 +139,19 @@ class Player(Node):
     id = Column(String(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
+    goal_id = Column(
+        String(36),
+        ForeignKey('goal.id')
+        )
+
+    goal = relationship(
+        Goal,
+        primaryjoin=goal_id == Goal.id,
+        order_by='Goal.id',
+        backref='players'
+        )
+
+
     token = Column(String(36),
                 index=True, default=default_uuid)
 
@@ -183,9 +196,6 @@ class Player(Node):
 
         if f is not None:
             f.weight = rate
-            if rate == 0.0:
-                # if we set funding level to 0 then delete fund link
-                self.lower_edges.remove(f)
         else: # create new fund link
             f = Edge(self, node, rate)
             db_session.add(f)

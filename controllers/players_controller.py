@@ -10,8 +10,8 @@ def get_player(id):
         return None, 404
     return dict(id=player.id,
                 name=player.name,
-                goal='',
-                policies=[],
+                goal=player.goal.id,
+                policies=[x.id for x in player.children()],
                 table=None,
                 ), 200
 
