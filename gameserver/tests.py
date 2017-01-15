@@ -101,8 +101,8 @@ class CoreGameTests(DBTestCase):
         random.seed(0)
         p = self.game.create_player('Matt')
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertEqual(p.goal.name, 'G5')
-        self.assertEqual([x.name for x in p.children()], ['P0', 'P11', 'P19', 'P1', 'P16'])
+        self.assertEqual(p.goal.name, 'G13')
+        self.assertEqual([x.name for x in p.children()], ['P0', 'P19', 'P9', 'P1', 'P6'])
 
     def testPlayerHasWallet(self):
 
@@ -149,8 +149,8 @@ class CoreGameTests(DBTestCase):
             self.game.add_goal(str(x), 0.5)
 
         random.seed(1)
-        self.assertEqual(self.game.get_random_goal().name, '2')
-        self.assertEqual(self.game.get_random_goal().name, '16')
+        self.assertEqual(self.game.get_random_goal().name, '10')
+        self.assertEqual(self.game.get_random_goal().name, '6')
         
 
     def testAddPlayerAndGoal(self):
@@ -1168,11 +1168,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G5')
+        self.assertEquals(response.json['goal']['id'], 'G13')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P0', 'P1', 'P11', 'P16', 'P19'])
+        self.assertEquals(policies, ['P0', 'P1', 'P19', 'P6', 'P9'])
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
@@ -1185,11 +1185,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G17')
+        self.assertEquals(response.json['goal']['id'], 'G7')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P10', 'P13', 'P3', 'P4','P7'])
+        self.assertEquals(policies, ['P11', 'P12', 'P15', 'P18','P3'])
         self.assertFalse(response.json.has_key('token'))
 
     def testGetNetwork(self):
