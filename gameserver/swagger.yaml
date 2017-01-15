@@ -27,7 +27,7 @@ paths:
       tags:
       - "network"
       summary: "Returns a JSON representation of the network"
-      operationId: "controllers.network_controller.get_network"
+      operationId: "gameserver.controllers.network_controller.get_network"
       parameters: []
       responses:
         200:
@@ -40,7 +40,7 @@ paths:
       tags:
       - "network"
       summary: "Creates a network from a JSON upload"
-      operationId: "controllers.network_controller.create_network"
+      operationId: "gameserver.controllers.network_controller.create_network"
       parameters:
         - in: body
           name: network
@@ -58,7 +58,7 @@ paths:
       tags:
       - "players"
       summary: "Creates a new game player"
-      operationId: "controllers.players_controller.create_player"
+      operationId: "gameserver.controllers.players_controller.create_player"
       parameters:
       - in: "body"
         name: "player"
@@ -76,7 +76,7 @@ paths:
       tags:
       - "players"
       summary: "Returns the specified player"
-      operationId: "controllers.players_controller.get_player"
+      operationId: "gameserver.controllers.players_controller.get_player"
       parameters:
       - name: "id"
         in: "path"
@@ -97,7 +97,7 @@ paths:
       tags:
       - "players"
       summary: "Returns the funding for specified player"
-      operationId: "controllers.players_controller.get_funding"
+      operationId: "gameserver.controllers.players_controller.get_funding"
       parameters:
       - name: "id"
         in: "path"
@@ -119,7 +119,7 @@ paths:
       tags:
       - "players"
       summary: "Sets the funding of the policies for this player"
-      operationId: "controllers.players_controller.set_funding"
+      operationId: "gameserver.controllers.players_controller.set_funding"
       parameters:
       - name: "id"
         in: "path"
@@ -146,7 +146,7 @@ paths:
       tags:
       - "table"
       summary: "Returns a list of the tables"
-      operationId: "controllers.table_controller.get_tables"
+      operationId: "gameserver.controllers.table_controller.get_tables"
       parameters: []
       responses:
         200:
@@ -164,7 +164,7 @@ paths:
       - "table"
       summary: "Create a new gaming table"
       description: "Success"
-      operationId: "controllers.table_controller.create_table"
+      operationId: "gameserver.controllers.table_controller.create_table"
       parameters:
       - in: "body"
         name: "table"
@@ -190,7 +190,7 @@ paths:
       tags:
       - "table"
       summary: "Return the network of a specific table"
-      operationId: "controllers.table_controller.get_table"
+      operationId: "gameserver.controllers.table_controller.get_table"
       parameters:
       - name: "id"
         in: "path"

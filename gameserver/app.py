@@ -3,11 +3,8 @@ import os
 
 from flask import Flask, Blueprint
 
-#from gameserver.api.restplus import api
 import connexion
 from gameserver.database import db, init_db
-
-from gameserver.api.endpoints.players import ns as players_namespace
 
 from gameserver import settings
 
@@ -32,7 +29,7 @@ def initialize_app(flask_app):
         models.Base.metadata.create_all(bind=db.engine)
 
 def create_app():
-    app = connexion.App(__name__, specification_dir='./swagger/')
+    app = connexion.App(__name__, specification_dir='./')
     app.add_api('swagger.yaml', arguments={'title': 'An API for the game server allowing mobile app to interact with players, etc'})
     initialize_app(app.app)
     return app.app
