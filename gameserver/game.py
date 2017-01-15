@@ -60,7 +60,7 @@ class Game:
         return db_session.query(Policy).filter(Policy.id == id).one()
 
     def get_policies(self):
-        return db_session.query(Policy).all()
+        return db_session.query(Policy).order_by(Policy.id).all()
 
     def add_goal(self, name, leak):
         g = Goal(name, leak)
@@ -71,7 +71,7 @@ class Game:
         return db_session.query(Goal).filter(Goal.id == id).one()        
 
     def get_goals(self):
-        return db_session.query(Goal).all()
+        return db_session.query(Goal).order_by(Goal.id).all()
 
     def get_random_goal(self):
         goals = self.get_goals()
