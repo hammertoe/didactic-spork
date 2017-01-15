@@ -14,6 +14,12 @@ def node_to_dict(node):
                 leakage=node.leak,
                 )
 
+def wallet_to_dict(wallet):
+    return dict(owner=wallet.owner_id,
+                location=wallet.location_id,
+                balance=wallet.balance,
+                )
+
 def create_network(network):
     game.create_network(network)
     return None, 201
@@ -27,3 +33,9 @@ def get_node(id):
         return "Node not found", 404
     return node_to_dict(node), 200
 
+def get_wallets(id):
+    node = game.get_node(id)
+    if not node:
+        return "Node not found", 404
+    return [ wallet_to_dict(w) for w in node.wallets_here ], 200
+    

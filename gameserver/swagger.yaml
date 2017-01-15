@@ -74,6 +74,27 @@ paths:
           description: "Node not found"
       x-tags:
       - tag: "network"
+  /network/{id}/wallets:
+    get:
+      tags:
+      - "network"
+      summary: "Returns the wallets at the specified node"
+      operationId: "gameserver.controllers.network_controller.get_wallets"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The node id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Node"
+        404:
+          description: "Node not found"
+      x-tags:
+      - tag: "network"
   /players/:
     post:
       tags:
@@ -314,6 +335,11 @@ definitions:
         description: "this nodes connections"
         items:
           $ref: "#/definitions/Connection"
+      wallets:
+        type: "array"
+        description: "the wallets associated with this node"
+        items:
+          $ref: "#/definitions/Wallet"
   Network:
     type: "object"
     properties:
@@ -327,6 +353,18 @@ definitions:
         description: "Policies of this network"
         items:
           $ref: "#/definitions/Node"
+  Wallet:
+    type: "object"
+    properties:
+      owner:
+        type: "string"
+        description: "id of owner of this wallet"
+      location:
+        type: "string"
+        description: "id of the location of this wallet"
+      balance:
+        type: "number"
+        description: "amount of money in this wallet"
   Table:
     properties:
       id:
