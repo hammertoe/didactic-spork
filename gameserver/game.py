@@ -10,7 +10,7 @@ db_session = db.session
 class Game:
 
     def __init__(self):
-        self.coins_per_budget_cycle = 150000
+        self.money_per_budget_cycle = 150000
         self.standard_max_player_outflow = 100
 
     @property
@@ -28,7 +28,7 @@ class Game:
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
-            player.balance = self.coins_per_budget_cycle
+            player.balance = self.money_per_budget_cycle
 
     def tick(self):
         self.do_leak()
@@ -37,6 +37,7 @@ class Game:
     def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
+        p.balance = self.money_per_budget_cycle
         p.goal = self.get_random_goal()
         for policy in self.get_n_policies(5):
             self.add_fund(p, policy, 0)

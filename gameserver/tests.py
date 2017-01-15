@@ -638,9 +638,9 @@ class CoreGameTests(DBTestCase):
 
         self.game.do_replenish_budget()
 
-        self.assertAlmostEqual(p1.balance, self.game.coins_per_budget_cycle)
-        self.assertAlmostEqual(p2.balance, self.game.coins_per_budget_cycle)
-        self.assertAlmostEqual(p3.balance, self.game.coins_per_budget_cycle)
+        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle)
 
         n1 = self.game.add_policy('Policy 1', 1.0)
 
@@ -648,17 +648,17 @@ class CoreGameTests(DBTestCase):
         p2.transfer_funds_to_node(n1, 200)
         p3.transfer_funds_to_node(n1, 400)
 
-        self.assertAlmostEqual(p1.balance, self.game.coins_per_budget_cycle-100)
-        self.assertAlmostEqual(p2.balance, self.game.coins_per_budget_cycle-200)
-        self.assertAlmostEqual(p3.balance, self.game.coins_per_budget_cycle-400)
+        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle-100)
+        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle-200)
+        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle-400)
 
         self.assertAlmostEqual(n1.balance, 100+200+400)
 
         self.game.do_replenish_budget()
 
-        self.assertAlmostEqual(p1.balance, self.game.coins_per_budget_cycle)
-        self.assertAlmostEqual(p2.balance, self.game.coins_per_budget_cycle)
-        self.assertAlmostEqual(p3.balance, self.game.coins_per_budget_cycle)
+        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle)
 
         self.assertAlmostEqual(n1.balance, 100+200+400)
         
