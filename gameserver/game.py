@@ -109,6 +109,9 @@ class Game:
             return
         funding = { x['to_id']:x['amount'] for x in funding }
         player = self.get_player(id)
+        if sum(funding.values()) > player.max_outflow:
+            raise ValueError, "Sum of funds exceeds max allowed for player"
+
         for fund in player.lower_edges:
             dest_id = fund.higher_node.id
             fund.weight = funding.get(dest_id, 0.0)

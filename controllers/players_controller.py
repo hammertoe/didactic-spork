@@ -28,9 +28,12 @@ def create_player(player=None):
         return 500
 
 def set_funding(id, funding = None):
-    game.set_funding(id, funding)
-
-    return None, 200
+    try:
+        game.set_funding(id, funding)
+        db_session.commit()
+        return None, 200
+    except ValueError:
+        return "Sum of funds exceeds max allowed", 400
 
 def get_funding(id):
     funds = game.get_funding(id)

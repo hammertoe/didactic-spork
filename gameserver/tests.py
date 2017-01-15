@@ -1286,9 +1286,35 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(data, data2)
 
+    def testSetFundingMaxOverflow(self):
+
+        for x in range(5):
+            p = self.game.add_policy("P{}".format(x), 0.5)
+            p.id = "P{}".format(x)
+
+        random.seed(0)
+
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        data = self.game.get_funding(id)
+
+        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
+
+        for x in range(5):
+            data[x]['amount'] = x*20
+
+        response = self.client.post("/v1/players/{}/funding".format(id),
+                                    data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 400)
+
 class Utils(DBTestCase):
 
     def createDB(self):
+        Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
 
     def GenNetFile(self):

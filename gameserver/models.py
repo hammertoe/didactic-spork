@@ -139,6 +139,8 @@ class Player(Node):
     id = Column(String(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
+    max_outflow = Column(Float)
+
     goal_id = Column(
         String(36),
         ForeignKey('goal.id')
