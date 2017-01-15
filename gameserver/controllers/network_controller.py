@@ -34,8 +34,8 @@ def get_node(id):
     return node_to_dict(node), 200
 
 def get_wallets(id):
-    node = game.get_node(id)
-    if not node:
-        return "Node not found", 404
-    return [ wallet_to_dict(w) for w in node.wallets_here ], 200
+    wallets = game.get_wallets_by_location(id)
+    if not wallets:
+        return "No wallets found", 404
+    return [ wallet_to_dict(w) for w in wallets ], 200
     

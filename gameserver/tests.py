@@ -631,6 +631,37 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(n1.balance, 25.0)
         self.assertAlmostEqual(n2.balance, 64.0)
 
+    def testGameGetWallets(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000.0
+        p2 = self.game.create_player('Simon')
+        p2.balance = 1000.0
+        n1 = self.game.add_policy('Policy 1', 1.0)
+
+        self.game.add_fund(p1, n1, 100)
+        self.game.add_fund(p2, n1, 90)
+        p1.transfer_funds()
+        p2.transfer_funds()
+
+        self.assertEqual(p1.balance, 900.0)
+        self.assertEqual(p2.balance, 910.0)
+        self.assertEqual(n1.balance, 190.0)
+
+        self.assertEqual(len(n1.parents()), 2)
+
+        expected_wallets = [{"location": n1.id,
+                             "owner": p1.id,
+                             "balance": 100},
+                            {"location": n1.id,
+                             "owner": p2.id,
+                             "balance": 90}
+                            ]
+
+        from gameserver.controllers.network_controller import wallet_to_dict
+        wallets = [ wallet_to_dict(w) for w in self.game.get_wallets_by_location(n1.id) ]
+
+        self.assertEqual(wallets,
+                         expected_wallets)
 
     def testFundPlayers(self):
         p1 = self.game.create_player('Matt')

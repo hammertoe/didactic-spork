@@ -76,6 +76,12 @@ class Game:
     def get_node(self, id):
         return db_session.query(Node).filter(Node.id == id).one_or_none()
 
+    def get_wallets_by_location(self, id):
+        node = self.get_node(id)
+        if not node:
+            return []
+        return node.wallets_here
+
     def get_random_goal(self):
         goals = self.get_goals()
         if goals:
