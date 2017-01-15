@@ -1167,11 +1167,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G13')
+        self.assertEquals(response.json['goal']['id'], 'G6')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P0', 'P1', 'P19', 'P6', 'P9'])
+        self.assertEquals(policies, ['P0', 'P11', 'P18', 'P4', 'P6'])
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
@@ -1184,11 +1184,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G7')
+        self.assertEquals(response.json['goal']['id'], 'G14')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P11', 'P12', 'P15', 'P18','P3'])
+        self.assertEquals(policies, ['P12', 'P15', 'P17', 'P18','P5'])
         self.assertFalse(response.json.has_key('token'))
 
     def testGetNetwork(self):
