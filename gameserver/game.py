@@ -1,5 +1,5 @@
 import json
-import random
+from utils import random
 
 #from database import db_session
 from gameserver.database import db

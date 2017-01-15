@@ -1,9 +1,8 @@
 import json
 import unittest
 import os
-import random
+from gameserver.utils import random
 import time
-import utils
 
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
@@ -101,8 +100,8 @@ class CoreGameTests(DBTestCase):
         random.seed(1)
         p = self.game.create_player('Matt')
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertEqual(p.goal.name, 'G13')
-        self.assertEqual([x.name for x in p.children()], ['P11', 'P10', 'P15', 'P6', 'P18'])
+        self.assertEqual(p.goal.name, 'G10')
+        self.assertEqual([x.name for x in p.children()], ['P13', 'P5', 'P10', 'P9', 'P2'])
 
     def testPlayerHasWallet(self):
 
