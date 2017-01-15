@@ -98,11 +98,11 @@ class CoreGameTests(DBTestCase):
             self.game.add_goal("G{}".format(x), 0.5)
             self.game.add_policy("P{}".format(x), 0.5)
 
-        random.seed(0)
+        random.seed(1)
         p = self.game.create_player('Matt')
         self.assertEqual(self.game.get_player(p.id), p)
         self.assertEqual(p.goal.name, 'G13')
-        self.assertEqual([x.name for x in p.children()], ['P0', 'P19', 'P9', 'P1', 'P6'])
+        self.assertEqual([x.name for x in p.children()], ['P11', 'P10', 'P15', 'P6', 'P18'])
 
     def testPlayerHasWallet(self):
 
