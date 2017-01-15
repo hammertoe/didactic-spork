@@ -56,6 +56,7 @@ class DBTestCase(TestCase):
 
     def tearDown(self):
         db_session.rollback()
+        os.system('echo "select * from node;" | sqlite3 gameserver/database.db')
 
 class CoreGameTests(DBTestCase):
         
@@ -981,6 +982,48 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(po1.balance, 400)
         self.assertEqual(g1.balance, 100)
 
+    def testGetFunding(self):
+        random.seed(0)
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        
+        for amount,edge in enumerate(player.lower_edges):
+            edge.weight = amount
+            dest_id = edge.higher_node.id
+            funding.append({'from_id':id, 'to_id': dest_id, 'weight': amount})
+
+        data = self.game.get_funding(id)
+        self.assertEqual(funding, data)
+
+    def testSetFunding(self):
+
+        for x in range(5):
+            p = self.game.add_policy("P{}".format(x), 0.5)
+            p.id = "P{}".format(x)
+
+        random.seed(0)
+
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        data = self.game.get_funding(id)
+
+        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
+
+        for x in range(5):
+            data[x]['amount'] = x
+            
+        self.game.set_funding(id, data)
+
+        data2 = self.game.get_funding(id)
+
+        self.assertEqual(data, data2)
+
 class DataLoadTests(DBTestCase):
 
     def testLoadJsonFile(self):
@@ -1116,6 +1159,7 @@ class RestAPITests(DBTestCase):
         random.seed(0)
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
+        db_session.begin(subtransactions=True)
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
@@ -1195,6 +1239,52 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(data, response.json)
 
+
+    def testGetFunding(self):
+        random.seed(0)
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        for amount,edge in enumerate(player.lower_edges):
+            edge.weight = amount
+            dest_id = edge.higher_node.id
+            funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
+
+        response = self.client.get("/v1/players/{}/funding".format(id))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(funding, response.json)
+        
+
+    def testSetFunding(self):
+
+        for x in range(5):
+            p = self.game.add_policy("P{}".format(x), 0.5)
+            p.id = "P{}".format(x)
+
+        random.seed(0)
+
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        data = self.game.get_funding(id)
+
+        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
+
+        for x in range(5):
+            data[x]['amount'] = x
+
+        response = self.client.post("/v1/players/{}/funding".format(id),
+                                    data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+
+        data2 = self.game.get_funding(id)
+
+        self.assertEqual(data, data2)
 
 class Utils(DBTestCase):
 

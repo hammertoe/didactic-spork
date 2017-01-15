@@ -10,7 +10,7 @@ def get_player(id):
         return None, 404
     return dict(id=player.id,
                 name=player.name,
-                goal=player.goal.id,
+                goal=player.goal.id if player.goal else None,
                 policies=[x.id for x in player.children()],
                 table=None,
                 ), 200
@@ -28,4 +28,12 @@ def create_player(player=None):
         return 500
 
 def set_funding(id, funding = None):
-    return 'do some magic!'
+    game.set_funding(id, funding)
+
+    return None, 200
+
+def get_funding(id):
+    funds = game.get_funding(id)
+
+    return funds, 200
+

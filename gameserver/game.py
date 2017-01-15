@@ -74,11 +74,14 @@ class Game:
 
     def get_random_goal(self):
         goals = self.get_goals()
-        return(random.choice(goals))
+        if goals:
+            return(random.choice(goals))
 
     def get_n_policies(self, goal, n=5):
         # for now just get n random policies
         policies = self.get_policies()
+        if not policies:
+            return []
         random.shuffle(policies)
         return policies[:n]
 
@@ -100,6 +103,24 @@ class Game:
         w = Wallet(player, amount)
         db_session.add(w)
         return w
+
+    def set_funding(self, id, funding = None):
+        if not funding:
+            return
+        funding = { x['to_id']:x['amount'] for x in funding }
+        player = self.get_player(id)
+        for fund in player.lower_edges:
+            dest_id = fund.higher_node.id
+            fund.weight = funding.get(dest_id, 0.0)
+
+    def get_funding(self,id):
+        player = self.get_player(id)
+        funds = []
+        for fund in player.lower_edges:
+            dest_id = fund.higher_node.id
+            funds.append({'from_id':id, 'to_id': dest_id, 'amount': fund.weight})
+            
+        return funds
 
     def load_json(self, json_file):
         data = json.load(json_file)

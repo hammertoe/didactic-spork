@@ -93,6 +93,28 @@ paths:
       x-tags:
       - tag: "players"
   /players/{id}/funding:
+    get:
+      tags:
+      - "players"
+      summary: "Returns the funding for specified player"
+      operationId: "controllers.players_controller.get_funding"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Connection"
+        404:
+          description: "Player not found"
+      x-tags:
+      - tag: "players"
     post:
       tags:
       - "players"
@@ -115,8 +137,6 @@ paths:
       responses:
         200:
           description: "Success"
-          schema:
-            $ref: "#/definitions/Player"
         404:
           description: "Player not found"
       x-tags:
