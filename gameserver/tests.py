@@ -57,6 +57,13 @@ class DBTestCase(TestCase):
         db_session.rollback()
         os.system('echo "select * from node;" | sqlite3 gameserver/database.db')
 
+    def add_20_goals_and_policies(self):
+        for x in range(20):
+            g = self.game.add_goal("G{}".format(x), 0.5)
+            g.id = "G{}".format(x)
+            p = self.game.add_policy("P{}".format(x), 0.5)
+            p.id = "P{}".format(x)
+
 class CoreGameTests(DBTestCase):
         
     def testRefactorLinks(self):
@@ -93,9 +100,7 @@ class CoreGameTests(DBTestCase):
 
     def testGameCreatePlayer(self):
         
-        for x in range(20):
-            self.game.add_goal("G{}".format(x), 0.5)
-            self.game.add_policy("P{}".format(x), 0.5)
+        self.add_20_goals_and_policies()
 
         random.seed(1)
         p = self.game.create_player('Matt')
@@ -144,12 +149,11 @@ class CoreGameTests(DBTestCase):
 
     def testGetRandomGoal(self):
         
-        for x in range(20):
-            self.game.add_goal(str(x), 0.5)
+        self.add_20_goals_and_policies()
 
         random.seed(1)
-        self.assertEqual(self.game.get_random_goal().name, '10')
-        self.assertEqual(self.game.get_random_goal().name, '6')
+        self.assertEqual(self.game.get_random_goal().name, 'G10')
+        self.assertEqual(self.game.get_random_goal().name, 'G6')
         
 
     def testAddPlayerAndGoal(self):
@@ -171,13 +175,12 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(w1.location, g)
         self.assertEqual(g.wallets_here, [w1,])
 
-    def getNPolicies(self):
+    def testGetNPolicies(self):
         g1 = self.game.add_goal('A', 0.5)
-        for x in range(20):
-            self.game.add_policy(str(x), 0.5)
+        self.add_20_goals_and_policies()
 
         random.seed(1)
-        policies = ['18', '11', '5', '15', '17']
+        policies = ['P8', 'P19', 'P13', 'P5', 'P7']
         self.assertEqual([x.name for x in self.game.get_n_policies(g1)], policies)
         
     def testModifyPolicies(self):
@@ -982,6 +985,7 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g1.balance, 100)
 
     def testGetFunding(self):
+        self.add_20_goals_and_policies()
         random.seed(0)
         name = 'Matt'
         player = self.game.create_player(name)
@@ -992,7 +996,7 @@ class CoreGameTests(DBTestCase):
         for amount,edge in enumerate(player.lower_edges):
             edge.weight = amount
             dest_id = edge.higher_node.id
-            funding.append({'from_id':id, 'to_id': dest_id, 'weight': amount})
+            funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
 
         data = self.game.get_funding(id)
         self.assertEqual(funding, data)
@@ -1149,11 +1153,7 @@ class RestAPITests(DBTestCase):
 
     def testCreateThenGetNewPlayerWithNodes(self):
         # create some nodes first
-        for x in range(20):
-            g = self.game.add_goal("G{}".format(x), 0.5)
-            g.id = "G{}".format(x)
-            p = self.game.add_policy("P{}".format(x), 0.5)
-            p.id = "P{}".format(x)
+        self.add_20_goals_and_policies()
 
         random.seed(0)
         name = 'Matt {}'.format(time.time())
@@ -1246,6 +1246,7 @@ class RestAPITests(DBTestCase):
 
 
     def testGetFunding(self):
+        self.add_20_goals_and_policies()
         random.seed(0)
         name = 'Matt'
         player = self.game.create_player(name)
@@ -1316,7 +1317,7 @@ class RestAPITests(DBTestCase):
                                     content_type='application/json')
         self.assertEquals(response.status_code, 400)
 
-class Utils(DBTestCase):
+class Utils(DBTestCase): # pragma: no cover
 
     def createDB(self):
         Base.metadata.drop_all(bind=engine)
