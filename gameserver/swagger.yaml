@@ -53,6 +53,27 @@ paths:
           description: "Success"
       x-tags:
       - tag: "network"
+  /network/{id}:
+    get:
+      tags:
+      - "network"
+      summary: "Returns the specified node"
+      operationId: "gameserver.controllers.network_controller.get_node"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The node id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Node"
+        404:
+          description: "Node not found"
+      x-tags:
+      - tag: "network"
   /players/:
     post:
       tags:
@@ -242,11 +263,11 @@ definitions:
       goal:
         type: "array"
         items:
-          $ref: "#/definitions/Goal"
+          $ref: "#/definitions/Node"
       policies:
         type: "array"
         items:
-          $ref: "#/definitions/Policy"
+          $ref: "#/definitions/Node"
       table:
         type: "string"
         description: "Id of the table this player is on"
@@ -265,20 +286,20 @@ definitions:
       weight:
         type: "number"
         description: "weight of this connection"
-  Goal:
+  Node:
     type: "object"
     required:
     - "name"
     properties:
       id:
         type: "string"
-        description: "id of this goal"
+        description: "id of this node"
       name:
         type: "string"
-        description: "Goal name"
+        description: "Node name"
       balance:
         type: "number"
-        description: "Goal current balance"
+        description: "Node current balance"
       activation_amount:
         type: "number"
         description: "The amount required for this node to be active"
@@ -293,34 +314,6 @@ definitions:
         description: "this nodes connections"
         items:
           $ref: "#/definitions/Connection"
-  Policy:
-    type: "object"
-    required:
-    - "name"
-    properties:
-      id:
-        type: "string"
-        description: "id of this policy"
-      name:
-        type: "string"
-        description: "Policy name"
-      balance:
-        type: "number"
-        description: "Policy current balance"
-      activation_amount:
-        type: "number"
-        description: "The amount required for this node to be active"
-      max_amount:
-        type: "number"
-        description: "The maximum amount this node can hold"
-      leakage:
-        type: "number"
-        description: "The rate this node leaks"
-      players:
-        type: "array"
-        description: "players funding this policy"
-        items:
-          $ref: "#/definitions/Connection"
   Network:
     type: "object"
     properties:
@@ -328,12 +321,12 @@ definitions:
         type: "array"
         description: "Goals of this network"
         items:
-          $ref: "#/definitions/Goal"
+          $ref: "#/definitions/Node"
       policies:
         type: "array"
         description: "Policies of this network"
         items:
-          $ref: "#/definitions/Policy"
+          $ref: "#/definitions/Node"
   Table:
     properties:
       id:

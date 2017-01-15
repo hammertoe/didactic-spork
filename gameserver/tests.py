@@ -101,7 +101,6 @@ class CoreGameTests(DBTestCase):
     def testGameCreatePlayer(self):
         
         self.add_20_goals_and_policies()
-
         random.seed(1)
         p = self.game.create_player('Matt')
         self.assertEqual(self.game.get_player(p.id), p)

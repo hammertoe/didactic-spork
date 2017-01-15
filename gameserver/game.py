@@ -73,6 +73,9 @@ class Game:
     def get_goals(self):
         return db_session.query(Goal).order_by(Goal.name).all()
 
+    def get_node(self, id):
+        return db_session.query(Node).filter(Node.id == id).one_or_none()
+
     def get_random_goal(self):
         goals = self.get_goals()
         if goals:

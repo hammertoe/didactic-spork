@@ -24,7 +24,7 @@ def player_to_dict(player):
 def get_player(id):
     player = game.get_player(id)
     if not player:
-        return None, 404
+        return "Player not found", 404
     return player_to_dict(player), 200
 
 
