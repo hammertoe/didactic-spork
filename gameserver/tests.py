@@ -109,7 +109,7 @@ class CoreGameTests(DBTestCase):
         p = self.game.create_player('Matt')
 
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertAlmostEqual(p.balance, 0.0)
+        self.assertAlmostEqual(p.balance, self.game.money_per_budget_cycle)
 
     def testPlayerSetBalance(self):
 
@@ -1168,8 +1168,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal'], 'G5')
-        self.assertEquals(response.json['policies'], ['P0', 'P11', 'P19', 'P1', 'P16'])
+        self.assertEquals(response.json['goal']['id'], 'G5')
+        policies = response.json['policies']
+        policies = [ x['id'] for x in policies ] 
+        policies.sort()
+        self.assertEquals(policies, ['P0', 'P1', 'P11', 'P16', 'P19'])
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
@@ -1182,8 +1185,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id))
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal'], 'G17')
-        self.assertEquals(response.json['policies'], ['P3', 'P10', 'P4', 'P13', 'P7'])
+        self.assertEquals(response.json['goal']['id'], 'G17')
+        policies = response.json['policies']
+        policies = [ x['id'] for x in policies ] 
+        policies.sort()
+        self.assertEquals(policies, ['P10', 'P13', 'P3', 'P4','P7'])
         self.assertFalse(response.json.has_key('token'))
 
     def testGetNetwork(self):
