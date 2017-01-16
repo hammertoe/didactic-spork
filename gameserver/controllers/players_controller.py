@@ -45,7 +45,7 @@ def set_funding(id, funding = None):
     try:
         game.set_funding(id, funding)
         db_session.commit()
-        return None, 200
+        return game.get_funding(id), 200
     except ValueError:
         return "Sum of funds exceeds max allowed", 400
 

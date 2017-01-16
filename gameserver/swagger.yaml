@@ -152,7 +152,7 @@ paths:
           schema:
             type: "array"
             items:
-              $ref: "#/definitions/Connection"
+              $ref: "#/definitions/Fund"
         404:
           description: "Player not found"
       x-tags:
@@ -175,10 +175,14 @@ paths:
         schema:
           type: "array"
           items:
-            $ref: "#/definitions/Connection"
+            $ref: "#/definitions/Fund"
       responses:
         200:
           description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Fund"
         404:
           description: "Player not found"
       x-tags:
@@ -307,6 +311,17 @@ definitions:
       weight:
         type: "number"
         description: "weight of this connection"
+  Fund:
+    properties:
+      from_id:
+        type: "string"
+        description: "id of funding player"
+      to_id:
+        type: "string"
+        description: "id of destination node"
+      amount:
+        type: "number"
+        description: "amount to fund"
   Node:
     type: "object"
     required:
