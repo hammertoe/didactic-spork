@@ -4,7 +4,7 @@ import os
 from flask import Flask, Blueprint
 
 import connexion
-from gameserver.database import db, init_db
+from gameserver.database import db
 
 from gameserver import settings
 
@@ -36,11 +36,11 @@ def create_app():
 
 app = create_app()
 
-def main():
+def main(): # pragma: no cover
     app = create_app()
     log.info('>>>>> Starting development server at http://{}/api/ <<<<<'.format(app.config['SERVER_NAME']))
     app.run(debug=settings.FLASK_DEBUG)
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()
 
