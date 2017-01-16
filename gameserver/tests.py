@@ -1116,6 +1116,45 @@ class DataLoadTests(DBTestCase):
 
         self.assertEqual(data, network)
 
+    def testGetWallets(self):
+        self.add_20_goals_and_policies()
+
+        random.seed(0)
+
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+
+        data = self.game.get_funding(p1.id)
+        for x in range(5):
+            data[x]['amount'] = x
+        self.game.set_funding(p1.id, data)
+
+        data = self.game.get_funding(p2.id)
+        for x in range(5):
+            data[x]['amount'] = x
+        self.game.set_funding(p2.id, data)
+
+        self.game.do_propogate_funds()
+
+        nodes = set(p1.children() + p2.children())
+
+        wallets = []
+        for n in nodes:
+            for ws in n.wallets_here:
+                wallets.append(dict(location=ws.location.id,
+                                    owner=ws.owner.name,
+                                    balance=ws.balance))
+
+        expected = [{'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
+                    {'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
+                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
+                    {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'},
+                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
+                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
+                    {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
+                    {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'}]
+
+        self.assertEqual(sorted(expected), sorted(wallets))
 
 class GameTests(DBTestCase):
     
@@ -1365,28 +1404,51 @@ class RestAPITests(DBTestCase):
             data[x]['amount'] = x
         self.game.set_funding(p2.id, data)
 
-        self.game.do_propogate_funds()
+        self.game.do_propogate_funds()        
 
         nodes = set(p1.children() + p2.children())
 
         wallets = []
         for n in nodes:
-            for ws in n.wallets_here:
-                wallets.append(dict(location=ws.location.id,
-                                    owner=ws.owner.name,
-                                    balance=ws.balance))
+            response = self.client.get("/v1/network/{}/wallets".format(n.id))
+            if response.status_code == 200:
+                wallets.extend(response.json)
 
-        expected = [{'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
-                    {'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
-                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
-                    {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'},
-                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
-                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
-                    {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
-                    {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'}]
+        expected = [{u'balance': 2.0,
+                     u'location': u'P17',
+                     u'owner': p2.id},
+                    {u'balance': 4.0,
+                     u'location': u'P15',
+                     u'owner': p2.id},
+                    {u'balance': 1.0,
+                     u'location': u'P12',
+                     u'owner': p2.id},
+                    {u'balance': 2.0,
+                     u'location': u'P6',
+                     u'owner': p1.id},
+                    {u'balance': 3.0,
+                     u'location': u'P5',
+                     u'owner': p2.id},
+                    {u'balance': 4.0,
+                     u'location': u'P4',
+                     u'owner': p1.id},
+                    {u'balance': 1.0,
+                     u'location': u'P18',
+                     u'owner': p1.id},
+                    {u'balance': 3.0,
+                     u'location': u'P11',
+                     u'owner': p1.id}]
 
         self.assertEqual(sorted(expected), sorted(wallets))
 
+    def testGetNode(self):
+        n1 = self.game.add_policy('A', 0.5)
+
+        response = self.client.get("/v1/network/{}".format(n1.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['id'], n1.id)
+        self.assertEqual(response.json['name'], 'A')
+        
 class Utils(DBTestCase): # pragma: no cover
 
     def createDB(self):
