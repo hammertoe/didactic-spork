@@ -135,6 +135,26 @@ class Game:
             
         return funds
 
+    def get_network_for_table(self, id):
+
+        def postorder(node):
+            children = node.children()
+            if not children:
+                return self
+            else:
+                return self + [ postorder(child) for child in children ]
+
+        players = db_session.query(Player).filter(Player.table_id == id).all()
+        if not players:
+            # empty table so return full network
+            return self.get_network()
+        else:
+            nodes = []
+            for player in players:
+                nodes.extend(postorder(player))
+
+        return nodes
+
     def load_json(self, json_file):
         data = json.load(json_file)
         

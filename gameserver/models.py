@@ -153,6 +153,9 @@ class Player(Node):
         backref='players'
         )
 
+    table_id = Column(
+        String(36),
+        )
 
     token = Column(String(36),
                 index=True, default=default_uuid)

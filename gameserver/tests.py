@@ -1057,6 +1057,20 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(data, data2)
 
+    def testGetNetworkForTable(self):
+
+        self.add_20_goals_and_policies()
+
+        p1 = self.game.create_player('Matt')
+        p1.table_id = 'T1'
+        p2 = self.game.create_player('Simon')
+        p3 = self.game.create_player('Richard')
+
+        table_uuid = default_uuid()
+
+        print self.gale.get_network_for_table('T1')
+
+
 class DataLoadTests(DBTestCase):
 
     def testLoadJsonFile(self):
