@@ -1347,6 +1347,46 @@ class RestAPITests(DBTestCase):
                                     content_type='application/json')
         self.assertEquals(response.status_code, 400)
 
+    def testGetWallets(self):
+        self.add_20_goals_and_policies()
+
+        random.seed(0)
+
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+
+        data = self.game.get_funding(p1.id)
+        for x in range(5):
+            data[x]['amount'] = x
+        self.game.set_funding(p1.id, data)
+
+        data = self.game.get_funding(p2.id)
+        for x in range(5):
+            data[x]['amount'] = x
+        self.game.set_funding(p2.id, data)
+
+        self.game.do_propogate_funds()
+
+        nodes = set(p1.children() + p2.children())
+
+        wallets = []
+        for n in nodes:
+            for ws in n.wallets_here:
+                wallets.append(dict(location=ws.location.id,
+                                    owner=ws.owner.name,
+                                    balance=ws.balance))
+
+        expected = [{'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
+                    {'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
+                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
+                    {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'},
+                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
+                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
+                    {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
+                    {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'}]
+
+        self.assertEqual(sorted(expected), sorted(wallets))
+
 class Utils(DBTestCase): # pragma: no cover
 
     def createDB(self):
