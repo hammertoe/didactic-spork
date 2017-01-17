@@ -140,9 +140,9 @@ class Game:
         def postorder(node):
             children = node.children()
             if not children:
-                return self
+                return node
             else:
-                return self + [ postorder(child) for child in children ]
+                return [node,] + [ postorder(child) for child in children ]
 
         players = db_session.query(Player).filter(Player.table_id == id).all()
         if not players:

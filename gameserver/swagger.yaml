@@ -15,6 +15,8 @@ tags:
   description: "Operations related to the game network"
 - name: "table"
   description: "Operations related to the game tables"
+- name: "game"
+  description: "Operations related to the overall game"
 consumes:
 - "application/json"
 produces:
@@ -22,6 +24,18 @@ produces:
 security:
 - UserSecurity: []
 paths:
+  /game/tick:
+    post:
+      tags:
+      - "game"
+      summary: "Causes a game tick to happen"
+      operationId: "gameserver.controllers.game_controller.do_tick"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
   /network/:
     get:
       tags:

@@ -10,7 +10,7 @@ from gameserver.game import Game
 from gameserver.models import Base, Node, Player, Goal, Policy, Wallet, Edge
 from sqlalchemy import event
 
-from gameserver.database import db
+from gameserver.database import db, default_uuid
 from gameserver.app import app, create_app
 from flask_testing import TestCase
 
@@ -1059,7 +1059,8 @@ class CoreGameTests(DBTestCase):
 
     def testGetNetworkForTable(self):
 
-        self.add_20_goals_and_policies()
+        data = json.load(open('examples/network.json', 'r'))
+        self.game.create_network(data)
 
         p1 = self.game.create_player('Matt')
         p1.table_id = 'T1'
@@ -1068,13 +1069,13 @@ class CoreGameTests(DBTestCase):
 
         table_uuid = default_uuid()
 
-        print self.gale.get_network_for_table('T1')
+        print self.game.get_network_for_table('T1')
 
 
 class DataLoadTests(DBTestCase):
 
     def testLoadJsonFile(self):
-        json_file = open('example-graph.json', 'r')
+        json_file = open('examples/example-graph.json', 'r')
         self.game.load_json(json_file)
         self.assertEqual(61, db_session.query(Edge).count())
         self.assertEqual(36, db_session.query(Node).count())
@@ -1112,7 +1113,7 @@ class DataLoadTests(DBTestCase):
         # todo: add more tests here
 
     def testCreateNetwork(self):
-        data = json.load(open('network.json', 'r'))
+        data = json.load(open('examples/network.json', 'r'))
 
         self.game.create_network(data)
 
@@ -1123,7 +1124,7 @@ class DataLoadTests(DBTestCase):
 
 
     def testCreateThenGetNetwork(self):
-        data = json.load(open('network.json', 'r'))
+        data = json.load(open('examples/network.json', 'r'))
 
         self.game.create_network(data)
         network = self.game.get_network()
@@ -1300,7 +1301,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(response.json['goals']), 3)
 
     def testCreateNetwork(self):
-        data = json.load(open('network.json', 'r'))
+        data = json.load(open('examples/network.json', 'r'))
 
         response = self.client.post("/v1/network/", data=json.dumps(data),
                                     content_type='application/json')
@@ -1313,7 +1314,7 @@ class RestAPITests(DBTestCase):
 
 
     def testCreateThenGetNetwork(self):
-        data = json.load(open('network.json', 'r'))
+        data = json.load(open('examples/network.json', 'r'))
 
 
         response = self.client.post("/v1/network/", data=json.dumps(data),
@@ -1470,12 +1471,12 @@ class Utils(DBTestCase): # pragma: no cover
         Base.metadata.create_all(bind=engine)
 
     def GenNetFile(self):
-        json_file = open('example-graph.json', 'r')
+        json_file = open('examples/example-graph.json', 'r')
         self.game.load_json(json_file)
 
         response = self.client.get("/v1/network/")
 
-        outfile = open('network.json', 'w')
+        outfile = open('examples/network.json', 'w')
         outfile.write(response.data)
         outfile.close()
 
