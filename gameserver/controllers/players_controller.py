@@ -18,7 +18,7 @@ def player_to_dict(player):
                 balance=player.balance,
                 goal=goal,
                 policies=policies,
-                table=None,
+                table=player.table_id,
                 )
 
 def get_player(id):

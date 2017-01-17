@@ -1,9 +1,9 @@
 import json
-from utils import random
+from gameserver.utils import random, node_to_dict
 
 #from database import db_session
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet
+from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table
 
 db_session = db.session
 
@@ -135,25 +135,20 @@ class Game:
             
         return funds
 
+    def create_table(self, name):
+        table = Table(name)
+        db_session.add(table)
+        return table
+
+    def get_table(self, id):
+        return db_session.query(Table).filter(Table.id == id).one_or_none()
+
     def get_network_for_table(self, id):
 
-        def postorder(node):
-            children = node.children()
-            if not children:
-                return node
-            else:
-                return [node,] + [ postorder(child) for child in children ]
-
-        players = db_session.query(Player).filter(Player.table_id == id).all()
-        if not players:
-            # empty table so return full network
-            return self.get_network()
-        else:
-            nodes = []
-            for player in players:
-                nodes.extend(postorder(player))
-
-        return nodes
+        table = self.get_table(id)
+        if not table:
+            return None
+        return self.get_network(table.players)
 
     def load_json(self, json_file):
         data = json.load(json_file)
@@ -189,33 +184,28 @@ class Game:
 
         db_session.commit()
 
-    def node_to_dict(self, node):
-        connections = []
-        for edge in node.higher_edges:
-            connections.append(
-                {"from_id": edge.lower_node.id,
-                 "to_id": node.id,
-                 "weight": edge.weight,
-                 }
-                )
+    def get_network(self, players=None):
 
-        data = {"id": node.id,
-                "name": node.name,
-                "leakage": node.leak,
-                "max_amount": node.max_level,
-                "activation_amount": node.activation,
-                "balance": node.balance,
-                "connections": connections
-                }
+        def node_recurse_generator(node):
+            yield node
+            for n in node.children():
+                for rn in node_recurse_generator(n):
+                    yield rn 
 
-        return data
-
-
-    def get_network(self):
-        goals = db_session.query(Goal).all()
-        policies = db_session.query(Policy).all()
-        goals = [self.node_to_dict(g) for g in goals ]
-        policies = [self.node_to_dict(p) for p in policies ]
+        if not players:
+            goals = db_session.query(Goal).all()
+            policies = db_session.query(Policy).all()
+        else:
+            goals = set()
+            policies = set()
+            for player in players:
+                goals.add(player.goal)
+                p = [ x for x in node_recurse_generator(player) \
+                      if isinstance(x, Policy) ]
+                policies.update(p)
+            
+        goals = [ node_to_dict(g) for g in goals ]
+        policies = [ node_to_dict(p) for p in policies ]
         return dict(goals=goals, policies=policies)
 
 

@@ -7,7 +7,7 @@ import time
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from gameserver.game import Game
-from gameserver.models import Base, Node, Player, Goal, Policy, Wallet, Edge
+from gameserver.models import Base, Node, Player, Goal, Policy, Wallet, Edge, Table
 from sqlalchemy import event
 
 from gameserver.database import db, default_uuid
@@ -1057,11 +1057,35 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(data, data2)
 
+    def testCreateTable(self):
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+        table = self.game.create_table('table a')
+
+        self.assertEqual(table.players, [])
+
+        table.players.append(p1)
+        
+        self.assertEqual(table.players, [p1,])
+        self.assertEqual(p1.table.id, table.id)
+
+        p2.table = table
+
+        self.assertEqual(table.players, [p1,p2])
+        self.assertEqual(p2.table.id, table.id)
+
+        p1.table = None
+
+        self.assertEqual(table.players, [p2,])
+        
+
     def testGetNetworkForTable(self):
 
         data = json.load(open('examples/network.json', 'r'))
         self.game.create_network(data)
 
+        random.seed(0)
+        
         p1 = self.game.create_player('Matt')
         p1.table_id = 'T1'
         p2 = self.game.create_player('Simon')
@@ -1069,7 +1093,31 @@ class CoreGameTests(DBTestCase):
 
         table_uuid = default_uuid()
 
-        print self.game.get_network_for_table('T1')
+        self.assertEqual(self.game.get_network_for_table('nonexistant'), None)
+
+        t1 = self.game.create_table('T1')
+
+        table = self.game.get_network_for_table(t1.id)
+        self.assertEqual(len(table['goals']), 6)
+        self.assertEqual(len(table['policies']), 30)
+
+        t1.players.append(p1)
+
+        table = self.game.get_network_for_table(t1.id)
+        self.assertEqual(len(table['goals']), 1)
+        self.assertEqual(len(table['policies']), 5)
+
+        t1.players.append(p2)
+
+        table = self.game.get_network_for_table(t1.id)
+        self.assertEqual(len(table['goals']), 2)
+        self.assertEqual(len(table['policies']), 7)
+
+        p2.table = None
+
+        table = self.game.get_network_for_table(t1.id)
+        self.assertEqual(len(table['goals']), 1)
+        self.assertEqual(len(table['policies']), 5)
 
 
 class DataLoadTests(DBTestCase):
@@ -1328,6 +1376,70 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(data, response.json)
 
+    def testCreateTable(self):
+        data = {'name': 'Table A'}
+        response = self.client.post("/v1/tables/", data=json.dumps(data),
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 201)
+        self.assertEquals(response.json['name'], 'Table A')
+        self.assertEquals(response.json['players'], [])
+
+        id = response.json['id']
+        self.assertEquals(self.game.get_table(id).id, id)
+
+    def testGetTableEmpty(self):
+        data = json.load(open('examples/network.json', 'r'))
+        self.game.create_network(data)
+
+        table = self.game.create_table('Table A')
+
+        response = self.client.get("/v1/tables/{}".format(table.id))
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertEquals(result['id'], table.id)
+        self.assertEquals(result['name'], 'Table A')
+        self.assertEquals(result['players'], [])
+        self.assertEquals(len(result['network']['policies']), 30)
+
+    def testGetTableWithOnePlayer(self):
+        data = json.load(open('examples/network.json', 'r'))
+        self.game.create_network(data)
+
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+
+        table = self.game.create_table('Table A')
+        table.players.append(p1)
+
+        response = self.client.get("/v1/tables/{}".format(table.id))
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertEquals(result['id'], table.id)
+        self.assertEquals(result['name'], 'Table A')
+        self.assertEquals(result['players'][0]['name'], 'Matt')
+        self.assertEquals(len(result['network']['policies']), 5)
+        self.assertEquals(len(result['network']['goals']), 1)
+
+    def testGetTableWithTwoPlayers(self):
+        data = json.load(open('examples/network.json', 'r'))
+        self.game.create_network(data)
+
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+
+        table = self.game.create_table('Table A')
+        table.players.append(p1)
+        table.players.append(p2)
+
+        response = self.client.get("/v1/tables/{}".format(table.id))
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertEquals(result['id'], table.id)
+        self.assertEquals(result['name'], 'Table A')
+        self.assertEquals(result['players'][0]['name'], 'Matt')
+        self.assertEquals(len(result['network']['policies']), 7)
+        self.assertEquals(len(result['network']['goals']), 2)
 
     def testGetFunding(self):
         self.add_20_goals_and_policies()

@@ -17,6 +17,17 @@ class Base(object):
         return cls.__name__.lower()
     id = Column(String(36), primary_key=True, default=default_uuid)
 
+class Table(Base):
+    discriminator = Column(String(32))
+    __mapper_args__ = {"polymorphic_on": discriminator}
+    id = Column(String(36),
+                primary_key=True, default=default_uuid)
+
+    name = Column(String(200))
+
+    def __init__(self, name):
+        self.id = default_uuid()
+        self.name = name
 
 class Node(Base):
 
@@ -155,6 +166,14 @@ class Player(Node):
 
     table_id = Column(
         String(36),
+        ForeignKey('table.id')
+        )
+
+    table = relationship(
+        Table,
+        primaryjoin=table_id == Table.id,
+        order_by='Table.id',
+        backref='players'
         )
 
     token = Column(String(36),

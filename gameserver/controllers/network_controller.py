@@ -1,11 +1,12 @@
 from gameserver.game import Game
 from gameserver.database import db
+from gameserver.utils import node_to_dict
 
 db_session = db.session
 game = Game()
 
 
-def node_to_dict(node):
+def Xnode_to_dict(node):
     return dict(id=node.id,
                 name=node.name,
                 balance=node.balance,
