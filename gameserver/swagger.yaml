@@ -164,7 +164,7 @@ paths:
         description: "The player to create."
         required: false
         schema:
-          $ref: "#/definitions/Player"
+          $ref: "#/definitions/PlayerPatch"
       responses:
         200:
           description: "Success"
@@ -326,9 +326,7 @@ definitions:
         type: "string"
         description: "Player name"
       goal:
-        type: "array"
-        items:
-          $ref: "#/definitions/Node"
+         $ref: "#/definitions/Node"
       policies:
         type: "array"
         items:
@@ -340,6 +338,23 @@ definitions:
         type: "string"
         description: "Secret token used for auth"
         readOnly: true
+  PlayerPatch:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "Player name"
+      goal:
+        type: "string"
+        description: "Id of the goal"
+      policies:
+        type: "array"
+        description: "Array of Ids of policies"
+        items:
+          type: string
+      table:
+        type: "string"
+        description: "Id of the table this player is on"
   Connection:
     properties:
       from_id:
