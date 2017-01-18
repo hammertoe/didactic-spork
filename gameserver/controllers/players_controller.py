@@ -50,8 +50,12 @@ def update_player(id, player=None):
     p = game.get_player(id)
     if not p:
         return "Player not found", 404
-    for key, value in player.items():
-        setattr(p, key, value) 
+
+    item_map = {'table': 'table_id'}
+
+    for key, value in item_map.items():
+        if player.has_key(key):
+            setattr(p, value, player[key])
     db_session.commit()
     return player_to_dict(p), 200
 
