@@ -211,6 +211,23 @@ class Game:
         policies = [ node_to_dict(p) for p in policies ]
         return dict(goals=goals, policies=policies)
 
+    def get_network2(self, players=None):
+
+        def node_recurse_generator(node):
+            if isinstance(node, Goal):
+                return
+            yield node
+            for n in node.children():
+                for rn in node_recurse_generator(n):
+                    yield rn 
+
+        nodes = set()
+        for player in players:
+            p = node_recurse_generator(player)
+            nodes.update(p)
+            nodes.add(player.goal)
+        return nodes
+        
 
 
     def create_network(self, network):

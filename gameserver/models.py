@@ -115,10 +115,13 @@ class Node(Base):
 
     @property
     def rank(self):
+        if getattr(self, '__rank__', None) is not None:
+            return self.__rank__
         rank = len(self.parents())
         for parent in self.parents():
             rank += parent.rank + 1
 
+        self.__rank__ = rank
         return rank
 
 class Goal(Node):

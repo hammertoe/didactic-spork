@@ -19,12 +19,43 @@ def create_table(table = None):
     db_session.commit()
     return table_to_dict(table), 201
 
-def get_table(id):
+def Xget_table(id):
     table = game.get_table(id)
     if not table:
         return "Table not found", 404
     else:
         return table_to_dict(table), 200
+
+def get_table(id):
+
+    table = game.get_table(id)
+    if not table:
+        return "Table not found", 404
+    else:
+        data = { 'nodes': [],
+                 'edges': [],
+                 }        
+        nset = set()
+        nodes = tuple(game.get_network2(table.players))
+        for n in nodes:
+            data['nodes'].append(
+                dict(id=n.id,
+                     label=n.name,
+                     )
+                )
+            nset.add(n.id)
+
+        for n in nodes:
+            edges = n.higher_edges
+            for e in edges:
+                if n.id in nset and e.lower_node.id in nset:
+                    data['edges'].append(
+                        {'from': e.lower_node.id,
+                         'to': n.id,
+                         'id':e.id,
+                         }
+                        )
+        return data
 
 def get_tables():
     tables = game.get_tables()
