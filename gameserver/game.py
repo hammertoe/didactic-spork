@@ -143,6 +143,9 @@ class Game:
     def get_table(self, id):
         return db_session.query(Table).filter(Table.id == id).one_or_none()
 
+    def get_tables(self):
+        return db_session.query(Table).all()
+
     def get_network_for_table(self, id):
 
         table = self.get_table(id)

@@ -16,6 +16,7 @@ def table_to_dict(table):
 
 def create_table(table = None):
     table = game.create_table(table['name'])
+    db_session.commit()
     return table_to_dict(table), 201
 
 def get_table(id):
@@ -26,4 +27,5 @@ def get_table(id):
         return table_to_dict(table), 200
 
 def get_tables():
-    return 'do some magic!'
+    tables = game.get_tables()
+    return [ dict(id=t.id,name=t.name) for t in tables ], 200

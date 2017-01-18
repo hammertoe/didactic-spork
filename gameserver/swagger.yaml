@@ -148,6 +148,34 @@ paths:
           description: "Player not found"
       x-tags:
       - tag: "players"
+    patch:
+      tags:
+      - "players"
+      summary: "Updates attributes of a player"
+      operationId: "gameserver.controllers.players_controller.update_player"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "player"
+        description: "The player to create."
+        required: false
+        schema:
+          $ref: "#/definitions/Player"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Player"
+        404:
+          description: "Player not found"
+      x-tags:
+      - tag: "players"
+      
+
   /players/{id}/funding:
     get:
       tags:
@@ -290,8 +318,6 @@ definitions:
         description: "The name of this player"
   Player:
     type: "object"
-    required:
-    - "name"
     properties:
       id:
         type: "string"

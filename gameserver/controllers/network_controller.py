@@ -6,15 +6,6 @@ db_session = db.session
 game = Game()
 
 
-def Xnode_to_dict(node):
-    return dict(id=node.id,
-                name=node.name,
-                balance=node.balance,
-                activation_amount=node.activation,
-                max_amount=node.max_level,
-                leakage=node.leak,
-                )
-
 def wallet_to_dict(wallet):
     return dict(owner=wallet.owner_id,
                 location=wallet.location_id,

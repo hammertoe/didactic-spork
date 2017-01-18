@@ -41,6 +41,20 @@ def create_player(player=None):
     else:
         return 500
 
+def update_player(id, player=None):
+    """
+    Updates a player
+    """
+    if not player:
+        return 500
+    p = game.get_player(id)
+    if not p:
+        return "Player not found", 404
+    for key, value in player.items():
+        setattr(p, key, value) 
+    db_session.commit()
+    return player_to_dict(p), 200
+
 def set_funding(id, funding = None):
     try:
         game.set_funding(id, funding)
