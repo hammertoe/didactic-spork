@@ -36,6 +36,12 @@ class Game:
             node.do_leak()
             node.do_propogate_funds()
 
+    def top_players(self, max_num=50):
+        wallets = db_session.query(Wallet).filter(Wallet.location_id.in_(
+                db_session.query(Goal.id)
+                )).order_by(Wallet.balance.desc()).limit(max_num).all()
+        return [ w.owner for w in wallets ]
+
     def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow

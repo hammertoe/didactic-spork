@@ -239,6 +239,12 @@ class Player(Node):
             self.transfer_funds_to_node(fund.higher_node, fund.weight)
 
 
+    @property
+    def goal_funded(self):
+        res = db_session.query(Wallet.balance).filter(Wallet.location == self.goal,
+                                                      Wallet.owner == self).scalar()
+        return res
+
 class Edge(Base):
 
     lower_id = Column(

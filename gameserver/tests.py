@@ -1209,6 +1209,41 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 150000)
         self.assertEqual(buyer.balance, 150000)
 
+    def testTopPlayers(self):
+        random.seed(0)
+        g1 = self.game.add_goal('G1', 0.0)
+        g2 = self.game.add_goal('G2', 0.0)
+
+        p1 = self.game.create_player('Matt')
+        p1.goal = g1
+        p2 = self.game.create_player('Simon')
+        p2.goal = g1
+        p3 = self.game.create_player('Richard')
+        p3.goal = g2
+
+        self.game.add_fund(p1, g1, 10)
+        self.game.add_fund(p2, g1, 20)
+        self.game.add_fund(p3, g2, 15)
+
+        self.game.tick()
+
+        self.assertEqual(p1.balance, 149990)
+        self.assertEqual(p2.balance, 149980)
+        self.assertEqual(p3.balance, 149985)
+
+        p1.goal_funded
+
+        top = self.game.top_players()
+        self.assertEqual(top, [p2,p3,p1])
+
+        self.game.add_fund(p1, g1, 100)
+
+        self.game.tick()
+
+        top = self.game.top_players()
+        self.assertEqual(top, [p1,p2,p3])
+
+
 class DataLoadTests(DBTestCase):
 
     def testLoadJsonFile(self):
@@ -1569,9 +1604,9 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x
 
-        response = self.client.post("/v1/players/{}/funding".format(id),
-                                    data=json.dumps(data),
-                                    content_type='application/json')
+        response = self.client.put("/v1/players/{}/funding".format(id),
+                                   data=json.dumps(data),
+                                   content_type='application/json')
         self.assertEquals(response.status_code, 200)
 
         data2 = self.game.get_funding(id)
@@ -1598,7 +1633,7 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x*20
 
-        response = self.client.post("/v1/players/{}/funding".format(id),
+        response = self.client.put("/v1/players/{}/funding".format(id),
                                     data=json.dumps(data),
                                     content_type='application/json')
         self.assertEquals(response.status_code, 400)
@@ -1725,6 +1760,49 @@ class RestAPITests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertEqual(seller.balance, 150000)
         self.assertEqual(buyer.balance, 150000)
+
+    def testLeagueTable(self):
+        random.seed(0)
+        g1 = self.game.add_goal('G1', 0.0)
+        g2 = self.game.add_goal('G2', 0.0)
+
+        p1 = self.game.create_player('Matt')
+        p1.goal = g1
+        p2 = self.game.create_player('Simon')
+        p2.goal = g1
+        p3 = self.game.create_player('Richard')
+        p3.goal = g2
+
+        self.game.add_fund(p1, g1, 10)
+        self.game.add_fund(p2, g1, 20)
+        self.game.add_fund(p3, g2, 15)
+
+        self.game.tick()
+
+        self.assertEqual(p1.balance, 149990)
+        self.assertEqual(p2.balance, 149980)
+        self.assertEqual(p3.balance, 149985)
+
+        response = self.client.get("/v1/game/league_table")
+        self.assertEqual(response.status_code, 200)
+        expected = [{'id': p2.id,
+                     'name': p2.name,
+                     'goal': p2.goal.name,
+                     'goal_total': 30,
+                     'goal_contribution': 20,},
+                    {'id': p3.id,
+                     'name': p3.name,
+                     'goal': p3.goal.name,
+                     'goal_total': 15,
+                     'goal_contribution': 15,},
+                    {'id': p1.id,
+                     'name': p1.name,
+                     'goal': p1.goal.name,
+                     'goal_total': 30,
+                     'goal_contribution': 10,}
+                    ]
+
+        self.assertEqual(response.json, expected)
         
 class Utils(DBTestCase): # pragma: no cover
 

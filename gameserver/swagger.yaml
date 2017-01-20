@@ -59,6 +59,22 @@ paths:
           description: "Cannot find policy, buyer, or seller"
       x-tags:
       - tag: "players"
+  /game/league_table:
+    get:
+      tags:
+      - "game"
+      - "players"
+      summary: "Returns a league table of players"
+      operationId: "gameserver.controllers.game_controller.league_table"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/LeagueTableEntry"
+      x-tags:
+      - tag: "game"
       
   /network/:
     get:
@@ -494,6 +510,23 @@ definitions:
           $ref: "#/definitions/Player"
       network:
         $ref: "#/definitions/Network"
+  LeagueTableEntry:
+    properties:
+      id:
+        type: "string"
+        description: "player id"
+      name:
+        type: "string"
+        description: "player name"
+      goal:
+        type: "string"
+        description: "goal name"
+      goal_total:
+        type: "number"
+        description: "total amount funded of their goal"
+      goal_contribution:
+        type: "number"
+        description: "amount this player funded their goal"
   ErrorMessage:
     properties:
       longMessage:
