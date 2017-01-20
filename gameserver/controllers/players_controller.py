@@ -72,3 +72,5 @@ def get_funding(id):
 
     return funds, 200
 
+def add_policy(id, policy):
+    game.add_fund(id, policy, 0.0)

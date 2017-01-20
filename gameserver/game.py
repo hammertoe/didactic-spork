@@ -31,8 +31,10 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
-        self.do_leak()
-        self.do_propogate_funds()
+        nodes = db_session.query(Node).all()
+        for node in sorted(nodes, key=lambda n: n.rank):
+            node.do_leak()
+            node.do_propogate_funds()
 
     def create_player(self, name):
         p = Player(name)
@@ -57,7 +59,7 @@ class Game:
         return p
 
     def get_policy(self, id):
-        return db_session.query(Policy).filter(Policy.id == id).one()
+        return db_session.query(Policy).filter(Policy.id == id).one_or_none()
 
     def get_policies(self):
         return db_session.query(Policy).order_by(Policy.name).all()
@@ -134,6 +136,29 @@ class Game:
             funds.append({'from_id':id, 'to_id': dest_id, 'amount': fund.weight})
             
         return funds
+
+    def sell_policy(self, seller, buyer, policy, price):
+        seller = self.get_player(seller)
+        buyer = self.get_player(buyer)
+        policy = self.get_policy(policy)
+        if not (seller and buyer and policy):
+            raise ValueError, "Can't find seller, buyer, or policy"
+
+        # check the seller has the funds:
+        if buyer.balance < price:
+            raise ValueError, "Not enough funds for sale"
+
+        # check the buyer doesn't alreay have this policy
+        if policy in buyer.children():
+            raise ValueError, "The buyer already has this policy"
+
+        # sort out the money first
+        seller.balance += price
+        buyer.balance -= price
+        
+        # then give the buyer the policy
+        self.add_fund(buyer, policy, 0.0)
+        
 
     def create_table(self, name):
         table = Table(name)
@@ -253,3 +278,4 @@ class Game:
             self.add_link(a,b,w)
 
         db_session.commit()
+

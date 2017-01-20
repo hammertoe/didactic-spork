@@ -952,11 +952,11 @@ class CoreGameTests(DBTestCase):
             self.game.tick()
 
         self.assertEqual(p1.balance, 2500)
-        self.assertAlmostEqual(po1.balance, 49.998, 2)
-        self.assertAlmostEqual(po2.balance, 59.998, 2)
+        self.assertAlmostEqual(po1.balance, 39.998, 2)
+        self.assertAlmostEqual(po2.balance, 44.998, 2)
 
-        self.assertEqual(g1.balance, 10.0)
-        self.assertEqual(g2.balance, 18.0)
+        self.assertEqual(g1.balance, 5.0)
+        self.assertEqual(g2.balance, 9.0)
 
     def testTwoPlayersFundAPolicyEqually(self):
         p1 = self.game.create_player('Matt')
@@ -1119,6 +1119,95 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(len(table['goals']), 1)
         self.assertEqual(len(table['policies']), 5)
 
+    def testSellPolicy(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.children())
+
+        self.game.sell_policy(seller.id, buyer.id, p1.id, 20000)
+
+        self.assertIn(p1, buyer.children())
+        self.assertIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000+20000)
+        self.assertEqual(buyer.balance, 150000-20000)
+        
+    def testSellPolicyFailDupe(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        buyer.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+        self.assertIn(p1, buyer.children())
+
+        with self.assertRaises(ValueError):
+            self.game.sell_policy(seller.id, buyer.id, p1.id, 20000)
+
+
+        self.assertIn(p1, buyer.children())
+        self.assertIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+        
+    def testSellPolicyFailNoFunds(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.children())
+
+        with self.assertRaises(ValueError):
+            self.game.sell_policy(seller.id, buyer.id, p1.id, 200000)
+
+
+        self.assertNotIn(p1, buyer.children())
+        self.assertIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+        
+    def testSellPolicyFailNoPolicy(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        self.assertNotIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.children())
+
+        with self.assertRaises(ValueError):
+            self.game.sell_policy(seller.id, buyer.id, p1.id, 200000)
+
+
+        self.assertNotIn(p1, buyer.children())
+        self.assertNotIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
 
 class DataLoadTests(DBTestCase):
 
@@ -1218,6 +1307,7 @@ class DataLoadTests(DBTestCase):
                     {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'}]
 
         self.assertEqual(sorted(expected), sorted(wallets))
+
 
 class GameTests(DBTestCase):
     
@@ -1575,6 +1665,66 @@ class RestAPITests(DBTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['id'], n1.id)
         self.assertEqual(response.json['name'], 'A')
+
+    def testSellPolicy(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.children())
+
+        data = {'seller': seller.id,
+                'buyer': buyer.id,
+                'policy': p1.id,
+                'price': 20000}
+
+        response = self.client.put("/v1/game/sell_policy",
+                                   data=json.dumps(data),
+                                   content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn(p1, buyer.children())
+        self.assertIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000+20000)
+        self.assertEqual(buyer.balance, 150000-20000)
+        
+    def testSellPolicyFail(self):
+        
+        seller = self.game.create_player('Matt')
+        buyer = self.game.create_player('Simon')
+
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
+
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.children())
+
+        data = {'seller': seller.id,
+                'buyer': buyer.id,
+                'policy': p1.id,
+                'price': 200000}
+
+        response = self.client.put("/v1/game/sell_policy",
+                                   data=json.dumps(data),
+                                   content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertNotIn(p1, buyer.children())
+        self.assertIn(p1, seller.children())
+        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(buyer.balance, 150000)
         
 class Utils(DBTestCase): # pragma: no cover
 

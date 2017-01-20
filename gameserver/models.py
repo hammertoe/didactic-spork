@@ -74,7 +74,11 @@ class Node(Base):
 
     @property
     def balance(self):
+#        res = db_session.execute("SELECT sum(balance) AS balance FROM wallet WHERE location_id = :id", {'id': self.id})
+#        return res.fetchall()[0][0] or 0.0
+        
         return float(sum([ wallet.balance for wallet in self.wallets_here ]))
+        
 
     def do_leak(self):
         total = self.balance
@@ -115,10 +119,13 @@ class Node(Base):
 
     @property
     def rank(self):
+        if getattr(self, '__rank__', None) is not None:
+            return self.__rank__
         rank = len(self.parents())
         for parent in self.parents():
             rank += parent.rank + 1
 
+        self.__rank__ = rank
         return rank
 
 class Goal(Node):
@@ -197,6 +204,9 @@ class Player(Node):
 
     @property
     def balance(self):
+#        res = db_session.execute("SELECT sum(balance) AS balance FROM wallet WHERE location_id = :id", {'id': self.id})
+#        return res.fetchall()[0][0] or 0.0
+
         return self.wallet.balance
 
     @balance.setter

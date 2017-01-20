@@ -25,7 +25,7 @@ security:
 - UserSecurity: []
 paths:
   /game/tick:
-    post:
+    put:
       tags:
       - "game"
       summary: "Causes a game tick to happen"
@@ -36,6 +36,30 @@ paths:
           description: "Success"
       x-tags:
       - tag: "game"
+  /game/sell_policy:
+    put:
+      tags:
+      - "game"
+      - "players"
+      summary: "Sell a policy from one player to another"
+      operationId: "gameserver.controllers.game_controller.do_sale"
+      parameters:
+      - in: "body"
+        name: "sale"
+        description: "The sale transaction"
+        required: false
+        schema:
+          $ref: "#/definitions/PolicySale"
+      responses:
+        200:
+          description: "Success"
+        402:
+          description: "Not enough funds to complete transaction"
+        404:
+          description: "Cannot find policy, buyer, or seller"
+      x-tags:
+      - tag: "players"
+      
   /network/:
     get:
       tags:
@@ -199,7 +223,7 @@ paths:
           description: "Player not found"
       x-tags:
       - tag: "players"
-    post:
+    put:
       tags:
       - "players"
       summary: "Sets the funding of the policies for this player"
@@ -435,6 +459,26 @@ definitions:
       balance:
         type: "number"
         description: "amount of money in this wallet"
+  PolicySale:
+    type: "object"
+    properties:
+      seller:
+        type: "string"
+        description: "Id of the seller of this policy"
+      buyer:
+        type: "string"
+        description: "Id of the buyer of this policy"
+      policy:
+        type: "string"
+        description: "The policy for sale"
+      price:
+        type: "number"
+        description: "Sale price"
+    required:
+      - seller
+      - buyer
+      - policy
+      - price
   Table:
     properties:
       id:

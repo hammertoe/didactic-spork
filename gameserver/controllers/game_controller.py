@@ -9,3 +9,14 @@ def do_tick():
     db_session.commit()
     return None, 200
 
+def do_sale(sale):
+    try:
+        buyer = sale['buyer']
+        seller = sale['seller']
+        policy = sale['policy']
+        price = sale['price']
+        game.sell_policy(seller, buyer, policy, price)
+    except ValueError:
+        return None, 400
+
+    return None, 200
