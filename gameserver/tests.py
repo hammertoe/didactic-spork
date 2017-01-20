@@ -1223,15 +1223,14 @@ class CoreGameTests(DBTestCase):
 
         self.game.add_fund(p1, g1, 10)
         self.game.add_fund(p2, g1, 20)
+        self.game.add_fund(p2, g2, 40)
         self.game.add_fund(p3, g2, 15)
 
         self.game.tick()
 
         self.assertEqual(p1.balance, 149990)
-        self.assertEqual(p2.balance, 149980)
+        self.assertEqual(p2.balance, 149940)
         self.assertEqual(p3.balance, 149985)
-
-        p1.goal_funded
 
         top = self.game.top_players()
         self.assertEqual(top, [p2,p3,p1])
@@ -1242,6 +1241,27 @@ class CoreGameTests(DBTestCase):
 
         top = self.game.top_players()
         self.assertEqual(top, [p1,p2,p3])
+
+    def testGoalFunded(self):
+        g1 = self.game.add_goal('G1', 0.0)
+        g2 = self.game.add_goal('G2', 0.0)
+
+        p1 = self.game.create_player('Matt')
+        p1.goal = g1
+        
+        self.assertEqual(p1.goal_funded, 0)
+
+        self.game.add_fund(p1, g1, 10)
+        self.game.add_fund(p1, g2, 30)
+
+        self.game.tick()
+
+        self.assertEqual(p1.balance, 149960)
+        self.assertEqual(p1.goal_funded, 10)
+
+        self.game.tick()
+
+        self.assertEqual(p1.goal_funded, 20)
 
 
 class DataLoadTests(DBTestCase):

@@ -243,7 +243,7 @@ class Player(Node):
     def goal_funded(self):
         res = db_session.query(Wallet.balance).filter(Wallet.location == self.goal,
                                                       Wallet.owner == self).scalar()
-        return res
+        return res or 0.0
 
 class Edge(Base):
 

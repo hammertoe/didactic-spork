@@ -26,12 +26,12 @@ def league_table():
     res = []
     top = game.top_players()
     for t in top:
-        wallet = db_session.query(Wallet).filter(Wallet.location == t.goal,
-                                                 Wallet.owner == t).one()
+        funded = db_session.query(Wallet.balance).filter(Wallet.location == t.goal,
+                                                         Wallet.owner == t).scalar()
         r = {'id': t.id,
              'name': t.name,
              'goal': t.goal.name,
-             'goal_contribution': wallet.balance,
+             'goal_contribution': funded or 0.0,
              'goal_total': t.goal.balance,
              }
         res.append(r)
