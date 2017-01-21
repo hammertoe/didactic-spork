@@ -36,29 +36,6 @@ paths:
           description: "Success"
       x-tags:
       - tag: "game"
-  /game/sell_policy:
-    put:
-      tags:
-      - "game"
-      - "players"
-      summary: "Sell a policy from one player to another"
-      operationId: "gameserver.controllers.game_controller.do_sale"
-      parameters:
-      - in: "body"
-        name: "sale"
-        description: "The sale transaction"
-        required: false
-        schema:
-          $ref: "#/definitions/PolicySale"
-      responses:
-        200:
-          description: "Success"
-        402:
-          description: "Not enough funds to complete transaction"
-        404:
-          description: "Cannot find policy, buyer, or seller"
-      x-tags:
-      - tag: "players"
   /game/league_table:
     get:
       tags:
@@ -269,6 +246,61 @@ paths:
           description: "Player not found"
       x-tags:
       - tag: "players"
+  /players/{player_id}/policies/{policy_id}/offer:
+    get:
+      tags:
+      - "players"
+      summary: "Returns an offer to sell the specified policy"
+      operationId: "gameserver.controllers.players_controller.get_policy_offer"
+      parameters:
+      - name: "player_id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - name: "policy_id"
+        in: "path"
+        description: "The policy id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/PolicyOffer"
+        404:
+          description: "Can't find player or policy"
+      x-tags:
+      - tag: "players"
+
+  /players/{player_id}/policies/:
+    post:
+      tags:
+      - "players"
+      summary: "Buys a policy from another player using supplied offer"
+      operationId: "gameserver.controllers.players_controller.buy_policy"
+      parameters:
+      - name: "player_id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "offer"
+        description: "The sale transaction"
+        required: false
+        schema:
+          $ref: "#/definitions/PolicyOffer"
+      responses:
+        200:
+          description: "Success"
+        402:
+          description: "Not enough funds to complete transaction"
+        404:
+          description: "Cannot find policy, buyer, or seller"
+      x-tags:
+      - tag: "players"
+
   /tables/:
     get:
       tags:
@@ -475,26 +507,26 @@ definitions:
       balance:
         type: "number"
         description: "amount of money in this wallet"
-  PolicySale:
+  PolicyOffer:
     type: "object"
     properties:
-      seller:
+      seller_id:
         type: "string"
         description: "Id of the seller of this policy"
-      buyer:
-        type: "string"
-        description: "Id of the buyer of this policy"
-      policy:
+      policy_id:
         type: "string"
         description: "The policy for sale"
       price:
         type: "number"
         description: "Sale price"
+      checksum:
+        type: "string"
+        description: "Checksum of the offer"
     required:
-      - seller
-      - buyer
-      - policy
+      - seller_id
+      - policy_id
       - price
+      - checksum
   Table:
     properties:
       id:

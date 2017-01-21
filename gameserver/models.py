@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from gameserver.database import default_uuid, db
+from gameserver.utils import pack_amount, checksum
 
 from utils import random
 
@@ -238,12 +239,50 @@ class Player(Node):
         for fund in self.lower_edges:
             self.transfer_funds_to_node(fund.higher_node, fund.weight)
 
-
     @property
     def goal_funded(self):
         res = db_session.query(Wallet.balance).filter(Wallet.location == self.goal,
                                                       Wallet.owner == self).scalar()
         return res or 0.0
+
+    def offer_policy(self, policy_id, price):
+        policy = db_session.query(Policy).filter(Policy.id == policy_id).one()
+        if policy not in self.children():
+            raise ValueError, "Seller doesn't have this policy"
+        
+        chk = checksum(self.id, policy_id, price, self.token)
+
+        data = {'seller_id': self.id,
+                'policy_id': policy_id,
+                'price': price,
+                'checksum': chk,
+                }
+        return data
+
+    def buy_policy(self, seller, policy, price, chk):
+
+        salt = seller.token
+        if chk != checksum(seller.id, policy.id, price, salt):
+            raise ValueError, "Checksum mismatch"
+
+        # check the seller has the funds:
+        if self.balance < price:
+            raise ValueError, "Not enough funds for sale"
+
+        # check the buyer doesn't alreay have this policy
+        if policy in self.children():
+            raise ValueError, "The buyer already has this policy"
+
+        # sort out the money first
+        seller.balance += price
+        self.balance -= price
+        
+        # then give the buyer the policy
+        self.fund(policy, 0.0)
+
+        return True
+
+
 
 class Edge(Base):
 

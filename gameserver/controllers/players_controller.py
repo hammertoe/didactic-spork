@@ -74,3 +74,19 @@ def get_funding(id):
 
 def add_policy(id, policy):
     game.add_fund(id, policy, 0.0)
+
+def get_policy_offer(player_id, policy_id):
+    try:
+        offer = game.offer_policy(player_id, policy_id, 20000)
+        return offer, 200
+    except ValueError, e:
+        return str(e), 400
+    
+
+def buy_policy(player_id, offer):
+    try:
+        buy = game.buy_policy(player_id, offer)
+        return buy, 200
+    except ValueError, e:
+        return str(e), 400
+   
