@@ -144,14 +144,14 @@ paths:
           description: "Player successfully created."
       x-tags:
       - tag: "players"
-  /players/{id}:
+  /players/{player_id}:
     get:
       tags:
       - "players"
       summary: "Returns the specified player"
       operationId: "gameserver.controllers.players_controller.get_player"
       parameters:
-      - name: "id"
+      - name: "player_id"
         in: "path"
         description: "The player id"
         required: true
@@ -171,7 +171,7 @@ paths:
       summary: "Updates attributes of a player"
       operationId: "gameserver.controllers.players_controller.update_player"
       parameters:
-      - name: "id"
+      - name: "player_id"
         in: "path"
         description: "The player id"
         required: true
@@ -193,14 +193,14 @@ paths:
       - tag: "players"
       
 
-  /players/{id}/funding:
+  /players/{player_id}/funding:
     get:
       tags:
       - "players"
       summary: "Returns the funding for specified player"
       operationId: "gameserver.controllers.players_controller.get_funding"
       parameters:
-      - name: "id"
+      - name: "player_id"
         in: "path"
         description: "The player id"
         required: true
@@ -222,7 +222,7 @@ paths:
       summary: "Sets the funding of the policies for this player"
       operationId: "gameserver.controllers.players_controller.set_funding"
       parameters:
-      - name: "id"
+      - name: "player_id"
         in: "path"
         description: "The player id"
         required: true
@@ -331,7 +331,7 @@ paths:
         description: "The details of the table to create."
         required: false
         schema:
-          $ref: "#/definitions/Table"
+            $ref: "#/definitions/Table"
       responses:
         204:
           description: "Table succesfully created."
