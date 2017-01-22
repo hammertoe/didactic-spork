@@ -297,6 +297,28 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(w1.balance, 3.2)
         self.assertAlmostEqual(w2.balance, 6.4)
 
+    def testNodeLeakNegative20(self):
+        n1 = self.game.add_policy('Policy 1', 0.2)
+        g1 = self.game.add_goal('Goal 1', 0.2)
+        p1 = self.game.create_player('Matt')
+        w1 = self.game.add_wallet(p1, 5.0)
+        g1.wallets_here.append(w1)
+        w2 = self.game.add_wallet(p1, 10.0)
+        g1.wallets_here.append(w2)
+        
+        # add a negative impact edge
+        l1 = self.game.add_link(n1, g1, -0.5)
+
+        self.assertEqual(g1.balance, 15.0)
+        g1.do_leak()
+        self.assertAlmostEqual(g1.balance, 4.5)
+        g1.do_leak()
+        self.assertAlmostEqual(g1.balance, 1.35)
+
+        # Check the individual wallets
+        self.assertAlmostEqual(w1.balance, 0.45)
+        self.assertAlmostEqual(w2.balance, 0.9)
+
     def testTransferWalletToWallet(self):
         p1 = self.game.create_player('Matt')
         w1 = Wallet(p1, 100.0)
@@ -1391,7 +1413,6 @@ class DataLoadTests(DBTestCase):
 
         self.assertEqual(sorted(expected), sorted(wallets))
 
-
 class GameTests(DBTestCase):
     
     def testGetNonexistantPlayer(self):
@@ -1628,10 +1649,29 @@ class RestAPITests(DBTestCase):
             dest_id = edge.higher_node.id
             funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
 
-        response = self.client.get("/v1/players/{}/funding".format(id))
+        headers = {'X-USER-KEY': player.token}
+        response = self.client.get("/v1/players/{}/funding".format(id),
+                                   headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(funding, response.json)
         
+    def testGetFundingFailAuth(self):
+        self.add_20_goals_and_policies()
+        random.seed(0)
+        name = 'Matt'
+        player = self.game.create_player(name)
+        id = player.id
+
+        funding = []
+        for amount,edge in enumerate(player.lower_edges):
+            edge.weight = amount
+            dest_id = edge.higher_node.id
+            funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
+
+        headers = {'X-USER-KEY': 'bogus'}
+        response = self.client.get("/v1/players/{}/funding".format(id),
+                                   headers=headers)
+        self.assertEquals(response.status_code, 401)
 
     def testSetFunding(self):
 
@@ -1653,8 +1693,10 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x
 
+        headers = {'X-USER-KEY': player.token}
         response = self.client.put("/v1/players/{}/funding".format(id),
                                    data=json.dumps(data),
+                                   headers=headers,
                                    content_type='application/json')
         self.assertEquals(response.status_code, 200)
 
@@ -1682,9 +1724,11 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x*20
 
+        headers = {'X-USER-KEY': player.token}
         response = self.client.put("/v1/players/{}/funding".format(id),
-                                    data=json.dumps(data),
-                                    content_type='application/json')
+                                   data=json.dumps(data),
+                                   headers=headers,
+                                   content_type='application/json')
         self.assertEquals(response.status_code, 400)
 
     def testGetWallets(self):
@@ -1764,13 +1808,17 @@ class RestAPITests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertNotIn(p1, buyer.children())
 
-        response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id))
+        headers = {'X-USER-KEY': seller.token}
+        response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
+                                   headers=headers)
         self.assertEqual(response.status_code, 200)
         offer = response.json
 
+        headers = {'X-USER-KEY': buyer.token}
         response = self.client.post("/v1/players/{}/policies/".format(buyer.id),
-                                   data=json.dumps(offer),
-                                   content_type='application/json')
+                                    data=json.dumps(offer),
+                                    headers=headers,
+                                    content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
 
@@ -1794,13 +1842,17 @@ class RestAPITests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertNotIn(p1, buyer.children())
 
-        response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id))
+        headers = {'X-USER-KEY': seller.token}
+        response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
+                                   headers=headers)
         self.assertEqual(response.status_code, 200)
         offer = response.json
 
+        headers = {'X-USER-KEY': buyer.token}
         response = self.client.post("/v1/players/{}/policies/".format(buyer.id),
-                                   data=json.dumps(offer),
-                                   content_type='application/json')
+                                    data=json.dumps(offer),
+                                    headers=headers,
+                                    content_type='application/json')
 
         self.assertEqual(response.status_code, 400)
 
@@ -1851,7 +1903,25 @@ class RestAPITests(DBTestCase):
                     ]
 
         self.assertEqual(response.json, expected)
-        
+
+    def testPatchPlayerWithTable(self):
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+
+        table = self.game.create_table('Table A')
+        self.assertNotIn(p1, table.players)
+
+        data = {'table': table.id}
+
+        response = self.client.patch("/v1/players/{}".format(p1.id),
+                                     data=json.dumps(data),
+                                     headers={'X-USER-KEY': p1.token},
+                                     content_type='application/json')
+
+
+        self.assertEquals(response.status_code, 200)
+        self.assertIn(p1, table.players)
+
 class Utils(DBTestCase): # pragma: no cover
 
     def createDB(self):
@@ -1867,7 +1937,34 @@ class Utils(DBTestCase): # pragma: no cover
         outfile = open('examples/network.json', 'w')
         outfile.write(response.data)
         outfile.close()
+    
+    def loadNet2(self):
+        self.createDB()
+        f = open('new-network.json')
+        network = json.load(f)
+        game = self.game
+        nodes = {}
+        for g in network['goals']:
+            goal = game.add_goal(g['name'], 0.0)
+            goal.id = g['id']
+            nodes[goal.id] = goal
 
+        for p in network['policies']:
+            policy = game.add_policy(p['name'], 0.0)
+            policy.id = p['id']
+            nodes[policy.id] = policy
+
+        import pdb; pdb.set_trace()
+
+        for e in network['edges']:
+            game.add_link(nodes[e['source']],
+                          nodes[e['target']],
+                          e['weight'],
+                          )
+
+        db_session.commit()
+        db_session.commit()
+        db_session.commit()
 
 if __name__ == '__main__':
     unittest.main()

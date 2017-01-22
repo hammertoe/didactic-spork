@@ -1,8 +1,22 @@
+from decorator import decorator
+
+from flask import request, abort
+
 from gameserver.game import Game
 from gameserver.database import db
 
 db_session = db.session
 game = Game()
+
+@decorator
+def require_user_key(f, *args, **kw):
+    key = request.headers.get('X-USER-KEY')
+    player_id = request.view_args['player_id']
+    player = game.get_player(player_id)
+    if not (key and player.token == key):
+        abort(401)
+
+    return f(*args, **kw)
 
 def player_to_dict(player):
     if player.goal:
@@ -41,6 +55,7 @@ def create_player(player=None):
     else:
         return 500
 
+@require_user_key
 def update_player(player_id, player=None):
     """
     Updates a player
@@ -51,14 +66,15 @@ def update_player(player_id, player=None):
     if not p:
         return "Player not found", 404
 
-    item_map = {'table': 'table_id'}
+    for key, value in player.items():
+        if key == 'table':
+            table = game.get_table(value)
+            p.table = table
 
-    for key, value in item_map.items():
-        if player.has_key(key):
-            setattr(p, value, player[key])
     db_session.commit()
     return player_to_dict(p), 200
 
+@require_user_key
 def set_funding(player_id, funding = None):
     try:
         game.set_funding(player_id, funding)
@@ -67,15 +83,13 @@ def set_funding(player_id, funding = None):
     except ValueError:
         return "Sum of funds exceeds max allowed", 400
 
+@require_user_key
 def get_funding(player_id):
     funds = game.get_funding(player_id)
 
     return funds, 200
 
-def add_policy(player_id, policy):
-    game.add_fund(player_id, policy, 0.0)
-    db_session.commit()
-
+@require_user_key
 def get_policy_offer(player_id, policy_id):
     try:
         offer = game.offer_policy(player_id, policy_id, 20000)
@@ -83,6 +97,7 @@ def get_policy_offer(player_id, policy_id):
     except ValueError, e:
         return str(e), 400
     
+@require_user_key
 def buy_policy(player_id, offer):
     try:
         buy = game.buy_policy(player_id, offer)

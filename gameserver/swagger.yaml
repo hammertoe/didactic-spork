@@ -21,8 +21,6 @@ consumes:
 - "application/json"
 produces:
 - "application/json"
-security:
-- UserSecurity: []
 paths:
   /game/tick:
     put:
@@ -166,6 +164,8 @@ paths:
       x-tags:
       - tag: "players"
     patch:
+      security:
+      - UserSecurity: []
       tags:
       - "players"
       summary: "Updates attributes of a player"
@@ -187,6 +187,8 @@ paths:
           description: "Success"
           schema:
             $ref: "#/definitions/Player"
+        401:
+          description: "Unauthorised"
         404:
           description: "Player not found"
       x-tags:
@@ -195,6 +197,8 @@ paths:
 
   /players/{player_id}/funding:
     get:
+      security:
+      - UserSecurity: []
       tags:
       - "players"
       summary: "Returns the funding for specified player"
@@ -212,11 +216,15 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Fund"
+        401:
+          description: "Unauthorised"
         404:
           description: "Player not found"
       x-tags:
       - tag: "players"
     put:
+      security:
+      - UserSecurity: []
       tags:
       - "players"
       summary: "Sets the funding of the policies for this player"
@@ -242,12 +250,16 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Fund"
+        401:
+          description: "Unauthorised"
         404:
           description: "Player not found"
       x-tags:
       - tag: "players"
   /players/{player_id}/policies/{policy_id}/offer:
     get:
+      security:
+      - UserSecurity: []
       tags:
       - "players"
       summary: "Returns an offer to sell the specified policy"
@@ -268,6 +280,8 @@ paths:
           description: "Success"
           schema:
             $ref: "#/definitions/PolicyOffer"
+        401:
+          description: "Unauthorised"
         404:
           description: "Can't find player or policy"
       x-tags:
@@ -275,6 +289,8 @@ paths:
 
   /players/{player_id}/policies/:
     post:
+      security:
+      - UserSecurity: []
       tags:
       - "players"
       summary: "Buys a policy from another player using supplied offer"
@@ -294,6 +310,8 @@ paths:
       responses:
         200:
           description: "Success"
+        401:
+          description: "Unauthorised"
         402:
           description: "Not enough funds to complete transaction"
         404:
@@ -369,7 +387,7 @@ paths:
 securityDefinitions:
   UserSecurity:
     type: "apiKey"
-    name: "X-API-KEY"
+    name: "X-USER-KEY"
     in: "header"
   AdminSecurity:
     type: "apiKey"

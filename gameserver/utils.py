@@ -5,7 +5,6 @@ import struct
 import hashlib
 
 from gameserver.database import db
-from flask import request, abort
 
 db_session = db.session
 
@@ -32,14 +31,6 @@ def node_to_dict(node):
             }
     
     return data
-
-@decorator
-def require_user_key(f, *args, **kw):
-    key = request.headers.get('X-USER-KEY')
-    if not key:
-        abort(401)
-
-    return f(*args, **kw)
 
 
 def pack_amount(value):

@@ -58,6 +58,14 @@ class Node(Base):
     children = higher_neighbors
     parents = lower_neighbors
 
+    def get_leak(self):
+        leak = self.leak
+        for edge in self.higher_edges:
+            if edge.weight < 0:
+                leak += abs(edge.weight)
+
+        return leak
+
     @property
     def current_outflow(self):
         if not self.active:
@@ -83,8 +91,9 @@ class Node(Base):
 
     def do_leak(self):
         total = self.balance
+        leak = self.get_leak()
         for wallet in self.wallets_here:
-            amount = wallet.balance * self.leak
+            amount = wallet.balance * leak
             wallet.balance -= amount
 
     def get_wallet_by_owner(self, owner, create=True):
