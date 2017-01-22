@@ -74,6 +74,7 @@ def get_funding(id):
 
 def add_policy(id, policy):
     game.add_fund(id, policy, 0.0)
+    db_session.commit()
 
 def get_policy_offer(player_id, policy_id):
     try:
@@ -82,10 +83,10 @@ def get_policy_offer(player_id, policy_id):
     except ValueError, e:
         return str(e), 400
     
-
 def buy_policy(player_id, offer):
     try:
         buy = game.buy_policy(player_id, offer)
+        db_session.commit()
         return buy, 200
     except ValueError, e:
         return str(e), 400

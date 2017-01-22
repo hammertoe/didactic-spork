@@ -1572,7 +1572,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'], [])
-        self.assertEquals(len(result['network']['policies']), 30)
+        self.assertEquals(len(result['network']['nodes']), 36)
+        self.assertEquals(len(result['network']['links']), 61)
 
     def testGetTableWithOnePlayer(self):
         data = json.load(open('examples/network.json', 'r'))
@@ -1590,8 +1591,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['policies']), 5)
-        self.assertEquals(len(result['network']['goals']), 1)
+        self.assertEquals(len(result['network']['nodes']), 7)
+        self.assertEquals(len(result['network']['links']), 7)
 
     def testGetTableWithTwoPlayers(self):
         data = json.load(open('examples/network.json', 'r'))
@@ -1611,8 +1612,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['policies']), 7)
-        self.assertEquals(len(result['network']['goals']), 2)
+        self.assertEquals(len(result['network']['nodes']), 11)
+        self.assertEquals(len(result['network']['links']), 14)
 
     def testGetFunding(self):
         self.add_20_goals_and_policies()

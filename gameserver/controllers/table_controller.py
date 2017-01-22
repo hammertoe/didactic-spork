@@ -6,11 +6,53 @@ from players_controller import player_to_dict
 db_session = db.session
 game = Game()
 
+
+def convert_to_d3(players, network):
+    nodes = {}
+    links = []
+
+    for n in players:
+        nodes[n['id']] = {'id': n['id'],
+                          'name': n['name'],
+                          'group': 1,
+                          'resources': n['balance'],
+                          }
+    for n in network['policies']:
+        nodes[n['id']] = {'id': n['id'],
+                          'name': n['name'],
+                          'group': 2,
+                          'resources': n['balance'],
+                          }
+        for l in n['connections']:
+            links.append({'source': l['from_id'],
+                          'target': l['to_id'],
+                          'value': l['weight'],
+                          })
+    for n in network['goals']:
+        nodes[n['id']] = {'id': n['id'],
+                          'name': n['name'],
+                          'group': 3,
+                          'resources': n['balance'],
+                          }
+        for l in n['connections']:
+            links.append({'source': l['from_id'],
+                          'target': l['to_id'],
+                          'value': l['weight'],
+                          })
+
+    links = [ l for l in links 
+              if l['source'] in nodes
+              and l['target'] in nodes
+              ]
+
+    return {'nodes': nodes.values(), 'links': links}
+
 def table_to_dict(table):
+    players = [ player_to_dict(p) for p in table.players ]
     return dict(id=table.id,
                 name=table.name,
-                players=[ player_to_dict(p) for p in table.players ],
-                network=game.get_network(table.players),
+                players=players,
+                network=convert_to_d3(players, game.get_network(table.players)),
                 )
 
 
