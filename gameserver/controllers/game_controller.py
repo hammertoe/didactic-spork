@@ -23,11 +23,16 @@ def do_sale(sale):
     return None, 200
 
 def league_table():
+    import pdb; pdb.set_trace()
     res = []
     top = game.top_players()
     for t in top:
         funded = db_session.query(Wallet.balance).filter(Wallet.location == t.goal,
                                                          Wallet.owner == t).scalar()
+
+        if not t.goal:
+            continue 
+
         r = {'id': t.id,
              'name': t.name,
              'goal': t.goal.name,
