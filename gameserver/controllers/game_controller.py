@@ -23,7 +23,6 @@ def do_sale(sale):
     return None, 200
 
 def league_table():
-    import pdb; pdb.set_trace()
     res = []
     top = game.top_players()
     for t in top:
