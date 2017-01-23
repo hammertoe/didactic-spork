@@ -3,7 +3,7 @@ from gameserver.utils import random, node_to_dict
 
 #from database import db_session
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table
+from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table, Client
 
 db_session = db.session
 
@@ -12,6 +12,9 @@ class Game:
     def __init__(self):
         self.money_per_budget_cycle = 150000
         self.standard_max_player_outflow = 100
+
+    def validate_api_key(self, token):
+        return db_session.query(Client.name).filter(Client.id == token).scalar()
 
     @property
     def num_players(self):

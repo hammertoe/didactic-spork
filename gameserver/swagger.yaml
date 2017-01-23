@@ -27,7 +27,7 @@ paths:
       tags:
       - "game"
       summary: "Causes a game tick to happen"
-      operationId: "gameserver.controllers.game_controller.do_tick"
+      operationId: "gameserver.controllers.do_tick"
       parameters: []
       responses:
         200:
@@ -40,7 +40,7 @@ paths:
       - "game"
       - "players"
       summary: "Returns a league table of players"
-      operationId: "gameserver.controllers.game_controller.league_table"
+      operationId: "gameserver.controllers.league_table"
       responses:
         200:
           description: "Success"
@@ -56,7 +56,7 @@ paths:
       tags:
       - "network"
       summary: "Returns a JSON representation of the network"
-      operationId: "gameserver.controllers.network_controller.get_network"
+      operationId: "gameserver.controllers.get_network"
       parameters: []
       responses:
         200:
@@ -69,7 +69,7 @@ paths:
       tags:
       - "network"
       summary: "Creates a network from a JSON upload"
-      operationId: "gameserver.controllers.network_controller.create_network"
+      operationId: "gameserver.controllers.create_network"
       parameters:
         - in: body
           name: network
@@ -87,7 +87,7 @@ paths:
       tags:
       - "network"
       summary: "Returns the specified node"
-      operationId: "gameserver.controllers.network_controller.get_node"
+      operationId: "gameserver.controllers.get_node"
       parameters:
       - name: "id"
         in: "path"
@@ -108,7 +108,7 @@ paths:
       tags:
       - "network"
       summary: "Returns the wallets at the specified node"
-      operationId: "gameserver.controllers.network_controller.get_wallets"
+      operationId: "gameserver.controllers.get_wallets"
       parameters:
       - name: "id"
         in: "path"
@@ -129,7 +129,7 @@ paths:
       tags:
       - "players"
       summary: "Creates a new game player"
-      operationId: "gameserver.controllers.players_controller.create_player"
+      operationId: "gameserver.controllers.create_player"
       parameters:
       - in: "body"
         name: "player"
@@ -147,7 +147,7 @@ paths:
       tags:
       - "players"
       summary: "Returns the specified player"
-      operationId: "gameserver.controllers.players_controller.get_player"
+      operationId: "gameserver.controllers.get_player"
       parameters:
       - name: "player_id"
         in: "path"
@@ -169,7 +169,7 @@ paths:
       tags:
       - "players"
       summary: "Updates attributes of a player"
-      operationId: "gameserver.controllers.players_controller.update_player"
+      operationId: "gameserver.controllers.update_player"
       parameters:
       - name: "player_id"
         in: "path"
@@ -202,7 +202,7 @@ paths:
       tags:
       - "players"
       summary: "Returns the funding for specified player"
-      operationId: "gameserver.controllers.players_controller.get_funding"
+      operationId: "gameserver.controllers.get_funding"
       parameters:
       - name: "player_id"
         in: "path"
@@ -228,7 +228,7 @@ paths:
       tags:
       - "players"
       summary: "Sets the funding of the policies for this player"
-      operationId: "gameserver.controllers.players_controller.set_funding"
+      operationId: "gameserver.controllers.set_funding"
       parameters:
       - name: "player_id"
         in: "path"
@@ -263,7 +263,7 @@ paths:
       tags:
       - "players"
       summary: "Returns an offer to sell the specified policy"
-      operationId: "gameserver.controllers.players_controller.get_policy_offer"
+      operationId: "gameserver.controllers.get_policy_offer"
       parameters:
       - name: "player_id"
         in: "path"
@@ -294,7 +294,7 @@ paths:
       tags:
       - "players"
       summary: "Buys a policy from another player using supplied offer"
-      operationId: "gameserver.controllers.players_controller.buy_policy"
+      operationId: "gameserver.controllers.buy_policy"
       parameters:
       - name: "player_id"
         in: "path"
@@ -324,7 +324,7 @@ paths:
       tags:
       - "table"
       summary: "Returns a list of the tables"
-      operationId: "gameserver.controllers.table_controller.get_tables"
+      operationId: "gameserver.controllers.get_tables"
       parameters: []
       responses:
         200:
@@ -342,7 +342,7 @@ paths:
       - "table"
       summary: "Create a new gaming table"
       description: "Success"
-      operationId: "gameserver.controllers.table_controller.create_table"
+      operationId: "gameserver.controllers.create_table"
       parameters:
       - in: "body"
         name: "table"
@@ -368,7 +368,7 @@ paths:
       tags:
       - "table"
       summary: "Return the network of a specific table"
-      operationId: "gameserver.controllers.table_controller.get_table"
+      operationId: "gameserver.controllers.get_table"
       parameters:
       - name: "id"
         in: "path"
@@ -389,9 +389,9 @@ securityDefinitions:
     type: "apiKey"
     name: "X-USER-KEY"
     in: "header"
-  AdminSecurity:
+  APISecurity:
     type: "apiKey"
-    name: "X-ADMIN-API-KEY"
+    name: "X-API-KEY"
     in: "header"
 definitions:
   Id:

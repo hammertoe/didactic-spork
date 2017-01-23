@@ -68,6 +68,8 @@ class DBTestCase(TestCase):
     def setUp(self):
         db_session.begin_nested()
         self.game = Game()
+        self.admin = self.game.create_player('Admin')
+        self.api_key = self.admin.token
 
     def tearDown(self):
         db_session.rollback()
@@ -1649,7 +1651,8 @@ class RestAPITests(DBTestCase):
             dest_id = edge.higher_node.id
             funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
 
-        headers = {'X-USER-KEY': player.token}
+        headers = {'X-USER-KEY': player.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/funding".format(id),
                                    headers=headers)
         self.assertEquals(response.status_code, 200)
