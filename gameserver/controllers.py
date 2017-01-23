@@ -66,7 +66,7 @@ def league_table():
              }
         res.append(r)
 
-    return res
+    return dict(rows=res)
 
 def wallet_to_dict(wallet):
     return dict(owner=wallet.owner_id,

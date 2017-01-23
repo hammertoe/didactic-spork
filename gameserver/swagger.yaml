@@ -45,9 +45,7 @@ paths:
         200:
           description: "Success"
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/LeagueTableEntry"
+            $ref: "#/definitions/LeagueTable"
       x-tags:
       - tag: "game"
       
@@ -560,6 +558,13 @@ definitions:
           $ref: "#/definitions/Player"
       network:
         $ref: "#/definitions/Network"
+  LeagueTable:
+    properties:
+      rows:    
+        type: "array"
+        description: "Array of player league table entries"
+        items:
+          $ref: "#/definitions/LeagueTableEntry"
   LeagueTableEntry:
     properties:
       id:
