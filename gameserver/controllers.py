@@ -162,9 +162,11 @@ def get_funding(player_id):
 
 @require_api_key
 @require_user_key
-def get_policy_offer(player_id, policy_id):
+def get_policy_offer(player_id, policy_id, price=None):
+    if price == None:
+        price = game.default_offer_price
     try:
-        offer = game.offer_policy(player_id, policy_id, 20000)
+        offer = game.offer_policy(player_id, policy_id, price)
         return offer, 200
     except ValueError, e:
         return str(e), 400

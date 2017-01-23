@@ -68,8 +68,7 @@ class DBTestCase(TestCase):
     def setUp(self):
         db_session.begin_nested()
         self.game = Game()
-        self.admin = self.game.create_player('Admin')
-        self.api_key = self.admin.token
+        self.api_key = 'ce43fa20-c35b-4257-a565-2fd77da51e3b'
 
     def tearDown(self):
         db_session.rollback()
@@ -697,7 +696,7 @@ class CoreGameTests(DBTestCase):
                              "balance": 90}
                             ]
 
-        from gameserver.controllers.network_controller import wallet_to_dict
+        from gameserver.controllers import wallet_to_dict
         wallets = [ wallet_to_dict(w) for w in self.game.get_wallets_by_location(n1.id) ]
 
         self.assertEqual(wallets,
@@ -1425,7 +1424,8 @@ class RestAPITests(DBTestCase):
 
     @unittest.skip("not implemented")
     def testGetEmptyPlayersList(self):
-        response = self.client.get("/v1/players/")
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/", headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, [])
 
@@ -1436,7 +1436,8 @@ class RestAPITests(DBTestCase):
         players = [ cp(name) for name in names ]
         data = [ dict(name=p.name, id=p.id) for p in players ]
 
-        response = self.client.get("/v1/players/")
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/", headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(response.json, data)
 
@@ -1444,19 +1445,23 @@ class RestAPITests(DBTestCase):
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
-        response = self.client.get("/v1/players/{}".format(id))
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertFalse(response.json.has_key('token'))
 
     def testGetNonExistentPlayer(self):
-        response = self.client.get("/v1/players/nobody")
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/nobody", headers=headers)
         self.assertEquals(response.status_code, 404)
 
     def testCreateNewPlayer(self):
         data = dict(name='Matt')
 
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
@@ -1469,12 +1474,14 @@ class RestAPITests(DBTestCase):
     def testCreateThenGetNewPlayer(self):
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
 
-        response = self.client.get("/v1/players/{}".format(id))
+        response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertFalse(response.json.has_key('token'))
@@ -1487,12 +1494,14 @@ class RestAPITests(DBTestCase):
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
         db_session.begin(subtransactions=True)
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
 
-        response = self.client.get("/v1/players/{}".format(id))
+        response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertEquals(response.json['goal']['id'], 'G6')
@@ -1505,11 +1514,12 @@ class RestAPITests(DBTestCase):
         name = 'Simon {}'.format(time.time())
         data = dict(name=name)
         response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         id = response.json['id']
 
-        response = self.client.get("/v1/players/{}".format(id))
+        response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertEquals(response.json['goal']['id'], 'G14')
@@ -1539,7 +1549,8 @@ class RestAPITests(DBTestCase):
         for x in range(20):
             self.game.tick()
 
-        response = self.client.get("/v1/network/")
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/network/", headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(len(response.json['policies']), 2)
         self.assertEquals(len(response.json['goals']), 3)
@@ -1547,7 +1558,9 @@ class RestAPITests(DBTestCase):
     def testCreateNetwork(self):
         data = json.load(open('examples/network.json', 'r'))
 
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/network/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
 
@@ -1561,11 +1574,13 @@ class RestAPITests(DBTestCase):
         data = json.load(open('examples/network.json', 'r'))
 
 
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/network/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
 
-        response = self.client.get("/v1/network/")
+        response = self.client.get("/v1/network/", headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(len(response.json['policies']), 30)
         self.assertEquals(len(response.json['goals']), 6)
@@ -1574,7 +1589,9 @@ class RestAPITests(DBTestCase):
 
     def testCreateTable(self):
         data = {'name': 'Table A'}
+        headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/tables/", data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
         self.assertEquals(response.json['name'], 'Table A')
@@ -1589,7 +1606,8 @@ class RestAPITests(DBTestCase):
 
         table = self.game.create_table('Table A')
 
-        response = self.client.get("/v1/tables/{}".format(table.id))
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
         result = response.json
         self.assertEquals(result['id'], table.id)
@@ -1608,7 +1626,8 @@ class RestAPITests(DBTestCase):
         table = self.game.create_table('Table A')
         table.players.append(p1)
 
-        response = self.client.get("/v1/tables/{}".format(table.id))
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
         result = response.json
         self.assertEquals(result['id'], table.id)
@@ -1629,7 +1648,8 @@ class RestAPITests(DBTestCase):
         table.players.append(p1)
         table.players.append(p2)
 
-        response = self.client.get("/v1/tables/{}".format(table.id))
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
         result = response.json
         self.assertEquals(result['id'], table.id)
@@ -1671,7 +1691,8 @@ class RestAPITests(DBTestCase):
             dest_id = edge.higher_node.id
             funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
 
-        headers = {'X-USER-KEY': 'bogus'}
+        headers = {'X-USER-KEY': 'bogus',
+                   'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/funding".format(id),
                                    headers=headers)
         self.assertEquals(response.status_code, 401)
@@ -1696,7 +1717,8 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x
 
-        headers = {'X-USER-KEY': player.token}
+        headers = {'X-USER-KEY': player.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.put("/v1/players/{}/funding".format(id),
                                    data=json.dumps(data),
                                    headers=headers,
@@ -1727,7 +1749,8 @@ class RestAPITests(DBTestCase):
         for x in range(5):
             data[x]['amount'] = x*20
 
-        headers = {'X-USER-KEY': player.token}
+        headers = {'X-API-KEY': self.api_key,
+                   'X-USER-KEY': player.token}
         response = self.client.put("/v1/players/{}/funding".format(id),
                                    data=json.dumps(data),
                                    headers=headers,
@@ -1758,7 +1781,8 @@ class RestAPITests(DBTestCase):
 
         wallets = []
         for n in nodes:
-            response = self.client.get("/v1/network/{}/wallets".format(n.id))
+            headers = {'X-API-KEY': self.api_key}
+            response = self.client.get("/v1/network/{}/wallets".format(n.id), headers=headers)
             if response.status_code == 200:
                 wallets.extend(response.json)
 
@@ -1792,10 +1816,43 @@ class RestAPITests(DBTestCase):
     def testGetNode(self):
         n1 = self.game.add_policy('A', 0.5)
 
-        response = self.client.get("/v1/network/{}".format(n1.id))
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/network/{}".format(n1.id), headers=headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['id'], n1.id)
         self.assertEqual(response.json['name'], 'A')
+
+    def testGetOfferDefaultPrice(self):
+        seller = self.game.create_player('Matt')
+        self.assertEqual(seller.balance, 150000)
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+
+        headers = {'X-USER-KEY': seller.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
+                                   headers=headers)
+        self.assertEqual(response.status_code, 200)
+        offer = response.json
+        self.assertEqual(offer['price'], self.game.default_offer_price)
+
+    def testGetOfferCustomPrice(self):
+        seller = self.game.create_player('Matt')
+        self.assertEqual(seller.balance, 150000)
+        p1 = self.game.add_policy('Policy 1', 0)
+        
+        seller.fund(p1, 0)
+        self.assertIn(p1, seller.children())
+
+        headers = {'X-USER-KEY': seller.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/players/{}/policies/{}/offer?price={}".format(seller.id, p1.id, 0), 
+                                   headers=headers)
+        self.assertEqual(response.status_code, 200)
+        offer = response.json
+        self.assertEqual(offer['price'], 0)
 
     def testBuyPolicy(self):
         
@@ -1811,13 +1868,15 @@ class RestAPITests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertNotIn(p1, buyer.children())
 
-        headers = {'X-USER-KEY': seller.token}
+        headers = {'X-USER-KEY': seller.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
                                    headers=headers)
         self.assertEqual(response.status_code, 200)
         offer = response.json
 
-        headers = {'X-USER-KEY': buyer.token}
+        headers = {'X-USER-KEY': buyer.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/{}/policies/".format(buyer.id),
                                     data=json.dumps(offer),
                                     headers=headers,
@@ -1845,13 +1904,15 @@ class RestAPITests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertNotIn(p1, buyer.children())
 
-        headers = {'X-USER-KEY': seller.token}
+        headers = {'X-USER-KEY': seller.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
                                    headers=headers)
         self.assertEqual(response.status_code, 200)
         offer = response.json
 
-        headers = {'X-USER-KEY': buyer.token}
+        headers = {'X-USER-KEY': buyer.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/{}/policies/".format(buyer.id),
                                     data=json.dumps(offer),
                                     headers=headers,
@@ -1886,24 +1947,25 @@ class RestAPITests(DBTestCase):
         self.assertEqual(p2.balance, 149980)
         self.assertEqual(p3.balance, 149985)
 
-        response = self.client.get("/v1/game/league_table")
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/game/league_table", headers=headers)
         self.assertEqual(response.status_code, 200)
-        expected = [{'id': p2.id,
-                     'name': p2.name,
-                     'goal': p2.goal.name,
-                     'goal_total': 30,
-                     'goal_contribution': 20,},
-                    {'id': p3.id,
-                     'name': p3.name,
-                     'goal': p3.goal.name,
-                     'goal_total': 15,
-                     'goal_contribution': 15,},
-                    {'id': p1.id,
-                     'name': p1.name,
-                     'goal': p1.goal.name,
-                     'goal_total': 30,
-                     'goal_contribution': 10,}
-                    ]
+        expected = {'rows': [{'id': p2.id,
+                              'name': p2.name,
+                              'goal': p2.goal.name,
+                              'goal_total': 30,
+                              'goal_contribution': 20,},
+                             {'id': p3.id,
+                              'name': p3.name,
+                              'goal': p3.goal.name,
+                              'goal_total': 15,
+                              'goal_contribution': 15,},
+                             {'id': p1.id,
+                              'name': p1.name,
+                              'goal': p1.goal.name,
+                              'goal_total': 30,
+                              'goal_contribution': 10,}
+                             ]}
 
         self.assertEqual(response.json, expected)
 
@@ -1916,9 +1978,11 @@ class RestAPITests(DBTestCase):
 
         data = {'table': table.id}
 
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
         response = self.client.patch("/v1/players/{}".format(p1.id),
                                      data=json.dumps(data),
-                                     headers={'X-USER-KEY': p1.token},
+                                     headers=headers,
                                      content_type='application/json')
 
 

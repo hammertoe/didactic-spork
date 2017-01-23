@@ -273,6 +273,10 @@ paths:
         description: "The policy id"
         required: true
         type: "string"
+      - name: "price"
+        in: "query"
+        description: "The price for the sale, defaults to 20,000"
+        type: "number"
       responses:
         200:
           description: "Success"

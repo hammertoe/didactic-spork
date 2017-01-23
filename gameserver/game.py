@@ -12,6 +12,7 @@ class Game:
     def __init__(self):
         self.money_per_budget_cycle = 150000
         self.standard_max_player_outflow = 100
+        self.default_offer_price = 20000
 
     def validate_api_key(self, token):
         return db_session.query(Client.name).filter(Client.id == token).scalar()
