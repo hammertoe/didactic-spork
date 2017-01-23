@@ -35,19 +35,6 @@ def do_tick():
     return None, 200
 
 @require_api_key
-def do_sale(sale):
-    try:
-        buyer = sale['buyer']
-        seller = sale['seller']
-        policy = sale['policy']
-        price = sale['price']
-        game.sell_policy(seller, buyer, policy, price)
-    except ValueError:
-        return None, 400
-
-    return None, 200
-
-@require_api_key
 def league_table():
     res = []
     top = game.top_players()
