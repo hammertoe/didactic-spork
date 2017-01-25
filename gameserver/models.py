@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, create_engine
+    Float, CHAR, create_engine
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -16,10 +16,10 @@ class Base(object):
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
-    id = Column(String(36), primary_key=True, default=default_uuid)
+    id = Column(CHAR(36), primary_key=True, default=default_uuid)
 
 class Table(Base):
-    id = Column(String(36),
+    id = Column(CHAR(36),
                 primary_key=True, default=default_uuid)
 
     name = Column(String(200))
@@ -29,7 +29,7 @@ class Table(Base):
         self.name = name
 
 class Client(Base):
-    id = Column(String(36),
+    id = Column(CHAR(36),
                 primary_key=True, default=default_uuid)
 
     name = Column(String(200))
@@ -42,7 +42,7 @@ class Node(Base):
 
     discriminator = Column(String(32))
     __mapper_args__ = {"polymorphic_on": discriminator}
-    id = Column(String(36),
+    id = Column(CHAR(36),
                 primary_key=True, default=default_uuid)
 
     name = Column(String(200))
@@ -50,12 +50,14 @@ class Node(Base):
     node_type = Column(String(10))
     activation = Column(Float)
     max_level = Column(Integer)
-
+    rank = Column(Integer)
+    
     def __init__(self, name, leak):
         self.id = default_uuid()
         self.name = name
         self.leak = leak
         self.activation = 0.0
+        self.rank = 0
 
     def higher_neighbors(self):
         return [x.higher_node for x in self.lower_edges]
@@ -135,15 +137,11 @@ class Node(Base):
                 if subamount > 0.0 and subamount <= wallet.balance:
                     wallet.transfer(child, subamount)
 
-    @property
-    def rank(self):
-        if getattr(self, '__rank__', None) is not None:
-            return self.__rank__
+    def calc_rank(self):
         rank = len(self.parents())
         for parent in self.parents():
-            rank += parent.rank + 1
+            rank += parent.calc_rank() + 1
 
-        self.__rank__ = rank
         return rank
 
 class Goal(Node):
@@ -152,7 +150,7 @@ class Goal(Node):
       'polymorphic_identity': 'Goal'
       }
 
-    id = Column(String(36), ForeignKey(Node.id),
+    id = Column(CHAR(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
 class Policy(Node):
@@ -161,7 +159,7 @@ class Policy(Node):
       'polymorphic_identity': 'Policy'
       }
 
-    id = Column(String(36), ForeignKey(Node.id),
+    id = Column(CHAR(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
 
@@ -172,13 +170,13 @@ class Player(Node):
       'polymorphic_identity': 'Player'
       }
 
-    id = Column(String(36), ForeignKey(Node.id),
+    id = Column(CHAR(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
     max_outflow = Column(Float)
 
     goal_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('goal.id')
         )
 
@@ -190,7 +188,7 @@ class Player(Node):
         )
 
     table_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('table.id')
         )
 
@@ -201,7 +199,7 @@ class Player(Node):
         backref='players'
         )
 
-    token = Column(String(36),
+    token = Column(CHAR(36),
                 index=True, default=default_uuid)
 
     def __init__(self, name):
@@ -304,12 +302,12 @@ class Player(Node):
 class Edge(Base):
 
     lower_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('node.id'),
         primary_key=True)
 
     higher_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('node.id'),
         primary_key=True)
 
@@ -341,7 +339,7 @@ class Edge(Base):
 class Wallet(Base):
 
     owner_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('node.id'),
         index=True)
 
@@ -351,7 +349,7 @@ class Wallet(Base):
         backref='wallets_owned')
 
     location_id = Column(
-        String(36),
+        CHAR(36),
         ForeignKey('node.id'),
         index=True)
 

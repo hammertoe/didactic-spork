@@ -35,8 +35,8 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
-        nodes = db_session.query(Node).all()
-        for node in sorted(nodes, key=lambda n: n.rank):
+        nodes = db_session.query(Node).order_by(Node.rank.desc()).all()
+        for node in nodes:
             node.do_leak()
             node.do_propogate_funds()
 
@@ -101,6 +101,9 @@ class Game:
 
     def get_node(self, id):
         return db_session.query(Node).filter(Node.id == id).one_or_none()
+
+    def get_nodes(self):
+        return db_session.query(Node).all()
 
     def get_wallets_by_location(self, id):
         node = self.get_node(id)
@@ -211,6 +214,9 @@ class Game:
             b = id_mapping[b]
             self.add_link(a,b,w)
 
+        for node in self.get_nodes():
+            node.rank = node.calc_rank()
+
         db_session.commit()
 
     def get_network(self, players=None):
@@ -235,6 +241,10 @@ class Game:
             
         goals = [ node_to_dict(g) for g in goals ]
         policies = [ node_to_dict(p) for p in policies ]
+
+        for node in self.get_nodes():
+            node.rank = node.calc_rank()
+
         return dict(goals=goals, policies=policies)
 
 
@@ -277,6 +287,9 @@ class Game:
             a = id_mapping[a]
             b = id_mapping[b]
             self.add_link(a,b,w)
+
+        for node in self.get_nodes():
+            node.rank = node.calc_rank()
 
         db_session.commit()
 
