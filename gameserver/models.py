@@ -3,7 +3,6 @@ from sqlalchemy import Column, Integer, String, ForeignKey, \
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
-#from sqlalchemy_utils import aggregated
 from sqlalchemy import func
 from sqlalchemy.orm.attributes import instance_state
 
@@ -62,8 +61,6 @@ class Base(object):
         return cls.__name__.lower()
     id = Column(CHAR(36), primary_key=True, default=default_uuid)
 
-#class Ledger(Base):
-#    amount = Column(Float)
 
 class Table(Base):
     id = Column(CHAR(36),
@@ -75,6 +72,7 @@ class Table(Base):
         self.id = default_uuid()
         self.name = name
 
+
 class Client(Base):
     id = Column(CHAR(36),
                 primary_key=True, default=default_uuid)
@@ -84,6 +82,7 @@ class Client(Base):
     def __init__(self, name):
         self.id = default_uuid()
         self.name = name
+
 
 class Node(Base):
 
@@ -134,10 +133,6 @@ class Node(Base):
         else:
             return balance
 
-#    @aggregated('lower_edges', Column(Integer))
-#    def total_children_weight(self):
-#        return func.sum(Edge.weight)
-
     @property
     def total_children_weight(self):
         return sum([e.weight for e in self.lower_edges])
@@ -152,25 +147,14 @@ class Node(Base):
 
     @property
     def balance(self):
-#        res = db_session.execute("SELECT sum(balance) AS balance FROM wallet WHERE location_id = :id", {'id': self.id})
-#        return res.fetchall()[0][0] or 0.0
-        
         return float(sum([ wallet.balance for wallet in self.wallets_here ]))
  
-#    @aggregated('wallets_here', Column(Integer))
-#    def balance(self):
-#        return func.sum(Wallet.balance)
-       
-
     def do_leak(self):
-#        print "*** start do leak"
         total = self.balance
         leak = 0.2
-#        leak = self.get_leak()
         for wallet in self.wallets_here:
             amount = wallet.balance * leak
             wallet.balance -= amount
-#        print "*** end do leak"
 
     def get_wallet_by_owner(self, owner, create=True):
         wallet = None
@@ -179,16 +163,13 @@ class Node(Base):
                 wallet = w
                 break
             
-#        wallet = db_session.query(Wallet).filter(Wallet.location==self, 
-#                                                 Wallet.owner==owner).one_or_none()
         if wallet is None and create:
             wallet = Wallet(owner)
             self.wallets_here.append(wallet)
             db_session.add(wallet)
 
         return wallet
-    
-    
+
     def do_propogate_funds(self):
         # Check activation
         if not self.active or not self.balance or not self.current_outflow:
@@ -290,8 +271,6 @@ class Player(Node):
 
     @property
     def balance(self):
-#        res = db_session.execute("SELECT sum(balance) AS balance FROM wallet WHERE location_id = :id", {'id': self.id})
-#        return res.fetchall()[0][0] or 0.0
         try:
             return self.wallet.balance
         except IndexError:
@@ -437,15 +416,6 @@ class Wallet(Base):
         self.owner = owner
         self.balance = balance or 0.0
 
-#    @property
-#    def balance(self):
-#        return self._balance
-
-#    @balance.setter
-#    def balance(self, amount):
-#        self.
-
-
     def transfer(self, dest, amount):
         if type(dest) == type(Wallet):
             self.transfer_to_wallet(dest, amount)
@@ -460,7 +430,6 @@ class Wallet(Base):
         # update the balances of source and dest
         self.balance -= amount
         dest.balance += amount
-
 
     def transfer_to_node(self, node, amount):
         # check we have funds for this transfer
@@ -477,6 +446,5 @@ class Wallet(Base):
         if self.balance == 0.0:
             db_session.delete(self)
             
-
     def __repr__(self):
         return "<Wallet: {} balance {:.2f}>".format(self.id, self.balance)

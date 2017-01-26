@@ -1,7 +1,6 @@
 import json
 from gameserver.utils import random, node_to_dict
 
-#from database import db_session
 from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table, Client
 
