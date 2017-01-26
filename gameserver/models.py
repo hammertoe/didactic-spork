@@ -1,8 +1,12 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, CHAR, create_engine
+    Float, CHAR, create_engine, event
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy_utils import aggregated
+from sqlalchemy import func
+
+from flask_sqlalchemy import SignallingSession
 
 from gameserver.database import default_uuid, db
 from gameserver.utils import pack_amount, checksum
@@ -10,6 +14,24 @@ from gameserver.utils import pack_amount, checksum
 from utils import random
 
 db_session = db.session
+db_session.ledgers = []
+
+@event.listens_for(SignallingSession, 'before_flush')
+def before_flush(session, flush_context, instances):
+    ledgers = []
+
+    if session.dirty:
+        for elem in session.dirty:
+            if ( session.is_modified(elem, include_collections=False) ):
+                if isinstance(elem, Wallet):
+                    session.expunge(elem)
+                    ledgers.append(Ledger(id=elem.id, amount=elem.balance))
+
+    if ledgers:
+        session.bulk_save_objects(ledgers)
+        session.execute('UPDATE wallet w JOIN ledger l on w.id = l.id SET w.balance = l.amount')
+        session.execute('TRUNCATE ledger')
+
 
 @as_declarative()
 class Base(object):
@@ -17,6 +39,9 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
     id = Column(CHAR(36), primary_key=True, default=default_uuid)
+
+class Ledger(Base):
+    amount = Column(Float)
 
 class Table(Base):
     id = Column(CHAR(36),
@@ -78,10 +103,22 @@ class Node(Base):
 
     @property
     def current_outflow(self):
-        if not self.active:
+        balance = self.balance or 0.0
+        if balance == 0.0 or not self.active:
             return 0.0
-        total = sum([x.weight for x in self.lower_edges])
-        return total if total < self.balance else self.balance
+        total = self.total_children_weight or 0.0
+        if total < balance:
+            return total
+        else:
+            return balance
+
+#    @aggregated('lower_edges', Column(Integer))
+#    def total_children_weight(self):
+#        return func.sum(Edge.weight)
+
+    @property
+    def total_children_weight(self):
+        return sum([e.weight for e in self.lower_edges])
 
     @property
     def current_inflow(self):
@@ -97,18 +134,31 @@ class Node(Base):
 #        return res.fetchall()[0][0] or 0.0
         
         return float(sum([ wallet.balance for wallet in self.wallets_here ]))
-        
+ 
+#    @aggregated('wallets_here', Column(Integer))
+#    def balance(self):
+#        return func.sum(Wallet.balance)
+       
 
     def do_leak(self):
+#        print "*** start do leak"
         total = self.balance
-        leak = self.get_leak()
+        leak = 0.2
+#        leak = self.get_leak()
         for wallet in self.wallets_here:
             amount = wallet.balance * leak
             wallet.balance -= amount
+#        print "*** end do leak"
 
     def get_wallet_by_owner(self, owner, create=True):
-        wallet = db_session.query(Wallet).filter(Wallet.location==self, 
-                                                 Wallet.owner==owner).one_or_none()
+        wallet = None
+        for w in self.wallets_here:
+            if w.owner == owner:
+                wallet = w
+                break
+            
+#        wallet = db_session.query(Wallet).filter(Wallet.location==self, 
+#                                                 Wallet.owner==owner).one_or_none()
         if wallet is None and create:
             wallet = Wallet(owner)
             self.wallets_here.append(wallet)
@@ -118,9 +168,17 @@ class Node(Base):
     
     
     def do_propogate_funds(self):
+#        print "** start node propogate funds"
         # Check activation
-        if not self.active or not self.balance:
+#        print "* checking active"
+        if not self.active or not self.balance or not self.current_outflow:
+#            print "* end checking balance"
+#            print "** end node propogate funds"
             return
+#        print "* end checking active"
+
+        total_balance = self.balance
+        ratio = max(total_balance/self.current_outflow, 1.0)
 
         for edge in self.lower_edges:
             child = edge.higher_node
@@ -128,14 +186,20 @@ class Node(Base):
 
             # if the amount is greater than the balance, then
             # transfer what we can.
-            if amount > self.balance:
-                amount = self.balance
+#            if amount > total:
+#                amount = total
 
-            total = self.balance
+#            print "***** end checking balance"
+
             for wallet in self.wallets_here:
-                subamount = (wallet.balance / total) * amount
-                if subamount > 0.0 and subamount <= wallet.balance:
+                subamount = (wallet.balance / total_balance) * amount * ratio
+                subamount = max(subamount, wallet.balance)
+                if subamount > 0.0:
+#                    print "**** start transfer"
                     wallet.transfer(child, subamount)
+#                    print "**** end transfer"
+
+#        print "** end node propogate funds"
 
     def calc_rank(self):
         rank = len(self.parents())
@@ -222,8 +286,10 @@ class Player(Node):
     def balance(self):
 #        res = db_session.execute("SELECT sum(balance) AS balance FROM wallet WHERE location_id = :id", {'id': self.id})
 #        return res.fetchall()[0][0] or 0.0
-
-        return self.wallet.balance
+        try:
+            return self.wallet.balance
+        except IndexError:
+            return 0.0
 
     @balance.setter
     def balance(self, amount):
@@ -364,6 +430,15 @@ class Wallet(Base):
         self.id = default_uuid()
         self.owner = owner
         self.balance = balance or 0.0
+
+#    @property
+#    def balance(self):
+#        return self._balance
+
+#    @balance.setter
+#    def balance(self, amount):
+#        self.
+
 
     def transfer(self, dest, amount):
         if type(dest) == type(Wallet):

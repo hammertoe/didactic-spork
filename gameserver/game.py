@@ -3,7 +3,9 @@ from gameserver.utils import random, node_to_dict
 
 #from database import db_session
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table, Client
+from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table, Client, Ledger
+
+from sqlalchemy.orm import joinedload, subqueryload
 
 db_session = db.session
 
@@ -35,10 +37,19 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
-        nodes = db_session.query(Node).order_by(Node.rank.desc()).all()
+        nodes = db_session.query(Node).options(
+            subqueryload('lower_edges'),
+            subqueryload('higher_edges'),
+            subqueryload('wallets_here')).order_by(Node.rank.desc()).all()
         for node in nodes:
             node.do_leak()
             node.do_propogate_funds()
+
+#        wallets = db_session.query(Wallet).all()
+#        ledgers = [ Ledger(id=w.id, amount=w._balance) for w in wallets ]
+#        db_session.bulk_save_objects(ledgers)
+#        db_session.execute('UPDATE wallet w JOIN ledger l on w.id = l.id SET w.balance = l.amount')
+#        db_session.execute('TRUNCATE ledger')
 
     def top_players(self, max_num=50):
         players = self.get_players()
