@@ -1,10 +1,11 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, CHAR, create_engine, event
+    Float, CHAR, create_engine, event, Table as SATable
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy_utils import aggregated
+#from sqlalchemy_utils import aggregated
 from sqlalchemy import func
+from sqlalchemy.orm.attributes import instance_state
 
 from flask_sqlalchemy import SignallingSession
 
@@ -16,21 +17,42 @@ from utils import random
 db_session = db.session
 db_session.ledgers = []
 
+# define the temp table
+ledger = SATable("ledger", db.metadata,
+                 Column("wallet_id", CHAR(36), primary_key=True),
+                 Column("new_balance", Float),
+                 prefixes=["TEMPORARY"],
+                 )    
+
 @event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances):
-    ledgers = []
+    temp_items = {}
 
     if session.dirty:
+
         for elem in session.dirty:
             if ( session.is_modified(elem, include_collections=False) ):
                 if isinstance(elem, Wallet):
-                    session.expunge(elem)
-                    ledgers.append(Ledger(id=elem.id, amount=elem.balance))
+                    instance_state(elem).committed_state.clear()
+                    temp_items[elem.id] = elem.balance
 
-    if ledgers:
-        session.bulk_save_objects(ledgers)
-        session.execute('UPDATE wallet w JOIN ledger l on w.id = l.id SET w.balance = l.amount')
-        session.execute('TRUNCATE ledger')
+    if temp_items:
+
+        # create the temp table
+        ledger.create(session.connection(), checkfirst=True)
+
+        # insert the temp values
+        session.execute(ledger.insert().values([{"wallet_id": k, "new_balance": v}
+                                           for k, v in temp_items.items()]))
+
+        # perform the update to the main table
+        session.execute(Wallet.__table__
+                        .update()
+                        .values(balance=ledger.c.new_balance)
+                        .where(Wallet.__table__.c.id == ledger.c.wallet_id))
+        
+        # drop temp table
+        session.execute(ledger.delete())
 
 
 @as_declarative()
@@ -40,8 +62,8 @@ class Base(object):
         return cls.__name__.lower()
     id = Column(CHAR(36), primary_key=True, default=default_uuid)
 
-class Ledger(Base):
-    amount = Column(Float)
+#class Ledger(Base):
+#    amount = Column(Float)
 
 class Table(Base):
     id = Column(CHAR(36),
@@ -168,14 +190,9 @@ class Node(Base):
     
     
     def do_propogate_funds(self):
-#        print "** start node propogate funds"
         # Check activation
-#        print "* checking active"
         if not self.active or not self.balance or not self.current_outflow:
-#            print "* end checking balance"
-#            print "** end node propogate funds"
             return
-#        print "* end checking active"
 
         total_balance = self.balance
         ratio = max(total_balance/self.current_outflow, 1.0)
@@ -184,22 +201,11 @@ class Node(Base):
             child = edge.higher_node
             amount = edge.weight
 
-            # if the amount is greater than the balance, then
-            # transfer what we can.
-#            if amount > total:
-#                amount = total
-
-#            print "***** end checking balance"
-
             for wallet in self.wallets_here:
                 subamount = (wallet.balance / total_balance) * amount * ratio
                 subamount = max(subamount, wallet.balance)
                 if subamount > 0.0:
-#                    print "**** start transfer"
                     wallet.transfer(child, subamount)
-#                    print "**** end transfer"
-
-#        print "** end node propogate funds"
 
     def calc_rank(self):
         rank = len(self.parents())
