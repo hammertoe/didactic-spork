@@ -25,6 +25,10 @@ ledger = SATable("ledger", db.metadata,
 
 @event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances):
+    # Only do this on MySQL
+    if session.connection().engine.dialect.name != 'mysql':
+        return
+
     temp_items = {}
 
     if session.dirty:
