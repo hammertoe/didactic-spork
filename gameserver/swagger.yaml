@@ -24,6 +24,8 @@ produces:
 paths:
   /game/tick:
     put:
+      security:
+      - APISecurity: []
       tags:
       - "game"
       summary: "Causes a game tick to happen"
@@ -36,6 +38,8 @@ paths:
       - tag: "game"
   /game/league_table:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "game"
       - "players"
@@ -51,6 +55,8 @@ paths:
       
   /network/:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "network"
       summary: "Returns a JSON representation of the network"
@@ -64,6 +70,8 @@ paths:
       x-tags:
       - tag: "network"
     post:
+      security:
+      - APISecurity: []
       tags:
       - "network"
       summary: "Creates a network from a JSON upload"
@@ -82,6 +90,8 @@ paths:
       - tag: "network"
   /network/{id}:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "network"
       summary: "Returns the specified node"
@@ -103,6 +113,8 @@ paths:
       - tag: "network"
   /network/{id}/wallets:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "network"
       summary: "Returns the wallets at the specified node"
@@ -124,6 +136,8 @@ paths:
       - tag: "network"
   /players/:
     post:
+      security:
+      - APISecurity: []
       tags:
       - "players"
       summary: "Creates a new game player"
@@ -142,6 +156,8 @@ paths:
       - tag: "players"
   /players/{player_id}:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "players"
       summary: "Returns the specified player"
@@ -164,6 +180,7 @@ paths:
     patch:
       security:
       - UserSecurity: []
+      - APISecurity: []
       tags:
       - "players"
       summary: "Updates attributes of a player"
@@ -197,6 +214,7 @@ paths:
     get:
       security:
       - UserSecurity: []
+      - APISecurity: []
       tags:
       - "players"
       summary: "Returns the funding for specified player"
@@ -223,6 +241,7 @@ paths:
     put:
       security:
       - UserSecurity: []
+      - APISecurity: []
       tags:
       - "players"
       summary: "Sets the funding of the policies for this player"
@@ -258,6 +277,7 @@ paths:
     get:
       security:
       - UserSecurity: []
+      - APISecurity: []
       tags:
       - "players"
       summary: "Returns an offer to sell the specified policy"
@@ -292,6 +312,7 @@ paths:
   /players/{player_id}/policies/:
     post:
       security:
+      - APISecurity: []
       - UserSecurity: []
       tags:
       - "players"
@@ -323,6 +344,8 @@ paths:
 
   /tables/:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "table"
       summary: "Returns a list of the tables"
@@ -340,6 +363,8 @@ paths:
         tag: "table"
       - tag: "network"
     post:
+      security:
+      - APISecurity: []
       tags:
       - "table"
       summary: "Create a new gaming table"
@@ -367,6 +392,8 @@ paths:
       - tag: "table"
   /tables/{id}:
     get:
+      security:
+      - APISecurity: []
       tags:
       - "table"
       summary: "Return the network of a specific table"
