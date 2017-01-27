@@ -20,7 +20,7 @@ db_session.ledgers = []
 ledger = SATable("ledger", db.metadata,
                  Column("wallet_id", CHAR(36), primary_key=True),
                  Column("new_balance", Float),
-                 prefixes=["TEMPORARY"],
+#                 prefixes=["TEMPORARY"],
                  )    
 
 @event.listens_for(SignallingSession, 'before_flush')
