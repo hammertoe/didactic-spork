@@ -804,6 +804,102 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(g3.balance, 1000.0)
 
 
+    def testSimpleNetwork(self):
+        p1 = self.game.create_player('Player 1')
+        p1.balance = 1000
+        po1 = self.game.add_policy('Policy 1', 0.0)
+        g1 = self.game.add_goal('Goal 1', 0.0)
+        g2 = self.game.add_goal('Goal 2', 0.0)
+
+        l1 = self.game.add_link(po1, g1, 3.0)
+        l2 = self.game.add_link(po1, g2, 4.0)
+
+        p1.transfer_funds_to_node(po1, 10)
+
+        self.game.do_propogate_funds()
+
+        self.assertAlmostEqual(p1.balance, 990)
+
+        self.assertAlmostEqual(g1.balance, 3.0)
+        self.assertAlmostEqual(g2.balance, 4.0)
+
+    def testSimpleNetworkLessThanBalance(self):
+        p1 = self.game.create_player('Player 1')
+        p1.balance = 1000
+        po1 = self.game.add_policy('Policy 1', 0.0)
+        g1 = self.game.add_goal('Goal 1', 0.0)
+        g2 = self.game.add_goal('Goal 2', 0.0)
+
+        l1 = self.game.add_link(po1, g1, 10.0)
+        l2 = self.game.add_link(po1, g2, 40.0)
+
+        p1.transfer_funds_to_node(po1, 10)
+
+        self.game.do_propogate_funds()
+
+        self.assertAlmostEqual(p1.balance, 990)
+
+        self.assertAlmostEqual(g1.balance, 2.0)
+        self.assertAlmostEqual(g2.balance, 8.0)
+
+    def testSimpleNetworkTwoWallets(self):
+        p1 = self.game.create_player('Player 1')
+        p1.balance = 1000
+        p2 = self.game.create_player('Player 2')
+        p2.balance = 1000
+        po1 = self.game.add_policy('Policy 1', 0.0)
+        g1 = self.game.add_goal('Goal 1', 0.0)
+        g2 = self.game.add_goal('Goal 2', 0.0)
+
+        l1 = self.game.add_link(po1, g1, 3.0)
+        l2 = self.game.add_link(po1, g2, 5.0)
+
+        p1.transfer_funds_to_node(po1, 10)
+        p2.transfer_funds_to_node(po1, 30)
+
+        self.game.do_propogate_funds()
+
+        self.assertAlmostEqual(p1.balance, 990)
+        self.assertAlmostEqual(p2.balance, 970)
+
+        self.assertAlmostEqual(g1.balance, 3.0)
+        self.assertEqual(g1.wallet_owner_map, {p1.id: 0.75,
+                                               p2.id: 2.25})
+        
+        self.assertAlmostEqual(g2.balance, 5.0)
+        self.assertEqual(g2.wallet_owner_map, {p1.id: 1.25,
+                                               p2.id: 3.75})
+
+    def testSimpleNetworkTwoWalletsLessThanBalance(self):
+        p1 = self.game.create_player('Player 1')
+        p1.balance = 1000
+        p2 = self.game.create_player('Player 2')
+        p2.balance = 1000
+        po1 = self.game.add_policy('Policy 1', 0.0)
+        g1 = self.game.add_goal('Goal 1', 0.0)
+        g2 = self.game.add_goal('Goal 2', 0.0)
+
+        l1 = self.game.add_link(po1, g1, 3.0)
+        l2 = self.game.add_link(po1, g2, 5.0)
+
+        p1.transfer_funds_to_node(po1, 1)
+        p2.transfer_funds_to_node(po1, 3)
+
+        self.assertAlmostEqual(p1.balance, 999)
+        self.assertAlmostEqual(p2.balance, 997)
+        self.assertAlmostEqual(po1.balance, 4)
+
+        self.game.do_propogate_funds()
+
+        self.assertAlmostEqual(g1.balance, 1.5)
+        self.assertEqual(g1.wallet_owner_map, {p1.id: 0.375,
+                                               p2.id: 1.125})
+        
+        self.assertAlmostEqual(g2.balance, 2.5)
+        self.assertEqual(g2.wallet_owner_map, {p1.id: 0.625,
+                                               p2.id: 1.875})
+        
+
     def testSimplePlayerCoinsNetwork(self):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000
@@ -1026,6 +1122,8 @@ class CoreGameTests(DBTestCase):
         self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
+        self.game.rank_nodes()
+
         self.assertEqual(po1.balance, 0)
 
         for x in range(100):
@@ -1043,6 +1141,8 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 0.5)
         self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
+
+        self.game.rank_nodes()
 
         self.assertEqual(po1.balance, 0)
 
@@ -1122,19 +1222,17 @@ class CoreGameTests(DBTestCase):
 
         data = json.load(open('examples/network.json', 'r'))
         self.game.create_network(data)
-
         random.seed(0)
         
+        t1 = self.game.create_table('T1')
+
         p1 = self.game.create_player('Matt')
-        p1.table_id = 'T1'
         p2 = self.game.create_player('Simon')
         p3 = self.game.create_player('Richard')
 
         table_uuid = default_uuid()
 
         self.assertEqual(self.game.get_network_for_table('nonexistant'), None)
-
-        t1 = self.game.create_table('T1')
 
         table = self.game.get_network_for_table(t1.id)
         self.assertEqual(len(table['goals']), 6)
@@ -1202,6 +1300,8 @@ class CoreGameTests(DBTestCase):
 
         self.game.add_fund(p1, g1, 10)
         self.game.add_fund(p1, g2, 30)
+
+        self.game.rank_nodes()
 
         self.game.tick()
 
@@ -2021,7 +2121,6 @@ class Utils(DBTestCase): # pragma: no cover
             policy.id = p['id']
             nodes[policy.id] = policy
 
-        import pdb; pdb.set_trace()
 
         for e in network['edges']:
             game.add_link(nodes[e['source']],

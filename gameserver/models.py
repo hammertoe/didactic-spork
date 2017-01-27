@@ -32,8 +32,9 @@ def before_flush(session, flush_context, instances):
         for elem in session.dirty:
             if ( session.is_modified(elem, include_collections=False) ):
                 if isinstance(elem, Wallet):
-                    instance_state(elem).committed_state.clear()
+#                    instance_state(elem).committed_state.clear()
                     temp_items[elem.id] = elem.balance
+                    session.expire(elem, ['balance'])
 
     if temp_items:
 
@@ -151,7 +152,7 @@ class Node(Base):
  
     def do_leak(self):
         total = self.balance
-        leak = 0.2
+        leak = self.get_leak()
         for wallet in self.wallets_here:
             amount = wallet.balance * leak
             wallet.balance -= amount
@@ -165,10 +166,15 @@ class Node(Base):
             
         if wallet is None and create:
             wallet = Wallet(owner)
-            self.wallets_here.append(wallet)
             db_session.add(wallet)
-
+            self.wallets_here.append(wallet)
+            db_session.flush()
+            
         return wallet
+
+    @property
+    def wallet_owner_map(self):
+        return { w.owner.id: w.balance for w in self.wallets_here }
 
     def do_propogate_funds(self):
         # Check activation
@@ -176,17 +182,25 @@ class Node(Base):
             return
 
         total_balance = self.balance
-        ratio = max(total_balance/self.current_outflow, 1.0)
+        total_children_weight = self.total_children_weight
+
+        total_out_factor = min(1.0, total_balance / total_children_weight)
+
+        to_transfer = []
 
         for edge in self.lower_edges:
             child = edge.higher_node
             amount = edge.weight
 
+            factored_amount = amount * total_out_factor
+
             for wallet in self.wallets_here:
-                subamount = (wallet.balance / total_balance) * amount * ratio
-                subamount = max(subamount, wallet.balance)
+                subamount = (wallet.balance / total_balance) * factored_amount
                 if subamount > 0.0:
-                    wallet.transfer(child, subamount)
+                    to_transfer.append((wallet, child, subamount))
+
+        for wallet, child, subamount in to_transfer:
+            wallet.transfer(child, subamount)
 
     def calc_rank(self):
         rank = len(self.parents())
@@ -445,6 +459,7 @@ class Wallet(Base):
         # If wallet is empty at the end, delete it
         if self.balance == 0.0:
             db_session.delete(self)
+            db_session.flush()
             
     def __repr__(self):
         return "<Wallet: {} balance {:.2f}>".format(self.id, self.balance)

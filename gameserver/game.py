@@ -22,13 +22,23 @@ class Game:
     def num_players(self):
         return db_session.query(Player).count()
 
+    def rank_nodes(self):
+        for node in self.get_nodes():
+            node.rank = node.calc_rank()
+
+
+    def get_nodes(self):
+        return db_session.query(Node).options(
+            subqueryload('higher_edges'),
+            subqueryload('lower_edges'),
+            subqueryload('wallets_here')).order_by(Node.rank).all()
+    
     def do_leak(self):
-        for node in db_session.query(Node).order_by(Node.id).all():
+        for node in self.get_nodes():
             node.do_leak()
 
     def do_propogate_funds(self):
-        nodes = db_session.query(Node).all()
-        for node in sorted(nodes, key=lambda n: n.rank):
+        for node in self.get_nodes():
             node.do_propogate_funds()
 
     def do_replenish_budget(self):
@@ -36,11 +46,7 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
-        nodes = db_session.query(Node).options(
-            subqueryload('higher_edges'),
-            subqueryload('lower_edges'),
-            subqueryload('wallets_here')).order_by(Node.rank.desc()).all()
-        for node in sorted(nodes):
+        for node in self.get_nodes():
             node.do_leak()
             node.do_propogate_funds()
 
@@ -105,9 +111,6 @@ class Game:
 
     def get_node(self, id):
         return db_session.query(Node).filter(Node.id == id).one_or_none()
-
-    def get_nodes(self):
-        return db_session.query(Node).all()
 
     def get_wallets_by_location(self, id):
         node = self.get_node(id)
@@ -218,8 +221,7 @@ class Game:
             b = id_mapping[b]
             self.add_link(a,b,w)
 
-        for node in self.get_nodes():
-            node.rank = node.calc_rank()
+        self.rank_nodes()
 
         db_session.commit()
 
@@ -289,8 +291,7 @@ class Game:
             b = id_mapping[b]
             self.add_link(a,b,w)
 
-        for node in self.get_nodes():
-            node.rank = node.calc_rank()
+        self.rank_nodes()
 
         db_session.commit()
 
