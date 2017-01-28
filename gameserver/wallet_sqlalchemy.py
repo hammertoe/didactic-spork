@@ -46,8 +46,8 @@ class Wallet(Mutable, BaseWallet):
         self.changed()
         return ret
 
-    def transfer(self, amount, dest):
-        ret = BaseWallet.transfer(self, amount, dest)
+    def transfer(self, dest, amount):
+        ret = BaseWallet.transfer(self, dest, amount)
         self.changed()
         dest.changed()
         return ret
@@ -138,7 +138,7 @@ class SQLAWalletTests(unittest.TestCase):
         self.assertEqual(n1.wallet[0], (UUID(u1).bytes, 30.5))
 
         # test transfer
-        n1.wallet.transfer(20.0, n2.wallet)
+        n1.wallet.transfer(n2.wallet, 20.0)
         self.assertEqual(n1.wallet.total, 10.5)
         self.assertEqual(n2.wallet.total, 20.0)
         

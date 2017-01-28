@@ -69,7 +69,7 @@ class Wallet:
     def todict(self):
         return { str(UUID(bytes=k)): v for k,v in tuple(self) }
 
-    def transfer(self, amount, dest):
+    def transfer(self, dest, amount):
         if amount > self.total:
             raise ValueError, "Transfer amount too high"
 
@@ -206,7 +206,7 @@ class WalletTests(unittest.TestCase):
         w1.add(player_id.bytes, 10.0)
         
         w2 = Wallet()
-        w1.transfer(4.0, w2)
+        w1.transfer(w2, 4.0)
 
         self.assertAlmostEqual(w1.total, 6.0)
         self.assertEqual(len(w1), 1)
@@ -221,7 +221,7 @@ class WalletTests(unittest.TestCase):
         
         w2 = Wallet()
         w2.add(player_id.bytes, 25.5)
-        w1.transfer(4.0, w2)
+        w1.transfer(w2, 4.0)
 
         self.assertAlmostEqual(w1.total, 6.0)
         self.assertEqual(len(w1), 1)
@@ -240,7 +240,7 @@ class WalletTests(unittest.TestCase):
         self.assertAlmostEqual(w1.total, 24.0)
 
         w2 = Wallet()
-        w1.transfer(6.0, w2)
+        w1.transfer(w2, 6.0)
 
         self.assertAlmostEqual(w1.total, 18.0)
         self.assertEqual(len(w1), 3)
@@ -268,7 +268,7 @@ class WalletTests(unittest.TestCase):
         self.assertAlmostEqual(w1.total, 24.0)
 
         w2 = Wallet()
-        w1.transfer(6.0, w2)
+        w1.transfer(w2, 6.0)
 
         self.assertAlmostEqual(w1.total, 18.0)
         self.assertEqual(len(w1), 3)
@@ -301,7 +301,7 @@ class WalletTests(unittest.TestCase):
         w2 = Wallet()
         w2.add(player1_id, 20.0)
 
-        w1.transfer(6.0, w2)
+        w1.transfer(w2, 6.0)
 
         self.assertAlmostEqual(w1.total, 18.0)
         self.assertEqual(len(w1), 3)
@@ -335,7 +335,7 @@ class WalletTests(unittest.TestCase):
 
         self.assertAlmostEqual(w2.total, 34.0)
 
-        w1.transfer(6.0, w2)
+        w1.transfer(w2, 6.0)
 
         self.assertAlmostEqual(w1.total, 4.0)
         self.assertEqual(len(w1), 1)
