@@ -127,19 +127,18 @@ class Game:
         random.shuffle(policies)
         return policies[:n]
 
+    def add_client(self, name):
+        client = Client(name)
+        db_session.add(client)
+        return client
+
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)
         db_session.add(l)
         return l
 
-    def get_link(self, id):
-        return db_session.query(Edge).filter(Edge.id == id).one()
-
     def add_fund(self, player, node, amount):
         return player.fund(node, amount)
-
-    def get_fund(self, id):
-        return db_session.query(Fund).filter(Fund.id == id).one()
 
     def set_funding(self, id, funding = None):
         if not funding:

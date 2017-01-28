@@ -69,7 +69,8 @@ class DBTestCase(TestCase):
     def setUp(self):
         db_session.begin_nested()
         self.game = Game()
-        self.api_key = 'ce43fa20-c35b-4257-a565-2fd77da51e3b'
+        test_client = self.game.add_client('tests')
+        self.api_key = test_client.id
 
     def tearDown(self):
         db_session.rollback()

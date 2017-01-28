@@ -25,7 +25,7 @@ ledger = SATable("ledger", db.metadata,
                  )    
 
 #@event.listens_for(SignallingSession, 'before_flush')
-def before_flush(session, flush_context, instances):
+def before_flush(session, flush_context, instances): # pragma: no cover
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
         return
@@ -165,21 +165,6 @@ class Node(Base):
         total = self.balance
         leak = self.get_leak()
         self.wallet.leak(leak)
-
-    def get_wallet_by_owner(self, owner, create=True):
-        wallet = None
-        for w in self.wallets_here:
-            if w.owner == owner:
-                wallet = w
-                break
-            
-        if wallet is None and create:
-            wallet = Wallet(owner)
-            db_session.add(wallet)
-            self.wallets_here.append(wallet)
-            db_session.flush()
-            
-        return wallet
 
     @property
     def wallet_owner_map(self):
