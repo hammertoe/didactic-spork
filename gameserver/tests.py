@@ -7,10 +7,11 @@ import time
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 from gameserver.game import Game
-from gameserver.models import Base, Node, Player, Goal, Policy, Wallet, Edge, Table
+from gameserver.models import Base, Node, Player, Goal, Policy, Edge, Table
 from sqlalchemy import event
 
 from gameserver.database import db, default_uuid
+from gameserver.wallet_sqlalchemy import Wallet
 from gameserver.app import app, create_app
 from flask_testing import TestCase
 
@@ -83,31 +84,6 @@ class DBTestCase(TestCase):
 
 class CoreGameTests(DBTestCase):
         
-    def testRefactorLinks(self):
-        p1 = Player('Player 1')
-        n1 = Policy('Policy A', leak=1.0)
-        g1 = Goal('Goal B', leak=1.0)
-        w1 = Wallet(p1)
-        w2 = Wallet(p1)
-        
-        l1 = Edge(p1, n1, 1)
-        l2 = Edge(n1, g1, 1)
-
-        n1.wallets_here.append(w1)
-        p1.wallets_here.append(w2)
-
-        db_session.add_all([p1, n1, g1, l1, l2, w1, w2])
-
-        self.assertEquals(len(p1.wallets_owned), 3)
-        self.assertIn(w1, p1.wallets_owned)
-        self.assertIn(w2, p1.wallets_owned)
-        self.assertEquals(w1.location, n1)
-
-        self.assertEquals(w2.location, p1)
-        self.assertEquals(w2.owner, p1)
-
-        self.assertIn(p1.wallets_here[0], p1.wallets_owned)
-
     def testAddPlayer(self):
 
         p = self.game.create_player('Matt')
@@ -149,11 +125,11 @@ class CoreGameTests(DBTestCase):
 
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         p1 = self.game.create_player('Matt')
-        w1 = Wallet(p1)
-        po1.wallets_here.append(w1)
+        w1 = Wallet([(p1.id, 100)])
+        po1.wallet = w1
 
-        self.assertEqual(w1.location, po1)
-        self.assertEqual(po1.wallets_here, [w1,])
+        self.assertIn(p1.id, w1.todict())
+        self.assertEqual(po1.wallet, w1)
 
 
     def testAddGoal(self):
@@ -185,11 +161,10 @@ class CoreGameTests(DBTestCase):
 
         g = self.game.add_goal('World Peace', 0.5)
         p1 = self.game.create_player('Matt')
-        w1 = Wallet(p1)
-        g.wallets_here.append(w1)
+        w1 = Wallet([(p1.id, 100.0)])
+        g.wallet = w1
 
-        self.assertEqual(w1.location, g)
-        self.assertEqual(g.wallets_here, [w1,])
+        self.assertEqual(g.wallet, w1)
 
     def testGetNPolicies(self):
         g1 = self.game.add_goal('A', 0.5)
@@ -242,23 +217,22 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(n1.balance, 0)
 
-        w1 = self.game.add_wallet(p1, 5.0)
+        w1 = Wallet([(p1.id, 5.0)])
         self.assertEqual(n1.balance, 0)
-        n1.wallets_here.append(w1)
+        n1.wallet = w1
         self.assertEqual(n1.balance, 5.0)
 
-        w2 = self.game.add_wallet(p1, 10.0)
-        self.assertEqual(n1.balance, 5.0)
-        n1.wallets_here.append(w2)
+        w2 = Wallet([(p1.id, 10.0)])
+        n1.wallet += w2
+
         self.assertEqual(n1.balance, 15.0)
 
     def testNodeLeak100(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets_here.append(w1)
-        w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets_here.append(w2)
+        p2 = self.game.create_player('Simon')
+        n1.wallet = Wallet([(p1.id, 5.0),
+                            (p2.id, 10.0),])
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -269,10 +243,7 @@ class CoreGameTests(DBTestCase):
     def testNodeLeak0(self):
         n1 = self.game.add_policy('Policy 1', 0.0)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets_here.append(w1)
-        w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets_here.append(w2)
+        n1.wallet = Wallet([(p1.id, 15.0)])
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -283,10 +254,9 @@ class CoreGameTests(DBTestCase):
     def testNodeLeak20(self):
         n1 = self.game.add_policy('Policy 1', 0.2)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 5.0)
-        n1.wallets_here.append(w1)
-        w2 = self.game.add_wallet(p1, 10.0)
-        n1.wallets_here.append(w2)
+        p2 = self.game.create_player('Simon')
+        n1.wallet = Wallet([(p1.id, 5.0),
+                            (p2.id, 10.0),])
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
@@ -295,18 +265,18 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(n1.balance, 9.6)
 
         # Check the individual wallets
-        self.assertAlmostEqual(w1.balance, 3.2)
-        self.assertAlmostEqual(w2.balance, 6.4)
+        d = n1.wallet.todict()
+        self.assertAlmostEqual(d[p1.id], 3.2, 5)
+        self.assertAlmostEqual(d[p2.id], 6.4, 5)
 
     def testNodeLeakNegative20(self):
         n1 = self.game.add_policy('Policy 1', 0.2)
         g1 = self.game.add_goal('Goal 1', 0.2)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 5.0)
-        g1.wallets_here.append(w1)
-        w2 = self.game.add_wallet(p1, 10.0)
-        g1.wallets_here.append(w2)
-        
+        p2 = self.game.create_player('Simon')
+        g1.wallet = Wallet([(p1.id, 5.0),
+                            (p2.id, 10.0),])
+
         # add a negative impact edge
         l1 = self.game.add_link(n1, g1, -0.5)
 
@@ -317,72 +287,37 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(g1.balance, 1.35)
 
         # Check the individual wallets
-        self.assertAlmostEqual(w1.balance, 0.45)
-        self.assertAlmostEqual(w2.balance, 0.9)
+        d = g1.wallet.todict()
+        self.assertAlmostEqual(d[p1.id], 0.45, 5)
+        self.assertAlmostEqual(d[p2.id], 0.9, 5)
 
     def testTransferWalletToWallet(self):
         p1 = self.game.create_player('Matt')
-        w1 = Wallet(p1, 100.0)
-        w2 = Wallet(p1, 20.0)
+        w1 = Wallet([(p1.id, 100.0)])
+        w2 = Wallet([(p1.id, 20.0)])
 
-        self.assertAlmostEqual(w1.balance, 100.0)
-        self.assertAlmostEqual(w2.balance, 20.0)
+        self.assertAlmostEqual(w1.total, 100.0)
+        self.assertAlmostEqual(w2.total, 20.0)
 
-        w1.transfer_to_wallet(w2, 30.0)
+        w1.transfer(w2, 30.0)
 
-        self.assertAlmostEqual(w1.balance, 70.0)
-        self.assertAlmostEqual(w2.balance, 50.0)
-
-
-    def testTransferWalletToNode(self):
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 100)
-        n1.wallets_here.append(w1)
-
-        n2 = self.game.add_policy('Policy 2', 1.0)
-
-        self.assertAlmostEqual(n1.balance, 100.0)
-        self.assertAlmostEqual(n2.balance, 0.0)
-
-        self.assertEqual(db_session.query(Wallet).count(), 2)
-
-        w1.transfer_to_node(n2, 70.0)
-
-        self.assertAlmostEqual(n1.balance, 30.0)
-        self.assertAlmostEqual(n2.balance, 70.0)
-
-        self.assertEqual(db_session.query(Wallet).count(), 3)
-
-        w1.transfer_to_node(n2, 10.0)
-
-        self.assertAlmostEqual(n1.balance, 20.0)
-        self.assertAlmostEqual(n2.balance, 80.0)
-
-        self.assertEqual(db_session.query(Wallet).count(), 3)
-
-        w1.transfer_to_node(n2, 20.0)
-
-        self.assertAlmostEqual(n1.balance, 0.0)
-        self.assertAlmostEqual(n2.balance, 100.0)
-
-        self.assertEqual(db_session.query(Wallet).count(), 2)
+        self.assertAlmostEqual(w1.total, 70.0)
+        self.assertAlmostEqual(w2.total, 50.0)
 
     def testTransferToWalletInsufficientFunds(self):
         n1 = self.game.add_policy('Policy 1', 1.0)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 100)
-        n1.wallets_here.append(w1)
+        n1.wallet = Wallet([(p1.id, 100.0)])
         n2 = self.game.add_policy('Policy 2', 1.0)
 
         self.assertAlmostEqual(n1.balance, 100.0)
         self.assertAlmostEqual(n2.balance, 0.0)
 
         with self.assertRaises(ValueError):
-            w1.transfer_to_node(n2, 110.0)
+            n1.wallet.transfer(n2.wallet, 110.0)
 
-        self.assertAlmostEqual(n1.balance, 100.0)
-        self.assertAlmostEqual(n2.balance, 0.0)
+        self.assertAlmostEqual(n1.wallet.total, 100.0)
+        self.assertAlmostEqual(n2.wallet.total, 0.0)
 
 
     def testAllocateFunds(self):
@@ -622,10 +557,8 @@ class CoreGameTests(DBTestCase):
         n1 = self.game.add_policy('Policy 1', 1.0)
         n2 = self.game.add_policy('Policy 2', 1.0)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 100.0)
-        w1.location = n1
-        w2 = self.game.add_wallet(p1, 100.0)
-        w2.location = n2
+        n1.wallet = Wallet([(p1.id, 100.0)])
+        n2.wallet = Wallet([(p1.id, 100.0)])
 
         self.assertEqual(n1.balance, 100.0)
         self.assertEqual(n2.balance, 100.0)
@@ -638,10 +571,8 @@ class CoreGameTests(DBTestCase):
         n1 = self.game.add_policy('Policy 1', 0.0)
         n2 = self.game.add_policy('Policy 2', 1.0)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 100.0)
-        w1.location = n1
-        w2 = self.game.add_wallet(p1, 100.0)
-        w2.location = n2
+        n1.wallet = Wallet([(p1.id, 100.0)])
+        n2.wallet = Wallet([(p1.id, 100.0)])
 
         self.assertEqual(n1.balance, 100.0)
         self.assertEqual(n2.balance, 100.0)
@@ -654,10 +585,8 @@ class CoreGameTests(DBTestCase):
         n1 = self.game.add_policy('Policy 1', 0.5)
         n2 = self.game.add_policy('Policy 2', 0.2)
         p1 = self.game.create_player('Matt')
-        w1 = self.game.add_wallet(p1, 100.0)
-        w1.location = n1
-        w2 = self.game.add_wallet(p1, 100.0)
-        w2.location = n2
+        n1.wallet = Wallet([(p1.id, 100.0)])
+        n2.wallet = Wallet([(p1.id, 100.0)])
 
         self.assertEqual(n1.balance, 100.0)
         self.assertEqual(n2.balance, 100.0)
@@ -688,19 +617,12 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(len(n1.parents()), 2)
 
-        expected_wallets = [{"location": n1.id,
-                             "owner": p1.id,
-                             "balance": 100},
-                            {"location": n1.id,
-                             "owner": p2.id,
-                             "balance": 90}
-                            ]
+        expected = {p1.id: 100.0,
+                    p2.id: 90.0,}
 
-        from gameserver.controllers import wallet_to_dict
-        wallets = [ wallet_to_dict(w) for w in self.game.get_wallets_by_location(n1.id) ]
+        wallets = self.game.get_wallets_by_location(n1.id)
 
-        self.assertEqual(wallets,
-                         expected_wallets)
+        self.assertEqual(wallets, expected)
 
     def testFundPlayers(self):
         p1 = self.game.create_player('Matt')
@@ -1498,20 +1420,22 @@ class DataLoadTests(DBTestCase):
 
         wallets = []
         for n in nodes:
-            for ws in n.wallets_here:
-                wallets.append(dict(location=ws.location.id,
-                                    owner=ws.owner.name,
-                                    balance=ws.balance))
+            for player_id,amount in n.wallet.todict().items():
+                wallets.append(dict(location=n.id,
+                                    owner=self.game.get_player(player_id).name,
+                                    balance=amount))
 
-        expected = [{'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
-                    {'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
-                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
+        expected = [{'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
+                    {'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
                     {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'},
-                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
-                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
+                    {'balance': 0.0, 'location': u'P0', 'owner': 'Matt'},
+                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
                     {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
+                    {'balance': 0.0, 'location': u'P18', 'owner': 'Simon'},
+                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
+                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
                     {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'}]
-
+        
         self.assertEqual(sorted(expected), sorted(wallets))
 
 class GameTests(DBTestCase):
@@ -1886,12 +1810,9 @@ class RestAPITests(DBTestCase):
             if response.status_code == 200:
                 wallets.extend(response.json)
 
-        expected = [{u'balance': 2.0,
-                     u'location': u'P17',
-                     u'owner': p2.id},
-                    {u'balance': 4.0,
-                     u'location': u'P15',
-                     u'owner': p2.id},
+        expected = [{u'balance': 0.0,
+                     u'location': u'P0',
+                     u'owner': p1.id},
                     {u'balance': 1.0,
                      u'location': u'P12',
                      u'owner': p2.id},
@@ -1901,11 +1822,20 @@ class RestAPITests(DBTestCase):
                     {u'balance': 3.0,
                      u'location': u'P5',
                      u'owner': p2.id},
-                    {u'balance': 4.0,
-                     u'location': u'P4',
-                     u'owner': p1.id},
+                    {u'balance': 2.0,
+                     u'location': u'P17',
+                     u'owner': p2.id},
+                    {u'balance': 0.0,
+                     u'location': u'P18',
+                     u'owner': p2.id},
                     {u'balance': 1.0,
                      u'location': u'P18',
+                     u'owner': p1.id},
+                    {u'balance': 4.0,
+                     u'location': u'P15',
+                     u'owner': p2.id},
+                    {u'balance': 4.0,
+                     u'location': u'P4',
                      u'owner': p1.id},
                     {u'balance': 3.0,
                      u'location': u'P11',
@@ -2131,6 +2061,8 @@ class Utils(DBTestCase): # pragma: no cover
         db_session.commit()
         db_session.commit()
         db_session.commit()
+
+
 
 if __name__ == '__main__':
     unittest.main()

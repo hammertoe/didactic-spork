@@ -57,7 +57,7 @@ class Wallet(Mutable, BaseWallet):
         self.changed()
         return ret
     
-class SQLAWalletTests(unittest.TestCase):
+class SQLAWalletTests(unittest.TestCase): # pragma: no cover
 
     def testSQLWalletType(self):
 
@@ -177,6 +177,6 @@ class SQLAWalletTests(unittest.TestCase):
         self.assertEqual(n1.wallet.total, (100+200) * 0.9)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main()
 

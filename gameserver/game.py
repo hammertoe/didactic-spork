@@ -2,7 +2,7 @@ import json
 from gameserver.utils import random, node_to_dict
 
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Wallet, Table, Client
+from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client
 
 from sqlalchemy.orm import joinedload, subqueryload
 
@@ -26,12 +26,10 @@ class Game:
         for node in self.get_nodes():
             node.rank = node.calc_rank()
 
-
     def get_nodes(self):
         return db_session.query(Node).options(
             subqueryload('higher_edges'),
-            subqueryload('lower_edges'),
-            subqueryload('wallets_here')).order_by(Node.rank).all()
+            subqueryload('lower_edges')).order_by(Node.rank).all()
     
     def do_leak(self):
         for node in self.get_nodes():
@@ -114,9 +112,7 @@ class Game:
 
     def get_wallets_by_location(self, id):
         node = self.get_node(id)
-        if not node:
-            return []
-        return node.wallets_here
+        return node.wallet.todict()
 
     def get_random_goal(self):
         goals = self.get_goals()
@@ -144,11 +140,6 @@ class Game:
 
     def get_fund(self, id):
         return db_session.query(Fund).filter(Fund.id == id).one()
-
-    def add_wallet(self, player, amount=None):
-        w = Wallet(player, amount)
-        db_session.add(w)
-        return w
 
     def set_funding(self, id, funding = None):
         if not funding:

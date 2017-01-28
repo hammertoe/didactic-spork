@@ -3,7 +3,6 @@ from flask import request, abort
 
 from gameserver.game import Game
 from gameserver.database import db
-from gameserver.models import Wallet
 from gameserver.utils import node_to_dict
 
 db_session = db.session
@@ -28,7 +27,7 @@ def require_api_key(f, *args, **kw):
 
     return f(*args, **kw)
 
-@require_api_key
+#@require_api_key
 def do_tick():
     game.tick()
     db_session.commit()
@@ -39,8 +38,6 @@ def league_table():
     res = []
     top = game.top_players()
     for t in top:
-        funded = db_session.query(Wallet.balance).filter(Wallet.location == t.goal,
-                                                         Wallet.owner == t).scalar()
 
         if not t.goal:
             continue 
@@ -48,18 +45,12 @@ def league_table():
         r = {'id': t.id,
              'name': t.name,
              'goal': t.goal.name,
-             'goal_contribution': funded or 0.0,
+             'goal_contribution': t.goal_funded,
              'goal_total': t.goal.balance,
              }
         res.append(r)
 
     return dict(rows=res)
-
-def wallet_to_dict(wallet):
-    return dict(owner=wallet.owner_id,
-                location=wallet.location_id,
-                balance=wallet.balance,
-                )
 
 @require_api_key
 def create_network(network):
@@ -79,10 +70,17 @@ def get_node(id):
 
 @require_api_key
 def get_wallets(id):
-    wallets = game.get_wallets_by_location(id)
-    if not wallets:
-        return "No wallets found", 404
-    return [ wallet_to_dict(w) for w in wallets ], 200
+    wallet = game.get_wallets_by_location(id)
+    if not wallet:
+        return "No wallet found", 404
+    res = []
+    for player_id, amount in wallet.items():
+        res.append({'owner': player_id,
+                    'location': id,
+                    'balance': amount,
+                    })
+
+    return res, 200
     
 def player_to_dict(player):
     if player.goal:

@@ -10,6 +10,7 @@ from flask_sqlalchemy import SignallingSession
 
 from gameserver.database import default_uuid, db
 from gameserver.utils import pack_amount, checksum
+from gameserver.wallet_sqlalchemy import WalletType, Wallet
 
 from utils import random
 
@@ -23,7 +24,7 @@ ledger = SATable("ledger", db.metadata,
 #                 prefixes=["TEMPORARY"],
                  )    
 
-@event.listens_for(SignallingSession, 'before_flush')
+#@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances):
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
@@ -43,7 +44,7 @@ def before_flush(session, flush_context, instances):
     if temp_items:
 
         # create the temp table
-        ledger.create(session.connection(), checkfirst=True)
+#        ledger.create(session.connection(), checkfirst=True)
 
         # insert the temp values
         session.execute(ledger.insert().values([{"wallet_id": k, "new_balance": v}
@@ -102,6 +103,7 @@ class Node(Base):
     activation = Column(Float)
     max_level = Column(Integer)
     rank = Column(Integer)
+    wallet = Column(Wallet.as_mutable(WalletType))
     
     def __init__(self, name, leak):
         self.id = default_uuid()
@@ -109,6 +111,7 @@ class Node(Base):
         self.leak = leak
         self.activation = 0.0
         self.rank = 0
+        self.wallet = Wallet()
 
     def higher_neighbors(self):
         return [x.higher_node for x in self.lower_edges]
@@ -152,14 +155,16 @@ class Node(Base):
 
     @property
     def balance(self):
-        return float(sum([ wallet.balance for wallet in self.wallets_here ]))
- 
+        return self.wallet.total
+
+    @balance.setter
+    def balance(self, amount):
+        self.wallet = Wallet([(self.id, amount)])
+
     def do_leak(self):
         total = self.balance
         leak = self.get_leak()
-        for wallet in self.wallets_here:
-            amount = wallet.balance * leak
-            wallet.balance -= amount
+        self.wallet.leak(leak)
 
     def get_wallet_by_owner(self, owner, create=True):
         wallet = None
@@ -178,7 +183,7 @@ class Node(Base):
 
     @property
     def wallet_owner_map(self):
-        return { w.owner.id: w.balance for w in self.wallets_here }
+        return self.wallet.todict()
 
     def do_propogate_funds(self):
         # Check activation
@@ -190,21 +195,13 @@ class Node(Base):
 
         total_out_factor = min(1.0, total_balance / total_children_weight)
 
-        to_transfer = []
-
         for edge in self.lower_edges:
             child = edge.higher_node
             amount = edge.weight
-
             factored_amount = amount * total_out_factor
 
-            for wallet in self.wallets_here:
-                subamount = (wallet.balance / total_balance) * factored_amount
-                if subamount > 0.0:
-                    to_transfer.append((wallet, child, subamount))
+            self.wallet.transfer(child.wallet, factored_amount)
 
-        for wallet, child, subamount in to_transfer:
-            wallet.transfer(child, subamount)
 
     def calc_rank(self):
         rank = len(self.parents())
@@ -277,29 +274,10 @@ class Player(Node):
         self.leak = 0.0
         self.max_outflow = 0.0
         self.token = default_uuid()
-
-        # create a wallet for the player
-        w = Wallet(self, 0.0)
-        db_session.add(w)
-        self.wallets_here.append(w)
-
-    @property
-    def wallet(self):
-        return self.wallets_here[0]
-
-    @property
-    def balance(self):
-        try:
-            return self.wallet.balance
-        except IndexError:
-            return 0.0
-
-    @balance.setter
-    def balance(self, amount):
-        self.wallet.balance = amount
+        self.wallet = Wallet()
 
     def transfer_funds_to_node(self, node, amount):
-        self.wallet.transfer(node, amount)
+        self.wallet.transfer(node.wallet, amount)
 
     def fund(self, node, rate):
         # Do we already fund this node? If so change value
@@ -325,9 +303,8 @@ class Player(Node):
 
     @property
     def goal_funded(self):
-        res = db_session.query(Wallet.balance).filter(Wallet.location == self.goal,
-                                                      Wallet.owner == self).scalar()
-        return res or 0.0
+        wallet = self.goal.wallet
+        return wallet.todict().get(self.id, 0.0)
 
     def offer_policy(self, policy_id, price):
         policy = db_session.query(Policy).filter(Policy.id == policy_id).one()
@@ -405,65 +382,3 @@ class Edge(Base):
         return self.lower_node.current_outflow
 
 
-class Wallet(Base):
-
-    owner_id = Column(
-        CHAR(36),
-        ForeignKey('node.id'),
-        index=True)
-
-    owner = relationship(
-        'Player',
-        primaryjoin=owner_id == Node.id,
-        backref='wallets_owned')
-
-    location_id = Column(
-        CHAR(36),
-        ForeignKey('node.id'),
-        index=True)
-
-    location = relationship(
-        'Node',
-        primaryjoin=location_id == Node.id,
-        backref='wallets_here')
-
-    balance = Column(Float)
-
-    def __init__(self, owner, balance=None):
-        self.id = default_uuid()
-        self.owner = owner
-        self.balance = balance or 0.0
-
-    def transfer(self, dest, amount):
-        if type(dest) == type(Wallet):
-            self.transfer_to_wallet(dest, amount)
-        else:
-            self.transfer_to_node(dest, amount) 
-
-    def transfer_to_wallet(self, dest, amount):
-        # check we have funds for this transfer
-        if amount > self.balance:
-            raise ValueError, "Insufficient balance for transfer"
-
-        # update the balances of source and dest
-        self.balance -= amount
-        dest.balance += amount
-
-    def transfer_to_node(self, node, amount):
-        # check we have funds for this transfer
-        if amount > self.balance:
-            raise ValueError, "Insufficient balance for transfer"
-
-        # get dest wallet, create one if non-existant
-        dest_wallet = node.get_wallet_by_owner(self.owner)
-
-        # do the transfer between wallets
-        self.transfer_to_wallet(dest_wallet, amount)
-
-        # If wallet is empty at the end, delete it
-        if self.balance == 0.0:
-            db_session.delete(self)
-            db_session.flush()
-            
-    def __repr__(self):
-        return "<Wallet: {} balance {:.2f}>".format(self.id, self.balance)

@@ -1,6 +1,7 @@
 from struct import pack, unpack, unpack_from, calcsize
 import unittest
 from uuid import uuid4, UUID
+from types import IntType, FloatType
 
 class Wallet:
 
@@ -119,7 +120,32 @@ class Wallet:
         self._num = new_wallet._num
         self._bytes = new_wallet._bytes
 
-class WalletTests(unittest.TestCase):
+    def __mul__(self, other):
+        if type(other) not in [IntType, FloatType]:
+            raise ValueError
+
+        new_wallet = Wallet()
+        for player,amount in self:
+            new_wallet._add(player, amount * other)
+
+        return new_wallet
+
+    def __add__(self, other):
+        if not isinstance(other, self.__class__):
+            raise ValueError
+
+        a = self.todict()
+        b = other.todict()
+        new_wallet = Wallet()
+
+        keys = set.union(set(a), set(b))
+        for key in keys:
+            new_wallet.add(key, a.get(key, 0.0) + b.get(key, 0.0))
+
+        return new_wallet
+
+
+class WalletTests(unittest.TestCase): # pragma: no cover
 
     def testEmptyWallet(self):
         w = Wallet()
@@ -428,6 +454,36 @@ class WalletTests(unittest.TestCase):
 
         self.assertEqual(len(w1), 2)
         self.assertEqual(w1.total, (100+200) * 0.9)
+
+    def testMultiplyWallet(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        orig_dict = w1.todict()
+        expected = { k:v*0.9 for k,v in orig_dict.items() }
+
+        w1 *= 0.9
+
+        res = w1.todict()
+        
+        for k in res:
+            self.assertAlmostEqual(res[k], expected[k])
+
+        self.assertEqual(len(w1), 2)
+        self.assertEqual(w1.total, (100+200) * 0.9)
+        
+    def testAddWallets(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        u3 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+        w2 = Wallet([(u2, 100.0), (u3, 50.0)])
+
+        expected = Wallet([(u1, 100.0), (u2, 300.0), (u3, 50.0)])
+
+        self.assertEqual(w1+w2, expected)
+        
                 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main()
