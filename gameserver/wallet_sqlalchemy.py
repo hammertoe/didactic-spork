@@ -52,6 +52,10 @@ class Wallet(Mutable, BaseWallet):
         dest.changed()
         return ret
 
+    def leak(self, factor):
+        ret = BaseWallet.leak(self, factor)
+        self.changed()
+        return ret
     
 class SQLAWalletTests(unittest.TestCase):
 
@@ -152,6 +156,25 @@ class SQLAWalletTests(unittest.TestCase):
         n1.wallet = Wallet()
         self.assertEqual(n1.wallet.total, 0)
 
+        # test leak
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        n1.wallet = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        orig_dict = n1.wallet.todict()
+        expected = { k:v*0.9 for k,v in orig_dict.items() }
+
+        n1.wallet.leak(0.1)
+        
+        session.flush()
+        session.expire(n1)
+
+        res = n1.wallet.todict()        
+        for k in res:
+            self.assertAlmostEqual(res[k], expected[k])
+
+        self.assertEqual(len(n1.wallet), 2)
+        self.assertEqual(n1.wallet.total, (100+200) * 0.9)
 
 
 if __name__ == '__main__':

@@ -109,7 +109,15 @@ class Wallet:
         dest._total = new_dest._total
         dest._num = new_dest._num
         dest._bytes = new_dest._bytes
-    
+
+    def leak(self, factor):
+        new_wallet = Wallet()
+        for player,amount in self:
+            new_wallet._add(player, amount - (amount * factor))
+
+        self._total = new_wallet._total
+        self._num = new_wallet._num
+        self._bytes = new_wallet._bytes
 
 class WalletTests(unittest.TestCase):
 
@@ -405,6 +413,21 @@ class WalletTests(unittest.TestCase):
 
         self.assertNotEqual(w1, w2)
         
+    def testLeak(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        orig_dict = w1.todict()
+        expected = { k:v*0.9 for k,v in orig_dict.items() }
+        w1.leak(0.1)
+        res = w1.todict()
+        
+        for k in res:
+            self.assertAlmostEqual(res[k], expected[k])
+
+        self.assertEqual(len(w1), 2)
+        self.assertEqual(w1.total, (100+200) * 0.9)
                 
 if __name__ == '__main__':
     unittest.main()
