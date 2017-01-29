@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 class WalletType(types.TypeDecorator):
 
-    impl = types.BLOB
+    impl = types.LargeBinary
 
     def process_bind_param(self, value, dialect):
         if value is not None:
