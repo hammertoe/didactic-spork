@@ -173,6 +173,9 @@ class Node(Base):
         total_balance = self.balance
         total_children_weight = self.total_children_weight
 
+        if not total_children_weight:
+            return
+
         total_out_factor = min(1.0, total_balance / total_children_weight)
 
         for edge in self.lower_edges:
