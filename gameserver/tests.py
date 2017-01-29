@@ -847,6 +847,8 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
 
+        self.game.rank_nodes()
+
         self.game.do_propogate_funds()
         
         self.assertEqual(p1.balance, 900)
@@ -861,6 +863,8 @@ class CoreGameTests(DBTestCase):
 
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
+
+        self.game.rank_nodes()
 
         self.game.do_propogate_funds()
         
@@ -893,6 +897,8 @@ class CoreGameTests(DBTestCase):
 
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
+
+        self.game.rank_nodes()
 
         self.game.do_propogate_funds()
         
@@ -932,6 +938,8 @@ class CoreGameTests(DBTestCase):
 
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
+
+        self.game.rank_nodes()
 
         self.game.do_propogate_funds()
         
@@ -977,6 +985,8 @@ class CoreGameTests(DBTestCase):
         l3 = self.game.add_link(po1, g1, 1.0)
         l4 = self.game.add_link(po2, g2, 2.0)
 
+        self.game.rank_nodes()
+
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
 
@@ -1003,6 +1013,8 @@ class CoreGameTests(DBTestCase):
         l3 = self.game.add_link(po1, g1, 5.0)
         l4 = self.game.add_link(po2, g2, 9.0)
 
+        self.game.rank_nodes()
+
         self.assertEqual(p1.balance, 5000)
         self.assertEqual(po1.balance, 0)
 
@@ -1024,6 +1036,8 @@ class CoreGameTests(DBTestCase):
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         self.game.add_fund(p1, po1, 1.0)
         self.game.add_fund(p2, po1, 1.0)
+
+        self.game.rank_nodes()
 
         self.assertEqual(po1.balance, 0)
 

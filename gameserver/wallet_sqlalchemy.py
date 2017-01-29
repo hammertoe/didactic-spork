@@ -34,7 +34,7 @@ class Wallet(Mutable, BaseWallet):
     @classmethod
     def coerce(cls, key, value):
         if not isinstance(value, cls):
-            return cls(value)
+            return cls(value.items())
         else:
             return value
 
@@ -139,7 +139,7 @@ class SQLAWalletTests(unittest.TestCase): # pragma: no cover
         session.expire(n1)
 
         self.assertEqual(n1.wallet.total, 30.5)
-        self.assertEqual(n1.wallet[0], (UUID(u1).bytes, 30.5))
+        self.assertEqual(n1.wallet[UUID(u1).bytes], 30.5)
 
         # test transfer
         n1.wallet.transfer(n2.wallet, 20.0)

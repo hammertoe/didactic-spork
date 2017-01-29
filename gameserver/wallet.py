@@ -10,8 +10,7 @@ class Wallet:
 
     def __init__(self, items=None):
         self._total = 0.0
-        self._bytes = ''
-        self._num = 0
+        self._entries = {}
         
         if items is not None:
             for player, amount in items:
@@ -19,10 +18,9 @@ class Wallet:
 
         
     def _add(self, player_id, amount):
-        data = pack(self.MSG_FMT, player_id, amount)
-        self._bytes += data
+        self._entries[player_id] = amount
         self._total += amount
-        self._num += 1
+
 
     def add(self, player_id, amount):
         if isinstance(player_id, UUID):
@@ -36,27 +34,28 @@ class Wallet:
         return self._total
 
     def __len__(self):
-        return self._num
+        return len(self._entries)
 
     def dumps(self):
-        return pack(self.HDR_FMT, self._total) + self._bytes
+        fmt = self.MSG_FMT
+        return pack(self.HDR_FMT, self._total) + \
+            ''.join([pack(fmt, k,v) for (k,v) in self._entries.items()])
 
     def loads(self, data):
         hdr_len = calcsize(self.HDR_FMT)
         hdr,data = data[:hdr_len], data[hdr_len:]
         self._total = unpack(self.HDR_FMT, hdr)[0]
-        self._bytes = data
-        self._num = len(self._bytes) / calcsize(self.MSG_FMT)
+        msg_len = calcsize(self.MSG_FMT)
+        fmt = self.MSG_FMT
+        for i in range(0, len(data), msg_len):
+            k,v = unpack(fmt, data[i:i+msg_len])
+            self._entries[k] = v
 
     def __getitem__(self, index):
-        if index >= self._num or index < 0:
-            raise IndexError
-        return unpack_from(self.MSG_FMT, self._bytes, index * calcsize(self.MSG_FMT))
+        return self._entries[index]
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
-            return False
-        if self._num != other._num:
             return False
         if self._total != other._total:
             return False
@@ -68,7 +67,7 @@ class Wallet:
         return not self.__eq__(other)
 
     def todict(self):
-        return { str(UUID(bytes=k)): v for k,v in tuple(self) }
+        return { str(UUID(bytes=k)): v for (k,v) in self._entries.items() }
 
     def transfer(self, dest, amount):
         if amount > self.total:
@@ -77,55 +76,46 @@ class Wallet:
         ratio = amount / self.total
         amounts = {}
 
-        new_source = Wallet()
-        new_dest = Wallet()
-
         # go through source wallet and work out how much to transfer
         # from each player as a ratio of the total amount
         # store that in amounts so we can add it later
         # construct a new source wallet with amounts deducted
-        for player,balance in self:
-            to_transfer = balance * ratio
-            amounts[player] = to_transfer
-            new_source._add(player, balance - to_transfer)
-
-        # go through original destination wallet and add players from there
-        # to new dest wallet incremented by the amount in amounts
-        # remove from amounts when done
-        for player,balance in dest:
-            incr = amounts.get(player, 0.0)
-            new_dest._add(player, balance+incr)
-            if player in amounts:
-                del amounts[player]
-
-        # Go through what is left in amounts (new players to dest wallet)
-        # and add them and their amount to the new wallet
-        for player,balance in amounts.items():
-            new_dest._add(player, balance)
-
-        self._total = new_source._total
-        self._num = new_source._num
-        self._bytes = new_source._bytes
-
-        dest._total = new_dest._total
-        dest._num = new_dest._num
-        dest._bytes = new_dest._bytes
+        _e = self._entries
+        for player in _e:
+            amount =  _e[player] * ratio
+            amounts[player] = amount
+            _e[player] -= amount
+            self._total -= amount
+        
+        # Go through a combined list of players in amounts and dest
+        # entries and add them up in new dict, keeping running total
+        _de = dest._entries
+        _a = amounts
+        _ne = {}
+        _nt = 0.0
+        for p,v in _a.items() + _de.items():
+            t = _ne.get(p, 0.0) + v
+            _nt += v
+            _ne[p] = t
+        
+        # assign new values to dest
+        dest._total = _nt
+        dest._entries = _ne
 
     def leak(self, factor):
-        new_wallet = Wallet()
-        for player,amount in self:
-            new_wallet._add(player, amount - (amount * factor))
+        _e = self._entries
+        for p in _e:
+            t = _e[p] * factor
+            _e[p] -= t
+            self._total -= t
 
-        self._total = new_wallet._total
-        self._num = new_wallet._num
-        self._bytes = new_wallet._bytes
 
     def __mul__(self, other):
         if type(other) not in [IntType, FloatType]:
             raise ValueError
 
         new_wallet = Wallet()
-        for player,amount in self:
+        for player,amount in self._entries.iteritems():
             new_wallet._add(player, amount * other)
 
         return new_wallet
@@ -144,6 +134,8 @@ class Wallet:
 
         return new_wallet
 
+    def items(self):
+        return self._entries.items()
 
 class WalletTests(unittest.TestCase): # pragma: no cover
 
@@ -165,7 +157,7 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         w.add(player_id, 40.5)
         self.assertEqual(len(w), 1)
         self.assertEqual(w.total, 40.5)
-        self.assertEqual(w[0][0], player_id.bytes)
+        self.assertEqual(w[player_id.bytes], 40.5)
 
     def testAddUUIDString(self):
         w = Wallet()
@@ -173,7 +165,7 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         w.add(str(player_id), 40.5)
         self.assertEqual(len(w), 1)
         self.assertEqual(w.total, 40.5)
-        self.assertEqual(w[0][0], player_id.bytes)
+        self.assertEqual(w[player_id.bytes], 40.5)
 
     def testAddSeveralItemsToWallet(self):
         w = Wallet()
@@ -195,31 +187,14 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         w.add(player1_id.bytes, 23.3)
         w.add(player2_id.bytes, 10.0)
 
-        self.assertEqual(w[0][0], player1_id.bytes)
-        self.assertAlmostEqual(w[0][1], 23.3, 5)
-        self.assertEqual(w[1][0], player2_id.bytes)
-        self.assertAlmostEqual(w[1][1], 10.0, 5)
+        self.assertAlmostEqual(w[player1_id.bytes], 23.3, 5)
+        self.assertAlmostEqual(w[player2_id.bytes], 10.0, 5)
 
-    def testIterateOverWallet(self):
-        w = Wallet()
-        player2_id = uuid4()
-        player1_id = uuid4()
-
-        w.add(player1_id.bytes, 23.3)
-        w.add(player2_id.bytes, 10.0)
-
-        w2 = tuple(w)
-
-        self.assertEqual(w2[0][0], player1_id.bytes)
-        self.assertAlmostEqual(w2[0][1], 23.3, 5)
-        self.assertEqual(w2[1][0], player2_id.bytes)
-        self.assertAlmostEqual(w2[1][1], 10.0, 5)
-
-    def testIndexError(self):
+    def testKeyError(self):
         w = Wallet()
         player_id = uuid4()
         w.add(player_id.bytes, 10.0)
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             a = w[1]
 
     def testToDict(self):
