@@ -54,6 +54,14 @@ class Wallet:
     def __getitem__(self, index):
         return self._entries[index]
 
+    def get(self, player_id, default=None):
+        if isinstance(player_id, UUID):
+            player_id = player_id.bytes
+        elif len(player_id) == 36 and player_id[8] == '-':
+            player_id = UUID(player_id).bytes
+
+        return self._entries.get(player_id, default)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
