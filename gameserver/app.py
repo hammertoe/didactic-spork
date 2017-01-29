@@ -2,6 +2,7 @@ import logging.config
 import os
 
 from flask import Flask, Blueprint
+from flask.ext.cors import CORS
 
 import connexion
 from gameserver.database import db
@@ -32,6 +33,7 @@ def create_app():
     app = connexion.App(__name__, specification_dir='./')
     app.add_api('swagger.yaml', arguments={'title': 'An API for the game server allowing mobile app to interact with players, etc'})
     initialize_app(app.app)
+    CORS(app.app)
     return app.app
 
 app = create_app()
