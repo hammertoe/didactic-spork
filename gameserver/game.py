@@ -28,8 +28,8 @@ class Game:
 
     def get_nodes(self):
         return db_session.query(Node).options(
-            subqueryload('higher_edges'),
-            subqueryload('lower_edges')).order_by(Node.rank).all()
+            joinedload('higher_edges'),
+            joinedload('lower_edges')).order_by(Node.rank).all()
     
     def do_leak(self):
         for node in self.get_nodes():
@@ -224,8 +224,10 @@ class Game:
                     yield rn 
 
         if not players:
-            goals = db_session.query(Goal).all()
-            policies = db_session.query(Policy).all()
+            goals = db_session.query(Goal).options(
+                joinedload('higher_edges')).all()
+            policies = db_session.query(Policy).options(
+                joinedload('higher_edges')).all()
         else:
             goals = set()
             policies = set()
