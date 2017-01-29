@@ -246,42 +246,39 @@ class Game:
 
     def create_network(self, network):
         
+        db_session.execute(Edge.__table__.delete())
+#        db_session.execute(Player.__table__.delete())
+        db_session.execute(Goal.__table__.delete())
+        db_session.execute(Policy.__table__.delete())
+
         goals = network['goals']
         policies = network['policies']
+        edges = network['edges']
 
         id_mapping = {}
         links = []
         
         for policy in policies:
-            p = self.add_policy(policy['name'], policy['leakage'])
+            p = self.add_policy(policy['name'], policy.get('leakage', 0))
             p.id = policy['id']
-            p.max_level = policy['max_amount']
-            p.activation = policy['activation_amount']
+            p.max_level = policy.get('max_amount', 0)
+            p.activation = policy.get('activation_amount', 0)
             id_mapping[p.id] = p
 
-            for conn in policy['connections']:
-                a = conn['from_id']
-                b = conn['to_id']
-                w = conn['weight']
-                links.append((a,b,w))
-
         for goal in goals:
-            g = self.add_goal(goal['name'], goal['leakage'])
+            g = self.add_goal(goal['name'], goal.get('leakage', 0))
             g.id = goal['id']
-            g.max_level = goal['max_amount']
-            g.activation = goal['activation_amount']
+            g.max_level = goal.get('max_amount', 0)
+            g.activation = goal.get('activation_amount', 0)
             id_mapping[g.id] = g
 
-            for conn in goal['connections']:
-                a = conn['from_id']
-                b = conn['to_id']
-                w = conn['weight']
-                links.append((a,b,w))
 
-        for a,b,w in links:
-            a = id_mapping[a]
-            b = id_mapping[b]
-            self.add_link(a,b,w)
+        for edge in edges:
+            i = id_mapping
+            l = self.add_link(i[edge['source']],
+                              i[edge['target']],
+                              edge['weight'],
+                              )
 
         self.rank_nodes()
 
