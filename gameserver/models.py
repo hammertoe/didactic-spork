@@ -12,8 +12,6 @@ from gameserver.database import default_uuid, db
 from gameserver.utils import pack_amount, checksum
 from gameserver.wallet_sqlalchemy import WalletType, Wallet
 
-from sqlalchemy_utils import aggregated
-
 from utils import random
 
 db_session = db.session
@@ -25,7 +23,7 @@ ledger = SATable("ledger", db.metadata,
                  Column("wallet", WalletType),
                  )    
 
-#@event.listens_for(SignallingSession, 'before_flush')
+@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
