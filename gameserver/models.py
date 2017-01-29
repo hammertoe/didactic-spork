@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, CHAR, create_engine, event, Table as SATable
+    Float, CHAR, create_engine, event, Table as SATable, inspect
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -19,12 +19,11 @@ db_session.ledgers = []
 
 # define the temp table
 ledger = SATable("ledger", db.metadata,
-                 Column("wallet_id", CHAR(36), primary_key=True),
-                 Column("new_balance", Float),
-#                 prefixes=["TEMPORARY"],
+                 Column("node_id", CHAR(36), primary_key=True),
+                 Column("wallet", WalletType),
                  )    
 
-#@event.listens_for(SignallingSession, 'before_flush')
+@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
@@ -36,25 +35,22 @@ def before_flush(session, flush_context, instances): # pragma: no cover
 
         for elem in session.dirty:
             if ( session.is_modified(elem, include_collections=False) ):
-                if isinstance(elem, Wallet):
-#                    instance_state(elem).committed_state.clear()
-                    temp_items[elem.id] = elem.balance
-                    session.expire(elem, ['balance'])
+                state = inspect(elem)
+                if state.committed_state.keys() == ['wallet']:
+                    temp_items[elem.id] = elem.wallet
+                    session.expire(elem, ['wallet'])
 
     if temp_items:
 
-        # create the temp table
-#        ledger.create(session.connection(), checkfirst=True)
-
         # insert the temp values
-        session.execute(ledger.insert().values([{"wallet_id": k, "new_balance": v}
+        session.execute(ledger.insert().values([{"node_id": k, "wallet": v}
                                            for k, v in temp_items.items()]))
 
         # perform the update to the main table
-        session.execute(Wallet.__table__
+        session.execute(Node.__table__
                         .update()
-                        .values(balance=ledger.c.new_balance)
-                        .where(Wallet.__table__.c.id == ledger.c.wallet_id))
+                        .values(wallet=ledger.c.wallet)
+                        .where(Node.__table__.c.id == ledger.c.node_id))
         
         # drop temp table
         session.execute(ledger.delete())
@@ -88,7 +84,6 @@ class Client(Base):
     def __init__(self, name):
         self.id = default_uuid()
         self.name = name
-
 
 class Node(Base):
 
@@ -162,9 +157,10 @@ class Node(Base):
         self.wallet = Wallet([(self.id, amount)])
 
     def do_leak(self):
-        total = self.balance
         leak = self.get_leak()
-        self.wallet.leak(leak)
+        balance = self.wallet.total
+        if balance and leak:
+            self.wallet.leak(leak)
 
     @property
     def wallet_owner_map(self):
@@ -189,9 +185,9 @@ class Node(Base):
 
 
     def calc_rank(self):
-        rank = len(self.parents())
+        rank = 1
         for parent in self.parents():
-            rank += parent.calc_rank() + 1
+            rank += parent.calc_rank()
 
         return rank
 
@@ -258,6 +254,7 @@ class Player(Node):
         self.name = name
         self.leak = 0.0
         self.max_outflow = 0.0
+        self.rank = 0
         self.token = default_uuid()
         self.wallet = Wallet()
 
@@ -288,6 +285,9 @@ class Player(Node):
 
     @property
     def goal_funded(self):
+        goal = self.goal
+        if not goal:
+            return 0.0
         wallet = self.goal.wallet
         return wallet.todict().get(self.id, 0.0)
 
