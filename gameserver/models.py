@@ -12,6 +12,8 @@ from gameserver.database import default_uuid, db
 from gameserver.utils import pack_amount, checksum
 from gameserver.wallet_sqlalchemy import WalletType, Wallet
 
+from sqlalchemy_utils import aggregated
+
 from utils import random
 
 db_session = db.session
@@ -23,7 +25,7 @@ ledger = SATable("ledger", db.metadata,
                  Column("wallet", WalletType),
                  )    
 
-@event.listens_for(SignallingSession, 'before_flush')
+#@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
@@ -54,7 +56,6 @@ def before_flush(session, flush_context, instances): # pragma: no cover
         
         # drop temp table
         session.execute(ledger.delete())
-
 
 @as_declarative()
 class Base(object):
@@ -221,6 +222,7 @@ class Player(Node):
                 primary_key=True, default=default_uuid)
 
     max_outflow = Column(Float)
+    goal_funded = Column(Float, default=0.0)
 
     goal_id = Column(
         CHAR(36),
@@ -283,13 +285,17 @@ class Player(Node):
         for fund in self.lower_edges:
             self.transfer_funds_to_node(fund.higher_node, fund.weight)
 
-    @property
-    def goal_funded(self):
+    def calc_goal_funded(self):
         goal = self.goal
         if not goal:
             return 0.0
-        wallet = self.goal.wallet
-        return wallet.todict().get(self.id, 0.0)
+        wallet = goal.wallet
+        return wallet.get(self.id, 0.0)
+
+    def do_propogate_funds(self):
+        Node.do_propogate_funds(self)
+        self.goal_funded = self.calc_goal_funded()
+                               
 
     def offer_policy(self, policy_id, price):
         policy = db_session.query(Policy).filter(Policy.id == policy_id).one()

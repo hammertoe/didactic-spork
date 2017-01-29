@@ -48,9 +48,9 @@ class Game:
             node.do_leak()
             node.do_propogate_funds()
 
-    def top_players(self, max_num=50):
+    def top_players(self, max_num=20):
         players = self.get_players()
-        return sorted(players, key=lambda x: x.goal_funded, reverse=True)[:max_num]
+        return db_session.query(Player).order_by(Player.goal_funded.desc()).all()
 
     def create_player(self, name):
         p = Player(name)
