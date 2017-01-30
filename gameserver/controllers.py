@@ -45,8 +45,8 @@ def league_table():
         r = {'id': t.id,
              'name': t.name,
              'goal': t.goal.name,
-             'goal_contribution': t.goal_funded,
-             'goal_total': t.goal.balance,
+             'goal_contribution': "{:.2f}".format(t.goal_funded),
+             'goal_total': "{:.2f}".format(t.goal.balance),
              }
         res.append(r)
 
