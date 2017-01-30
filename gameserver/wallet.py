@@ -18,8 +18,12 @@ class Wallet:
 
         
     def _add(self, player_id, amount):
-        self._entries[player_id] = amount
-        self._total += amount
+        self._total -= self._entries.get(player_id, 0)
+        if amount > 0:
+            self._entries[player_id] = amount
+            self._total += amount
+        else:
+            del self._entries[player_id]
 
 
     def add(self, player_id, amount):
@@ -93,7 +97,9 @@ class Wallet:
             amount =  _e[player] * ratio
             amounts[player] = amount
             _e[player] -= amount
-            self._total -= amount
+
+        self._entries = { k:v for (k,v) in self._entries.items() if v > 0.0 }
+        self._total = sum([x for x in self._entries.values()])
         
         # Go through a combined list of players in amounts and dest
         # entries and add them up in new dict, keeping running total
@@ -467,6 +473,45 @@ class WalletTests(unittest.TestCase): # pragma: no cover
 
         self.assertEqual(w1+w2, expected)
         
+    def testAddExistingKeyTotalIsCorrect(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+        self.assertEqual(w1.total, 300)
+        w1.add(u1, 50)
+        self.assertEqual(w1.total, 250) 
+
+    def testAddNegativeValue(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+        self.assertEqual(len(w1._entries), 2)
+
+        w1.add(u1, -50)
+        self.assertEqual(len(w1._entries), 1)
+        self.assertEqual(w1.total, 200) 
+
+    def testTransferExactBalanceFromWallet(self):
+        w1 = Wallet()
+
+        player1_id = uuid4()
+        player2_id = uuid4()
+        player3_id = uuid4()
+
+        w1.add(player1_id, 10.0)
+        w1.add(player2_id, 20.0)
+        w1.add(player3_id, 0.5)
+        
+        self.assertAlmostEqual(w1.total, 30.5)
+
+        w2 = Wallet()
+
+        w1.transfer(w2, 30.5)
+
+        self.assertAlmostEqual(w1.total, 0.0)
+        self.assertEqual(len(w1), 0)
                 
 if __name__ == '__main__': # pragma: no cover
     unittest.main()
