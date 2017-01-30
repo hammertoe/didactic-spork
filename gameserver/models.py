@@ -137,7 +137,7 @@ class Node(Base):
 
     @property
     def total_children_weight(self):
-        return sum([e.weight for e in self.lower_edges])
+        return sum([max(e.weight,0) for e in self.lower_edges])
 
     @property
     def current_inflow(self):
@@ -181,10 +181,16 @@ class Node(Base):
         for edge in self.lower_edges:
             child = edge.higher_node
             amount = edge.weight
+            if amount <= 0: # don't try to propogate negative values
+                continue
             factored_amount = amount * total_out_factor
 
-            self.wallet.transfer(child.wallet, factored_amount)
+            # due to rounding errors in floats this is needed
+            # otherwise we overdraw by like 5.10702591328e-15
+            if factored_amount > self.balance:
+                factored_amount = self.balance
 
+            self.wallet.transfer(child.wallet, factored_amount)
 
     def calc_rank(self):
         rank = 1
