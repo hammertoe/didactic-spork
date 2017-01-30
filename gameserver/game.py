@@ -225,9 +225,9 @@ class Game:
 
         if not players:
             goals = db_session.query(Goal).options(
-                joinedload('higher_edges')).all()
+                joinedload('lower_edges')).all()
             policies = db_session.query(Policy).options(
-                joinedload('higher_edges')).all()
+                joinedload('lower_edges')).all()
         else:
             goals = set()
             policies = set()
@@ -246,10 +246,10 @@ class Game:
 
     def create_network(self, network):
         
-        db_session.execute(Edge.__table__.delete())
+#        db_session.execute(Edge.__table__.delete())
 #        db_session.execute(Player.__table__.delete())
-        db_session.execute(Goal.__table__.delete())
-        db_session.execute(Policy.__table__.delete())
+#        db_session.execute(Goal.__table__.delete())
+#        db_session.execute(Policy.__table__.delete())
 
         goals = network['goals']
         policies = network['policies']
