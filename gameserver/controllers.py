@@ -59,7 +59,11 @@ def create_network(network):
 
 @require_api_key
 def get_network():
-    return game.get_network(), 200
+    network =  game.get_network()
+    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
+    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+
+    return network, 200
 
 @require_api_key
 def get_node(id):
@@ -239,8 +243,45 @@ def get_table(id):
     table = game.get_table(id)
     if not table:
         return "Table not found", 404
-    else:
-        return table_to_dict(table), 200
+
+    name = table.name
+    players = table.players
+    network = game.get_network(players)
+
+    nodes = {}
+    links = []
+
+    for n in players:
+        nodes[n.id] = {'id': n.id,
+                       'name': n.name,
+                       'group': 1,
+                       'resources': "{:.2f}".format(n.balance),
+                       }
+    for n in network['policies']:
+        nodes[n.id] = {'id': n.id,
+                       'name': n.name,
+                       'group': 2,
+                       'active': n.active and True or False,
+                       'resources': "{:.2f}".format(n.balance),
+                       }
+        for l in n.lower_edges:
+            links.append({'source': n.id,
+                          'target': l.higher_node.id,
+                          'weight': "{:.2f}".format(l.weight),
+                          })
+    for n in network['goals']:
+        nodes[n.id] = {'id': n.id,
+                       'name': n.name,
+                       'group': 3,
+                       'resources': "{:.2f}".format(n.balance),
+                       }
+
+    links = [ l for l in links 
+              if l['source'] in nodes
+              and l['target'] in nodes
+              ]
+
+    return {'nodes': nodes.values(), 'links': links}, 200
 
 @require_api_key
 def get_tables():

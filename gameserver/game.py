@@ -237,9 +237,6 @@ class Game:
                       if isinstance(x, Policy) ]
                 policies.update(p)
             
-        goals = [ node_to_dict(g) for g in goals ]
-        policies = [ node_to_dict(p) for p in policies ]
-
         return dict(goals=goals, policies=policies)
 
 
