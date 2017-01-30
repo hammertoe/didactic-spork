@@ -1,8 +1,7 @@
 import logging.config
 import os
 
-from flask import Flask, Blueprint
-from flask.ext.cors import CORS
+from flask import Flask, Blueprint, request
 
 import connexion
 from gameserver.database import db
@@ -29,11 +28,17 @@ def initialize_app(flask_app):
         import models
         models.Base.metadata.create_all(bind=db.engine)
 
+def cors_after_request(resp):
+    headers_allow = request.headers.get('Access-Control-Request-Headers', '*')
+    resp.headers['Access-Control-Allow-Headers'] = headers_allow
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
+
 def create_app():
     app = connexion.App(__name__, specification_dir='./')
     app.add_api('swagger.yaml', arguments={'title': 'An API for the game server allowing mobile app to interact with players, etc'})
     initialize_app(app.app)
-    CORS(app.app)
+    app.app.after_request(cors_after_request)
     return app.app
 
 app = create_app()
