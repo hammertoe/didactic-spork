@@ -257,6 +257,11 @@ def get_table(id):
                        'group': 1,
                        'resources': "{:.2f}".format(n.balance),
                        }
+        for l in n.lower_edges:
+            links.append({'source': n.id,
+                          'target': l.higher_node.id,
+                          'weight': "{:.2f}".format(l.weight),
+                          })
     for n in network['policies']:
         nodes[n.id] = {'id': n.id,
                        'name': n.name,
@@ -281,7 +286,14 @@ def get_table(id):
               and l['target'] in nodes
               ]
 
-    return {'nodes': nodes.values(), 'links': links}, 200
+    network =  {'nodes': nodes.values(), 'links': links}
+    players = [ player_to_dict(p) for p in players ]
+
+    return dict(id=table.id,
+                name=name,
+                players=players,
+                network=network,
+                ), 200
 
 @require_api_key
 def get_tables():
