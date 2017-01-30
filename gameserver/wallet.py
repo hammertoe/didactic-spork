@@ -98,7 +98,7 @@ class Wallet:
             amounts[player] = amount
             _e[player] -= amount
 
-        self._entries = { k:v for (k,v) in self._entries.items() if v > 0.0 }
+        self._entries = { k:v for (k,v) in self._entries.items() if v > 0.001 }
         self._total = sum([x for x in self._entries.values()])
         
         # Go through a combined list of players in amounts and dest
