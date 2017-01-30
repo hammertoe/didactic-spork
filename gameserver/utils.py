@@ -17,16 +17,16 @@ def node_to_dict(node):
         connections.append(
             {"from_id": edge.lower_node.id,
              "to_id": node.id,
-             "weight": edge.weight,
+             "weight": "{:.2f}".format(edge.weight),
              }
             )
 
     data = {"id": node.id,
             "name": node.name,
-            "leakage": node.leak,
-            "max_amount": node.max_level,
-            "activation_amount": node.activation,
-            "balance": node.balance,
+            "leakage": "{:.2f}".format(node.leak),
+            "max_amount": "{:.2f}".format(node.max_level),
+            "activation_amount": "{:.2f}".format(node.activation),
+            "balance": "{:.2f}".format(node.balance),
             "connections": connections
             }
     
