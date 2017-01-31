@@ -146,7 +146,7 @@ class Node(Base):
 
     @property
     def active(self):
-        return self.current_inflow >= self.activation
+        return (self.current_inflow / self.game.total_inflow) >= self.activation
 
     @property
     def balance(self):

@@ -380,11 +380,11 @@ class CoreGameTests(DBTestCase):
 
     def testGameTotalInflow(self):
         p1 = self.game.create_player('Matt')
-        self.assertEqual(self.game.get_total_inflow(), 100)
+        self.assertEqual(self.game.total_inflow, 100)
         p2 = self.game.create_player('Simon')
-        self.assertEqual(self.game.get_total_inflow(), 200)
+        self.assertEqual(self.game.total_inflow, 200)
         p2.max_outflow = 50
-        self.assertEqual(self.game.get_total_inflow(), 150)
+        self.assertEqual(self.game.total_inflow, 150)
 
     def testPlayerCurrentOutflow(self):
         p1 = self.game.create_player('Matt')

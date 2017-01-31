@@ -64,7 +64,8 @@ class Game:
         db_session.add(p)
         return p
 
-    def get_total_inflow(self):
+    @property
+    def total_inflow(self):
         return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
     
     def get_players(self):
