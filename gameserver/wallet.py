@@ -135,6 +135,22 @@ class Wallet:
         return new_wallet
 
     def __add__(self, other):
+        if type(other) not in [IntType, FloatType]:
+            raise ValueError
+
+        total = self._total
+        new_total = self._total + other
+        factor = new_total / total
+        new_wallet = Wallet()
+        for player,amount in self._entries.iteritems():
+            new_wallet._add(player, amount * factor)
+
+        return new_wallet
+
+    def __sub__(self, other):
+        return self.__add__(-other)
+
+    def __and__(self, other):
         if not isinstance(other, self.__class__):
             raise ValueError
 
@@ -444,7 +460,7 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         self.assertEqual(len(w1), 2)
         self.assertEqual(w1.total, (100+200) * 0.9)
 
-    def testMultiplyWallet(self):
+    def testWalletMultiply(self):
         u1 = str(uuid4())
         u2 = str(uuid4())
         w1 = Wallet([(u1, 100.0), (u2, 200.0)])
@@ -462,7 +478,27 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         self.assertEqual(len(w1), 2)
         self.assertEqual(w1.total, (100+200) * 0.9)
         
-    def testAddWallets(self):
+    def testWalletAddition(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        w1 += 50
+
+        self.assertEqual(len(w1), 2)
+        self.assertEqual(w1.total, 100+200+50)
+        
+    def testWalletSubtraction(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        w1 -= 50
+
+        self.assertEqual(len(w1), 2)
+        self.assertAlmostEqual(w1.total, 100+200-50)
+
+    def testUnionWallets(self):
         u1 = str(uuid4())
         u2 = str(uuid4())
         u3 = str(uuid4())
@@ -471,7 +507,7 @@ class WalletTests(unittest.TestCase): # pragma: no cover
 
         expected = Wallet([(u1, 100.0), (u2, 300.0), (u3, 50.0)])
 
-        self.assertEqual(w1+w2, expected)
+        self.assertEqual(w1 & w2, expected)
         
     def testAddExistingKeyTotalIsCorrect(self):
         u1 = str(uuid4())
