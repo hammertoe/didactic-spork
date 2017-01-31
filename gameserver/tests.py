@@ -429,10 +429,10 @@ class CoreGameTests(DBTestCase):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
-        po1.activation = 2.0
+        po1.activation = 0.2
 
         self.assertFalse(po1.active)
-        self.game.add_fund(p1, po1, 10.0)
+        self.game.add_fund(p1, po1, 30.0)
         
         self.assertTrue(po1.active)
 
@@ -440,28 +440,28 @@ class CoreGameTests(DBTestCase):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
-        po1.activation = 2.0
+        po1.activation = 0.1
 
         self.assertFalse(po1.active)
 
         po2 = self.game.add_policy('Policy 2', 1.0)
-        po2.activation = 10.0
+        po2.activation = 0.2
         l1 = self.game.add_link(po1, po2, 5.0)
 
         self.assertFalse(po1.active)
 
-        self.game.add_fund(p1, po1, 10.0)
+        self.game.add_fund(p1, po1, 20.0)
         for x in range(5):
             self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
         self.assertFalse(po2.active)
 
-        self.game.add_fund(p1, po1, 20.0)
+        self.game.add_fund(p1, po1, 40.0)
         self.assertTrue(po1.active)
         self.assertFalse(po2.active)
 
-        l1.weight = 30.0
+        l1.weight = 40.0
         self.assertTrue(po1.active)
         self.assertTrue(po2.active)
 
@@ -1106,7 +1106,7 @@ class CoreGameTests(DBTestCase):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
-        po1.activation = 6.0
+        po1.activation = 0.2
         g1 = self.game.add_goal('World Peace', 0.5)
         self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
@@ -1128,19 +1128,19 @@ class CoreGameTests(DBTestCase):
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         po1.activation = 0.2
         g1 = self.game.add_goal('World Peace', 0.5)
-        self.game.add_fund(p1, po1, 5.0)
+        self.game.add_fund(p1, po1, 25.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.game.rank_nodes()
 
         self.assertEqual(po1.balance, 0)
 
-        for x in range(100):
+        for x in range(10):
             self.game.do_propogate_funds()
 
-        self.assertEqual(p1.balance, 500)
-        self.assertEqual(po1.balance, 400)
-        self.assertEqual(g1.balance, 100)
+        self.assertEqual(p1.balance, 750)
+        self.assertEqual(po1.balance, 240)
+        self.assertEqual(g1.balance, 10)
 
     def testGetFunding(self):
         self.add_20_goals_and_policies()
