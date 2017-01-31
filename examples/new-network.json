@@ -3,481 +3,481 @@
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "23b4b540-d645-436c-a1f3-db0aca308608", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "c1931b11-03be-41b1-902a-1c0d86d78ee8"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "5eb429df-c12e-4ee2-a523-a2ac3f1ea5c7", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "c1931b11-03be-41b1-902a-1c0d86d78ee8"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "a5b3116d-42f1-4a88-9221-4838e42ca871", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "c1931b11-03be-41b1-902a-1c0d86d78ee8"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "6d755bb2-bbba-4fbc-b646-7cfb63143ceb", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "c1931b11-03be-41b1-902a-1c0d86d78ee8"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "84225efc-c2ea-42ef-b4fe-0fbacc550179", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "8035f13b-2d1a-4acc-a211-213f7b1b9e61"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "acf9f90c-d5de-4f0d-a625-c3363235372a", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "8035f13b-2d1a-4acc-a211-213f7b1b9e61"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "077dfc3a-4940-4ec4-afed-fcc8abbfb12b", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "8035f13b-2d1a-4acc-a211-213f7b1b9e61"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "6eaaf0de-0571-4a70-94d5-ae43a294f601", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "876f9aaf-77df-4c5d-b40a-13e17419a994"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "e05f47f9-97af-492a-8173-9d0c80cd521c", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "876f9aaf-77df-4c5d-b40a-13e17419a994"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "14f9562e-f83b-4e51-a0f4-d1e9dd6fecfd", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "876f9aaf-77df-4c5d-b40a-13e17419a994"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "ace1c89b-3abc-4188-aa12-e69aa20caa67", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "876f9aaf-77df-4c5d-b40a-13e17419a994"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "d80b3cb9-2621-41de-b2f5-1cf3c23a0d87", 
-            "weight": "-0.1", 
+            "weight": -0.1, 
             "source": "876f9aaf-77df-4c5d-b40a-13e17419a994"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "ed4cc04e-69c6-4b31-bce3-74b9e03848f8", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "0dd8e57a-b0ef-4e8c-89e5-46bdbdd65a02"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "fad39b03-1d87-454f-ac3d-a6b9702eb932", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "ede30571-feac-4da6-9d8e-6b5a5d89110a"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "5a62aa96-d959-444a-b708-b0593fef9a4e", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "ede30571-feac-4da6-9d8e-6b5a5d89110a"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "0c4187a9-2b77-41bb-938d-2c4e35eeddde", 
-            "weight": "-0.1", 
+            "weight": -0.1, 
             "source": "23537501-7cb8-4d0f-8aac-d96879ed5985"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "63305ad1-c08f-4443-ae62-b8af982f560f", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "23537501-7cb8-4d0f-8aac-d96879ed5985"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "1d345165-0b6f-4f76-abb2-dd96335cf5c8", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "adcb3c41-7ca5-4273-9c73-b6745fbb28d5"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "6f8dc672-29e6-415e-b689-8769197ee635", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "0a5dc585-7d1b-43a5-910c-a5d41718b298"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "2cd839fe-a7d4-44c6-bb93-f3fe896966e2", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "0a5dc585-7d1b-43a5-910c-a5d41718b298"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "925a0018-534a-4e45-87b5-4f43621c579f", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "2222ee17-3561-44d1-ae01-378929356d3f", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "f77058ab-0476-4ffd-87ee-98dc836798b9", 
-            "weight": "-0.3", 
+            "weight": -0.3, 
             "source": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "965b98c5-1736-4acb-9c68-2ba5248f1712", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "30369542-d9a8-4543-a551-c2ee54300e6b"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "10910795-0d11-4fd1-a9b7-c820db9a91b8", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "30369542-d9a8-4543-a551-c2ee54300e6b"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "02f23e5f-15e5-46b3-b5ad-37a339b5da32", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "30369542-d9a8-4543-a551-c2ee54300e6b"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "f7c3b48e-e807-436c-ab62-6a7bf25fd87c", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "30369542-d9a8-4543-a551-c2ee54300e6b"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "37f779f5-380d-40d9-b334-6e16f4115b87", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "2d0b6b93-7f54-4c53-8aa6-6d16251ca5c8"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "acaf4f6d-458b-4757-935c-70f296bacc72", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "5eed9159-ece5-4814-b263-ee3972dc7b16"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "8d1029eb-f002-4136-b29b-6508c4f089e7", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "5eed9159-ece5-4814-b263-ee3972dc7b16"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "4044895d-09f9-44ea-bc13-f8d5e3a1372b", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "a345a689-1b94-4c20-839e-b8b4ec11ec2d"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "9a4bc8d0-2a63-4b58-8420-52f417a9ad94", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "a345a689-1b94-4c20-839e-b8b4ec11ec2d"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "a139da40-8083-4a70-96ca-3865066b1881", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "6cc92ebb-6cb1-4ade-88a4-586c67c377d0"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "72a93271-a0db-4d1a-a2e1-659ff89e02d6", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "6cc92ebb-6cb1-4ade-88a4-586c67c377d0"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "20f0c9d9-2ac0-46f7-bcb2-e916e1dbecb0", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "77dae349-c0f2-4b47-b92c-d1e1b6d587c5"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "0678fe58-0e9b-43b8-a8c9-e50251376ae3", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "77dae349-c0f2-4b47-b92c-d1e1b6d587c5"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "0bf4a4f9-bb69-4c74-9495-196b7fb253bf", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "1e1eac9c-64c1-4aad-a138-519da1e6b5cc"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "2799bacb-ec69-4df5-80ac-80071f6a6ea4", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "1e1eac9c-64c1-4aad-a138-519da1e6b5cc"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "0560a9ad-4117-4e92-9300-2d9f3b055e35", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "489c43bd-de9e-4841-8be9-c0fc74f746fd"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "e4cb5b38-0688-4fd9-ab73-2874674ab1e2", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "489c43bd-de9e-4841-8be9-c0fc74f746fd"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "8ccd513f-45a3-42ad-907d-db129ce11ba6", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "6c4be7ab-3a45-4334-84f2-811e82485542"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "80ded8d7-1936-431b-8b03-14c05d9b48a0", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "6c4be7ab-3a45-4334-84f2-811e82485542"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "22bbc67f-12c6-49b1-ae3e-a57f0d9b4448", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "b008c889-0047-4a1d-b22f-d7a5968fef52"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "7da77c8e-c20f-4f26-9f5b-28d5bfa9c5bf", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "b008c889-0047-4a1d-b22f-d7a5968fef52"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "4a6ff799-d549-4de0-88ce-f257d5ed8775", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "99ae5096-dbed-4ac3-be11-aaed8b53e9cf"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "69a6a197-326d-4dde-b5f0-f43926adb27b", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "99ae5096-dbed-4ac3-be11-aaed8b53e9cf"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "eaa863d0-7cd9-4198-8fba-5b95eb55c5e1", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "f0bfec38-9e76-4c39-a490-89fe2548ca3e"
         }, 
         {
             "target": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
             "id": "0b3f6bb9-a8dd-4c2d-84b8-f1205dec43a4", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "f0bfec38-9e76-4c39-a490-89fe2548ca3e"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "ff2f3858-4fb8-4f7e-aa8b-7e702d128c7e", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "559aa10b-8ec4-4c7d-9b73-b45cd12c1f1e", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "71be8707-99c9-4a61-ae87-98a1f5ef20a1", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "22160b7f-019e-427b-ab9c-8d08d52a2c47", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "c7d9930a-164e-489a-9311-7875bffdcebb"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "f944ad40-388d-4625-88f3-a5bdfb47129e", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "ededca00-4dd8-4c52-957a-89a434f1f406"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "13844f94-a68f-4711-8046-335de2ba8457", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "698585cc-6e5e-4383-8e48-d7c01d3281c2"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "75b41958-2546-41f9-b407-ff1e7f900ba1", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "6821d23a-d848-452a-a621-1cc0c3e6f04f"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "8a999a13-6985-42c3-b7ba-cf0bda9007f1", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "6821d23a-d848-452a-a621-1cc0c3e6f04f"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "0f905761-015b-4a5f-a1c6-a0d4b2a94b96", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "b04d2802-01f1-48ea-a952-fcffdf352501"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "a86cc09f-077f-4495-9cc7-15ed7d1ffa14", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "b04d2802-01f1-48ea-a952-fcffdf352501"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "02b9e271-9d9b-45be-9c43-24db16f4971e", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "4484b05b-50a7-4031-96f1-6ae1e3a9f3cd"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "34252d1f-f1ba-47b1-b4b0-bdfcaa3b2fdb", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "4484b05b-50a7-4031-96f1-6ae1e3a9f3cd"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "803dac6d-8134-43ec-8eb3-5af753adf6fa", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "95cd06dc-bd5c-46d7-b848-58def2589284"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "70eb9c71-b1cc-4c4c-a078-081312a04919", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "95cd06dc-bd5c-46d7-b848-58def2589284"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "8c375b8d-667c-4655-a7fe-0f330d30846d", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "3a64110e-8649-414a-85cc-cddb09e6d1ee"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "321fcf6a-5e35-4785-ae72-416d681d3941", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "d7ea54ef-fe79-4262-8f6f-a661887a90b2"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "b1225b17-ced7-4bc3-82bb-43d87d5762cf", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "d7ea54ef-fe79-4262-8f6f-a661887a90b2"
         }, 
         {
             "target": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
             "id": "a07e2b67-1b95-43fa-8e7e-89a613d165c5", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "2ff13137-ea25-419b-bf74-078e81fb1b5c"
         }, 
         {
             "target": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
             "id": "8c4962b2-9539-443d-907d-a1a39319208a", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "2ff13137-ea25-419b-bf74-078e81fb1b5c"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "c0b58d79-fb74-4e82-8f93-5f38faed4bf7", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "48fc2d38-929e-479c-bce5-9dedb0c085fa"
         }, 
         {
             "target": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
             "id": "76e071b0-2765-42d2-8ac8-45f9ace54ee9", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "48fc2d38-929e-479c-bce5-9dedb0c085fa"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "e0a07b8e-a524-4528-bafe-1520e0d01154", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "48fc2d38-929e-479c-bce5-9dedb0c085fa"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "70d288d5-aad9-4c07-9efb-9228d6e18d12", 
-            "weight": "30", 
+            "weight": 30, 
             "source": "9307de47-17cc-4992-9f6f-196048a9d2c2"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "34e52835-4214-4f5a-98c4-8663c57006e8", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "9307de47-17cc-4992-9f6f-196048a9d2c2"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "72ca75ff-ceef-4667-b009-24d200254a74", 
-            "weight": "-0.1", 
+            "weight": -0.1, 
             "source": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "ba605355-73b8-4df3-84c0-cacd29c4939c", 
-            "weight": "-0.1", 
+            "weight": -0.1, 
             "source": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "69435cf6-f93c-4296-b83c-317f2e1ad46b", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "b9149e27-caeb-4388-b5d0-d7aa8ab479ea", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "2f629aad-4cb8-4a73-8947-d264d5ff4e91"
         }, 
         {
             "target": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
             "id": "72db7ecc-7849-4c11-b0c5-44cc2350abd8", 
-            "weight": "10", 
+            "weight": 10, 
             "source": "2f629aad-4cb8-4a73-8947-d264d5ff4e91"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "e4b7f7b1-d510-4115-9a89-e409be48f8f5", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "2f629aad-4cb8-4a73-8947-d264d5ff4e91"
         }, 
         {
             "target": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
             "id": "d16ba05f-2bc3-4cee-a58e-35c14c4db5ec", 
-            "weight": "-0.1", 
+            "weight": -0.1, 
             "source": "dcfb16e7-40bf-495e-93da-db33bdf3c898"
         }, 
         {
             "target": "b39e189d-3126-4e6e-8d84-e224c603eead", 
             "id": "7c186704-1baa-4c15-9c9e-c1b3243d5619", 
-            "weight": "50", 
+            "weight": 50, 
             "source": "dcfb16e7-40bf-495e-93da-db33bdf3c898"
         }
     ], 
