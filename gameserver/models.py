@@ -148,11 +148,21 @@ class Node(Base):
         return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
     
     @property
-    def active(self):
+    def active_level(self):
         try:
-            return (self.current_inflow / self.total_players_inflow) >= self.activation
+            return (self.current_inflow / self.total_players_inflow)
         except ZeroDivisionError:
-            return False
+            return 0
+
+    @property
+    def active_percent(self):
+        if not self.activation:
+            return 1.0
+        return self.active_level / self.activation
+
+    @property
+    def active(self):
+        return self.active_percent >= 1.0
 
     @property
     def balance(self):

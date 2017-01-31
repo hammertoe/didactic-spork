@@ -432,6 +432,7 @@ class CoreGameTests(DBTestCase):
         po1.activation = 0.2
 
         self.assertFalse(po1.active)
+        self.assertAlmostEqual(po1.active_level, 0)
         self.game.add_fund(p1, po1, 30.0)
         
         self.assertTrue(po1.active)
@@ -442,12 +443,14 @@ class CoreGameTests(DBTestCase):
         po1 = self.game.add_policy('Policy 1', 1.0)
         po1.activation = 0.1
 
+        self.assertAlmostEqual(po1.active_level, 0)
         self.assertFalse(po1.active)
 
         po2 = self.game.add_policy('Policy 2', 1.0)
         po2.activation = 0.2
         l1 = self.game.add_link(po1, po2, 5.0)
 
+        self.assertAlmostEqual(po1.active, 0.0)
         self.assertFalse(po1.active)
 
         self.game.add_fund(p1, po1, 20.0)
@@ -455,15 +458,20 @@ class CoreGameTests(DBTestCase):
             self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
+        self.assertAlmostEqual(po1.active_level, 0.2)
+        self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
 
         self.game.add_fund(p1, po1, 40.0)
         self.assertTrue(po1.active)
+        self.assertAlmostEqual(po1.active_percent, 4.0)
         self.assertFalse(po2.active)
+        self.assertAlmostEqual(po2.active_percent, 0.25)
 
         l1.weight = 40.0
         self.assertTrue(po1.active)
         self.assertTrue(po2.active)
+        self.assertAlmostEqual(po2.active_percent, 2.0)
 
 
     def testTwoPlayersFundPolicy(self):
