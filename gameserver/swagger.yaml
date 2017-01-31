@@ -273,6 +273,65 @@ paths:
           description: "Player not found"
       x-tags:
       - tag: "players"
+  /players/{player_id}/table/{table_id}:
+    put:
+      security:
+      - UserSecurity: []
+      - APISecurity: []
+      tags:
+      - "players"
+      - "table"
+      summary: "Sets the table the player is on"
+      operationId: "gameserver.controllers.set_player_table"
+      parameters:
+      - name: "player_id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - name: "table_id"
+        in: "path"
+        description: "The table id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+        401:
+          description: "Unauthorised"
+        404:
+          description: "Table not found"
+      x-tags:
+      - tag: "players"
+    delete:
+      security:
+      - UserSecurity: []
+      - APISecurity: []
+      tags:
+      - "players"
+      - "table"
+      summary: "Removes the player from the specified table"
+      operationId: "gameserver.controllers.delete_player_table"
+      parameters:
+      - name: "player_id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      - name: "table_id"
+        in: "path"
+        description: "The table id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+        401:
+          description: "Unauthorised"
+        404:
+          description: "Table not found"
+      x-tags:
+      - tag: "players"
   /players/{player_id}/policies/{policy_id}/offer:
     get:
       security:

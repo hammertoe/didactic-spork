@@ -2061,25 +2061,70 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(response.json, expected)
 
-    def testPatchPlayerWithTable(self):
+    def testAddPlayerToTable(self):
         random.seed(0)
         p1 = self.game.create_player('Matt')
 
         table = self.game.create_table('Table A')
         self.assertNotIn(p1, table.players)
 
-        data = {'table': table.id}
-
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
-        response = self.client.patch("/v1/players/{}".format(p1.id),
-                                     data=json.dumps(data),
+        response = self.client.put("/v1/players/{}/table/{}".format(p1.id, table.id),
                                      headers=headers,
                                      content_type='application/json')
 
-
         self.assertEquals(response.status_code, 200)
         self.assertIn(p1, table.players)
+
+    def testAddPlayerToNonexistantTable(self):
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+
+        table = self.game.create_table('Table A')
+        self.assertNotIn(p1, table.players)
+
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/players/{}/table/{}".format(p1.id, 'bogus'),
+                                     headers=headers,
+                                     content_type='application/json')
+
+        self.assertEquals(response.status_code, 404)
+        self.assertNotIn(p1, table.players)
+
+    def testAddNonexistantPlayerToTable(self):
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+
+        table = self.game.create_table('Table A')
+        self.assertNotIn(p1, table.players)
+
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/players/{}/table/{}".format('bogus', table.id),
+                                     headers=headers,
+                                     content_type='application/json')
+
+        self.assertEquals(response.status_code, 404)
+        self.assertNotIn(p1, table.players)
+
+    def testRemovePlayerFromTable(self):
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+
+        table = self.game.create_table('Table A')
+        p1.table = table
+        self.assertIn(p1, table.players)
+
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.delete("/v1/players/{}/table/{}".format(p1.id, table.id),
+                                      headers=headers,
+                                      content_type='application/json')
+
+        self.assertEquals(response.status_code, 200)
+        self.assertNotIn(p1, table.players)
 
 class Utils(DBTestCase): # pragma: no cover
 

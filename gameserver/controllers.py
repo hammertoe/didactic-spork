@@ -13,6 +13,8 @@ def require_user_key(f, *args, **kw):
     key = request.headers.get('X-USER-KEY')
     player_id = request.view_args['player_id']
     player = game.get_player(player_id)
+    if not player:
+        abort(404)
     if not (key and player.token == key):
         abort(401)
 
@@ -141,6 +143,44 @@ def update_player(player_id, player=None):
         if key == 'table':
             table = game.get_table(value)
             p.table = table
+
+    db_session.commit()
+    return player_to_dict(p), 200
+
+@require_api_key
+@require_user_key
+def set_player_table(player_id, table_id):
+    """
+    Adds / Updates the table a player is on
+    """
+    p = game.get_player(player_id)
+    if not p:
+        return "Player not found", 404
+
+    t = game.get_table(table_id)
+    if not t:
+        return "Table not found", 404
+
+    p.table = t
+
+    db_session.commit()
+    return player_to_dict(p), 200
+
+@require_api_key
+@require_user_key
+def delete_player_table(player_id, table_id):
+    """
+    Adds / Updates the table a player is on
+    """
+    p = game.get_player(player_id)
+    if not p:
+        return "Player not found", 404
+
+    t = game.get_table(table_id)
+    if not t:
+        return "Table not found", 404
+
+    p.table = None
 
     db_session.commit()
     return player_to_dict(p), 200
