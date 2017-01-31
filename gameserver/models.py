@@ -15,7 +15,6 @@ from gameserver.wallet_sqlalchemy import WalletType, Wallet
 from utils import random
 
 db_session = db.session
-db_session.ledgers = []
 
 # define the temp table
 ledger = SATable("ledger", db.metadata,
@@ -145,8 +144,15 @@ class Node(Base):
         return sum([x.current_flow for x in self.higher_edges])
 
     @property
+    def total_players_inflow(self):
+        return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
+    
+    @property
     def active(self):
-        return (self.current_inflow / self.game.total_inflow) >= self.activation
+        try:
+            return (self.current_inflow / self.total_players_inflow) >= self.activation
+        except ZeroDivisionError:
+            return False
 
     @property
     def balance(self):

@@ -224,7 +224,7 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 5.0)
 
         w2 = Wallet([(p1.id, 10.0)])
-        n1.wallet += w2
+        n1.wallet &= w2
 
         self.assertEqual(n1.balance, 15.0)
 
@@ -380,11 +380,11 @@ class CoreGameTests(DBTestCase):
 
     def testGameTotalInflow(self):
         p1 = self.game.create_player('Matt')
-        self.assertEqual(self.game.total_inflow, 100)
+        self.assertEqual(p1.total_players_inflow, 100)
         p2 = self.game.create_player('Simon')
-        self.assertEqual(self.game.total_inflow, 200)
+        self.assertEqual(p1.total_players_inflow, 200)
         p2.max_outflow = 50
-        self.assertEqual(self.game.total_inflow, 150)
+        self.assertEqual(p2.total_players_inflow, 150)
 
     def testPlayerCurrentOutflow(self):
         p1 = self.game.create_player('Matt')
