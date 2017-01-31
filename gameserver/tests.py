@@ -499,6 +499,50 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(len(n1.parents()), 3)
 
+    def testGameTransferFundsNoMaxLevel(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000.0
+    
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1.max_level = 0
+        self.game.add_fund(p1, n1, 10)
+
+        self.game.do_propogate_funds()
+
+        self.assertEqual(p1.balance, 990.0)
+        self.assertEqual(n1.balance, 10.0)
+
+    def testGameTransferFundsMaxLevel(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000.0
+    
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1.max_level = 5.0
+        self.game.add_fund(p1, n1, 10)
+
+        self.game.do_propogate_funds()
+
+        self.assertEqual(p1.balance, 990.0)
+        self.assertEqual(n1.balance, 5.0)
+
+    def testGameTransferFundsMaxLevelMultiplePlayers(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000.0
+    
+        p2 = self.game.create_player('Simon')
+        p2.balance = 1000.0
+
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1.max_level = 5.0
+        self.game.add_fund(p1, n1, 10)
+        self.game.add_fund(p2, n1, 5)
+
+        self.game.do_propogate_funds()
+
+        self.assertEqual(p1.balance, 990.0)
+        self.assertEqual(p2.balance, 995.0)
+        self.assertEqual(n1.balance, 5.0)
+
     def testGameTransferFundsComplex(self):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0

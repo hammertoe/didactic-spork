@@ -191,6 +191,11 @@ class Node(Base):
                 factored_amount = self.balance
 
             self.wallet.transfer(child.wallet, factored_amount)
+            if child.max_level:
+                excess = child.wallet.total - child.max_level
+                if excess > 0:
+                    # trim the child back down to mex_level
+                    child.wallet -= excess
 
     def calc_rank(self):
         rank = 1
