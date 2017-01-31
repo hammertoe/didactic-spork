@@ -5,6 +5,7 @@ from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client
 
 from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy import func
 
 db_session = db.session
 
@@ -63,6 +64,9 @@ class Game:
         db_session.add(p)
         return p
 
+    def get_total_inflow(self):
+        return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
+    
     def get_players(self):
         return db_session.query(Player).all()
 
