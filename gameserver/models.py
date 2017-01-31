@@ -104,6 +104,7 @@ class Node(Base):
         self.name = name
         self.leak = leak
         self.activation = 0.0
+        self.max_level = 0.0
         self.rank = 0
         self.wallet = Wallet()
 
