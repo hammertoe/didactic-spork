@@ -307,8 +307,8 @@ def get_table(id):
                        'name': n.name,
                        'group': 9,
                        'active': n.active and True or False,
-                       'active_level': n.active_level,
-                       'active_percent': n.active_percent,
+                       'active_level': "{:.2f}".format(n.active_level),
+                       'active_percent': "{:.2f}".format(n.active_percent),
                        'resources': "{:.2f}".format(n.balance),
                        }
         for l in n.lower_edges:
@@ -322,8 +322,8 @@ def get_table(id):
                        'name': n.name,
                        'group': i,
                        'active': n.active and True or False,
-                       'active_level': n.active_level,
-                       'active_percent': n.active_percent,
+                       'active_level': "{:.2f}".format(n.active_level),
+                       'active_percent': "{:.2f}".format(n.active_percent),
                        'resources': "{:.2f}".format(n.balance),
                        }
 
