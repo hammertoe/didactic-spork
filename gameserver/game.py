@@ -224,11 +224,21 @@ class Game:
                 for rn in node_recurse_generator(n):
                     yield rn 
 
+        # pre-load these as needed later
+        junk1 = db_session.query(Player).options(
+            joinedload('lower_edges'),
+            joinedload('higher_edges')).all()
+        junk2 = db_session.query(Edge).options(
+            joinedload('lower_node'),
+            joinedload('higher_node')).all()
+
         if not players:
             goals = db_session.query(Goal).options(
-                joinedload('lower_edges')).all()
+                joinedload('lower_edges'),
+                joinedload('higher_edges')).all()
             policies = db_session.query(Policy).options(
-                joinedload('lower_edges')).all()
+                joinedload('lower_edges'),
+                joinedload('higher_edges')).all()
         else:
             goals = set()
             policies = set()
