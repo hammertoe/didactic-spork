@@ -95,6 +95,7 @@ class Node(Base):
     node_type = Column(String(10))
     activation = Column(Float)
     max_level = Column(Integer)
+    active_level = Column(Float)
     rank = Column(Integer)
     wallet = Column(Wallet.as_mutable(WalletType))
     
@@ -104,6 +105,7 @@ class Node(Base):
         self.leak = leak
         self.activation = 0.0
         self.max_level = 0.0
+        self.active_level = 0.0
         self.rank = 0
         self.wallet = Wallet()
 
@@ -125,34 +127,8 @@ class Node(Base):
         return leak
 
     @property
-    def current_outflow(self):
-        balance = self.balance or 0.0
-        if balance == 0.0 or not self.active:
-            return 0.0
-        total = self.total_children_weight or 0.0
-        if total < balance:
-            return total
-        else:
-            return balance
-
-    @property
     def total_children_weight(self):
         return sum([max(e.weight,0) for e in self.lower_edges])
-
-    @property
-    def current_inflow(self):
-        return sum([x.current_flow for x in self.higher_edges])
-
-    @property
-    def total_players_inflow(self):
-        return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
-    
-    @property
-    def active_level(self):
-        try:
-            return (self.current_inflow / self.total_players_inflow)
-        except ZeroDivisionError:
-            return 0
 
     @property
     def active_percent(self):
@@ -162,7 +138,7 @@ class Node(Base):
 
     @property
     def active(self):
-        return self.active_percent >= 1.0
+        return self.active_level >= self.activation
 
     @property
     def balance(self):
@@ -182,17 +158,38 @@ class Node(Base):
     def wallet_owner_map(self):
         return self.wallet.todict()
 
-    def do_propogate_funds(self):
-        # Check activation
-        if not self.active or not self.balance or not self.current_outflow:
+    def do_propogate_funds(self, total_player_inflow):
+        previous_balance = self.balance
+        for edge in self.higher_edges:
+            if edge.wallet:
+                self.wallet &= edge.wallet
+                # delete the wallet after we get from it
+                edge.wallet = None 
+        new_balance = self.balance
+        max_level = self.max_level or 0
+        if max_level and new_balance > max_level:
+            # if we are over out level then remove excess
+            self.wallet -= new_balance - max_level
+        # set the active level on the node
+        self.active_level = (new_balance - previous_balance) / total_player_inflow
+        # check if we are active
+        if self.active_level < self.activation:
+            # not active so stop here
             return
+        # yes we are active so distribute funds
+        if self.balance < 0:
+            return # no balance to propogate
 
         total_balance = self.balance
         total_children_weight = self.total_children_weight
 
         if not total_children_weight:
-            return
+            return # no children weight so return
 
+        # max we can distribute is our balance or what children need
+        current_outflow = min(total_children_weight, total_balance)
+
+        # calculate the factor to multiply each player amount by
         total_out_factor = min(1.0, total_balance / total_children_weight)
 
         for edge in self.lower_edges:
@@ -207,12 +204,10 @@ class Node(Base):
             if factored_amount > self.balance:
                 factored_amount = self.balance
 
-            self.wallet.transfer(child.wallet, factored_amount)
-            if child.max_level:
-                excess = child.wallet.total - child.max_level
-                if excess > 0:
-                    # trim the child back down to mex_level
-                    child.wallet -= excess
+            # create a wallet on the edge and transfer to it
+            edge.wallet = Wallet()
+            self.wallet.transfer(edge.wallet, factored_amount)
+
 
     def calc_rank(self):
         rank = 1
@@ -297,7 +292,7 @@ class Player(Node):
         f = db_session.query(Edge).filter(Edge.higher_node == node,
                                           Edge.lower_node == self).one_or_none()
         # check we are not exceeding our max fund outflow rate
-        tmp_rate = self.current_outflow
+        tmp_rate = self.total_funding
         if f is not None:
             tmp_rate -= f.weight
         tmp_rate += rate
@@ -310,6 +305,14 @@ class Player(Node):
             f = Edge(self, node, rate)
             db_session.add(f)
 
+    @property
+    def active(self):
+        return True
+
+    @property
+    def total_funding(self):
+        return sum([ x.weight for x in self.lower_edges ])
+
     def transfer_funds(self):
         for fund in self.lower_edges:
             self.transfer_funds_to_node(fund.higher_node, fund.weight)
@@ -319,11 +322,11 @@ class Player(Node):
         if not goal:
             return 0.0
         wallet = goal.wallet
-        return wallet.get(self.id, 0.0)
+        self.goal_funded =  wallet.get(self.id, 0.0)
 
-    def do_propogate_funds(self):
-        Node.do_propogate_funds(self)
-        self.goal_funded = self.calc_goal_funded()
+    def do_propogate_funds(self, total_player_inflow):
+        Node.do_propogate_funds(self, total_player_inflow)
+        self.calc_goal_funded()
                                
 
     def offer_policy(self, policy_id, price):
@@ -396,6 +399,7 @@ class Edge(Base):
         self.lower_node = n1
         self.higher_node = n2
         self.weight = weight
+        self.wallet = None
 
     @property
     def current_flow(self):

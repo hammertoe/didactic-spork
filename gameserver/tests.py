@@ -380,13 +380,13 @@ class CoreGameTests(DBTestCase):
 
     def testGameTotalInflow(self):
         p1 = self.game.create_player('Matt')
-        self.assertEqual(p1.total_players_inflow, 100)
+        self.assertEqual(self.game.total_players_inflow, 100)
         p2 = self.game.create_player('Simon')
-        self.assertEqual(p1.total_players_inflow, 200)
+        self.assertEqual(self.game.total_players_inflow, 200)
         p2.max_outflow = 50
-        self.assertEqual(p2.total_players_inflow, 150)
+        self.assertEqual(self.game.total_players_inflow, 150)
 
-    def testPlayerCurrentOutflow(self):
+    def testPlayerTotalFunding(self):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
@@ -396,13 +396,13 @@ class CoreGameTests(DBTestCase):
         po3 = self.game.add_policy('Policy 3', 1.0)
         self.game.add_fund(p1, po3, 30)
 
-        self.assertEqual(p1.current_outflow, 60)
+        self.assertEqual(p1.total_funding, 60)
 
         self.game.add_fund(p1, po3, 10)
-        self.assertEqual(p1.current_outflow, 40)
+        self.assertEqual(p1.total_funding, 40)
 
         self.game.add_fund(p1, po2, 0)
-        self.assertEqual(p1.current_outflow, 20)
+        self.assertEqual(p1.total_funding, 20)
 
     def testPlayerMaxOutflow(self):
         p1 = self.game.create_player('Matt')
@@ -420,10 +420,10 @@ class CoreGameTests(DBTestCase):
         with self.assertRaises(ValueError):
             self.game.add_fund(p1, po3, 80)
 
-        self.assertEqual(p1.current_outflow, 30)
+        self.assertEqual(p1.total_funding, 30)
 
         self.game.add_fund(p1, po3, 70)
-        self.assertEqual(p1.current_outflow, 100)
+        self.assertEqual(p1.total_funding, 100)
 
     def testNodeActivationFromPlayer(self):
         p1 = self.game.create_player('Matt')
@@ -434,6 +434,7 @@ class CoreGameTests(DBTestCase):
         self.assertFalse(po1.active)
         self.assertAlmostEqual(po1.active_level, 0)
         self.game.add_fund(p1, po1, 30.0)
+        self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
 
@@ -464,11 +465,12 @@ class CoreGameTests(DBTestCase):
 
         self.game.add_fund(p1, po1, 40.0)
         self.assertTrue(po1.active)
-        self.assertAlmostEqual(po1.active_percent, 4.0)
+        self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
         self.assertAlmostEqual(po2.active_percent, 0.25)
 
         l1.weight = 40.0
+        self.game.do_propogate_funds()
         self.assertTrue(po1.active)
         self.assertTrue(po2.active)
         self.assertAlmostEqual(po2.active_percent, 2.0)
@@ -505,6 +507,8 @@ class CoreGameTests(DBTestCase):
         self.game.add_fund(p1, n1, 10)
         self.game.add_fund(p2, n1, 20)
         self.game.add_fund(p3, n1, 50)
+
+        
 
         self.game.do_propogate_funds()
 
@@ -797,6 +801,8 @@ class CoreGameTests(DBTestCase):
         l1 = self.game.add_link(po1, g1, 3.0)
         l2 = self.game.add_link(po1, g2, 4.0)
 
+        
+
         p1.transfer_funds_to_node(po1, 10)
 
         self.game.do_propogate_funds()
@@ -907,7 +913,7 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
 
-        self.game.rank_nodes()
+        
 
         self.game.do_propogate_funds()
         
@@ -924,7 +930,7 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
 
-        self.game.rank_nodes()
+        
 
         self.game.do_propogate_funds()
         
@@ -958,7 +964,7 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
 
-        self.game.rank_nodes()
+        
 
         self.game.do_propogate_funds()
         
@@ -999,7 +1005,7 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
 
-        self.game.rank_nodes()
+        
 
         self.game.do_propogate_funds()
         
@@ -1045,7 +1051,7 @@ class CoreGameTests(DBTestCase):
         l3 = self.game.add_link(po1, g1, 1.0)
         l4 = self.game.add_link(po2, g2, 2.0)
 
-        self.game.rank_nodes()
+        
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
@@ -1073,8 +1079,6 @@ class CoreGameTests(DBTestCase):
         l3 = self.game.add_link(po1, g1, 5.0)
         l4 = self.game.add_link(po2, g2, 9.0)
 
-        self.game.rank_nodes()
-
         self.assertEqual(p1.balance, 5000)
         self.assertEqual(po1.balance, 0)
 
@@ -1082,11 +1086,11 @@ class CoreGameTests(DBTestCase):
             self.game.tick()
 
         self.assertEqual(p1.balance, 2500)
-        self.assertAlmostEqual(po1.balance, 39.998, 2)
-        self.assertAlmostEqual(po2.balance, 44.998, 2)
+        self.assertAlmostEqual(po1.balance, 50, 2)
+        self.assertAlmostEqual(po2.balance, 60, 2)
 
-        self.assertEqual(g1.balance, 5.0)
-        self.assertEqual(g2.balance, 9.0)
+        self.assertEqual(g1.balance, 10.0)
+        self.assertEqual(g2.balance, 18.0)
 
     def testTwoPlayersFundAPolicyEqually(self):
         p1 = self.game.create_player('Matt')
@@ -1097,7 +1101,7 @@ class CoreGameTests(DBTestCase):
         self.game.add_fund(p1, po1, 1.0)
         self.game.add_fund(p2, po1, 1.0)
 
-        self.game.rank_nodes()
+        
 
         self.assertEqual(po1.balance, 0)
 
@@ -1119,8 +1123,6 @@ class CoreGameTests(DBTestCase):
         self.game.add_fund(p1, po1, 5.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
-        self.game.rank_nodes()
-
         self.assertEqual(po1.balance, 0)
 
         for x in range(100):
@@ -1138,8 +1140,6 @@ class CoreGameTests(DBTestCase):
         g1 = self.game.add_goal('World Peace', 0.5)
         self.game.add_fund(p1, po1, 25.0)
         l2 = self.game.add_link(po1, g1, 1.0)
-
-        self.game.rank_nodes()
 
         self.assertEqual(po1.balance, 0)
 
@@ -1277,12 +1277,20 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p2.balance, 149940)
         self.assertEqual(p3.balance, 149985)
 
+        p1.calc_goal_funded()
+        p2.calc_goal_funded()
+        p3.calc_goal_funded()
+
         top = self.game.top_players()
         self.assertEqual(top, [p2,p3,p1])
 
         self.game.add_fund(p1, g1, 100)
 
         self.game.tick()
+
+        p1.calc_goal_funded()
+        p2.calc_goal_funded()
+        p3.calc_goal_funded()
 
         top = self.game.top_players()
         self.assertEqual(top, [p1,p2,p3])
@@ -1299,14 +1307,14 @@ class CoreGameTests(DBTestCase):
         self.game.add_fund(p1, g1, 10)
         self.game.add_fund(p1, g2, 30)
 
-        self.game.rank_nodes()
-
         self.game.tick()
+        p1.calc_goal_funded()
 
         self.assertEqual(p1.balance, 149960)
         self.assertEqual(p1.goal_funded, 10)
 
         self.game.tick()
+        p1.calc_goal_funded()
 
         self.assertEqual(p1.goal_funded, 20)
 
@@ -2047,6 +2055,10 @@ class RestAPITests(DBTestCase):
         self.assertEqual(p1.balance, 149990)
         self.assertEqual(p2.balance, 149980)
         self.assertEqual(p3.balance, 149985)
+
+        p1.calc_goal_funded()
+        p2.calc_goal_funded()
+        p3.calc_goal_funded()
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/game/league_table", headers=headers)

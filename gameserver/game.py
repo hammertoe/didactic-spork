@@ -36,22 +36,31 @@ class Game:
         for node in self.get_nodes():
             node.do_leak()
 
+    @property
+    def total_players_inflow(self):
+        return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
+
     def do_propogate_funds(self):
+        if hasattr(self, '_needs_ranking'):
+            self.rank_nodes()
+            del self._needs_ranking
         for node in self.get_nodes():
-            node.do_propogate_funds()
+            node.do_propogate_funds(self.total_players_inflow)
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
+        if hasattr(self, '_needs_ranking'):
+            self.rank_nodes()
+            del self._needs_ranking
         for node in self.get_nodes():
             node.do_leak()
-            node.do_propogate_funds()
+            node.do_propogate_funds(self.total_players_inflow)
 
     def top_players(self, max_num=20):
-        players = self.get_players()
-        return db_session.query(Player).order_by(Player.goal_funded.desc()).all()
+        return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
 
     def create_player(self, name):
         p = Player(name)
@@ -62,6 +71,7 @@ class Game:
             self.add_fund(p, policy, 0)
 
         db_session.add(p)
+        self._needs_ranking = 1
         return p
 
     def get_players(self):
@@ -73,6 +83,7 @@ class Game:
     def add_policy(self, name, leak):
         p = Policy(name, leak)
         db_session.add(p)
+        self._needs_ranking = 1
         return p
 
     def get_policy(self, id):
@@ -100,6 +111,7 @@ class Game:
     def add_goal(self, name, leak):
         g = Goal(name, leak)
         db_session.add(g)
+        self._needs_ranking = 1
         return g
 
     def get_goal(self, id):
@@ -136,9 +148,11 @@ class Game:
     def add_link(self, a, b, weight):
         l = Edge(a, b, weight)
         db_session.add(l)
+        self._needs_ranking = 1
         return l
 
     def add_fund(self, player, node, amount):
+        self._needs_ranking = 1
         return player.fund(node, amount)
 
     def set_funding(self, id, funding = None):
@@ -224,11 +238,21 @@ class Game:
                 for rn in node_recurse_generator(n):
                     yield rn 
 
+        # pre-load these as needed later
+        junk1 = db_session.query(Player).options(
+            joinedload('lower_edges'),
+            joinedload('higher_edges')).all()
+        junk2 = db_session.query(Edge).options(
+            joinedload('lower_node'),
+            joinedload('higher_node')).all()
+
         if not players:
             goals = db_session.query(Goal).options(
-                joinedload('lower_edges')).all()
+                joinedload('lower_edges'),
+                joinedload('higher_edges')).order_by(Goal.name).all()
             policies = db_session.query(Policy).options(
-                joinedload('lower_edges')).all()
+                joinedload('lower_edges'),
+                joinedload('higher_edges')).all()
         else:
             goals = set()
             policies = set()
