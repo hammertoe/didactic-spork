@@ -161,7 +161,7 @@ class Node(Base):
     def do_propogate_funds(self, total_player_inflow):
         previous_balance = self.balance
         for edge in self.higher_edges:
-            if edge.wallet:
+            if getattr(edge, 'wallet', None):
                 self.wallet &= edge.wallet
                 # delete the wallet after we get from it
                 edge.wallet = None 
