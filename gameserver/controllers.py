@@ -236,7 +236,7 @@ def convert_to_d3(players, network):
     for n in network['policies']:
         nodes[n['id']] = {'id': n['id'],
                           'name': n['name'],
-                          'group': 2,
+                          'group': 9,
                           'resources': n['balance'],
                           }
         for l in n['connections']:
@@ -294,7 +294,7 @@ def get_table(id):
     for n in players:
         nodes[n.id] = {'id': n.id,
                        'name': n.name,
-                       'group': 1,
+                       'group': 8,
                        'resources': "{:.2f}".format(n.balance),
                        }
         for l in n.lower_edges:
@@ -305,7 +305,7 @@ def get_table(id):
     for n in network['policies']:
         nodes[n.id] = {'id': n.id,
                        'name': n.name,
-                       'group': 2,
+                       'group': 9,
                        'active': n.active and True or False,
                        'active_level': n.active_level,
                        'active_percent': n.active_percent,
@@ -316,10 +316,14 @@ def get_table(id):
                           'target': l.higher_node.id,
                           'weight': "{:.2f}".format(l.weight),
                           })
-    for n in network['goals']:
+
+    for i,n in enumerate(network['goals'], start=1):
         nodes[n.id] = {'id': n.id,
                        'name': n.name,
-                       'group': 3,
+                       'group': i,
+                       'active': n.active and True or False,
+                       'active_level': n.active_level,
+                       'active_percent': n.active_percent,
                        'resources': "{:.2f}".format(n.balance),
                        }
 
