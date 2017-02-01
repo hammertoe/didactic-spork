@@ -28,6 +28,8 @@ class Game:
             node.rank = node.calc_rank()
 
     def get_nodes(self):
+        # preload players
+        junk = db_session.query(Player).all()
         return db_session.query(Node).options(
             joinedload('higher_edges'),
             joinedload('lower_edges')).order_by(Node.rank).all()
@@ -44,8 +46,9 @@ class Game:
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
+        total_players_inflow = self.total_players_inflow
         for node in self.get_nodes():
-            node.do_propogate_funds(self.total_players_inflow)
+            node.do_propogate_funds(total_players_inflow)
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
@@ -55,9 +58,10 @@ class Game:
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
+        total_players_inflow =self.total_players_inflow
         for node in self.get_nodes():
             node.do_leak()
-            node.do_propogate_funds(self.total_players_inflow)
+            node.do_propogate_funds(total_players_inflow)
 
     def top_players(self, max_num=20):
         return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
