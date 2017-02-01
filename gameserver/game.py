@@ -248,6 +248,11 @@ class Game:
             policies = db_session.query(Policy).options(
                 joinedload('lower_edges')).all()
         else:
+            # preload goals and policies
+            junk1 = db_session.query(Goal).options(
+                joinedload('lower_edges')).order_by(Goal.name).all()
+            junk2 = db_session.query(Policy).options(
+                joinedload('lower_edges')).all()
             goals = set()
             policies = set()
             for player in players:
