@@ -23,7 +23,10 @@ class Wallet:
             self._entries[player_id] = amount
             self._total += amount
         else:
-            del self._entries[player_id]
+            try:
+                del self._entries[player_id]
+            except KeyError:
+                pass
 
 
     def add(self, player_id, amount):
