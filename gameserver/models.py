@@ -142,7 +142,11 @@ class Node(Base):
 
     @property
     def balance(self):
-        return self.wallet.total
+        wallet = self.wallet
+        if wallet is None:
+            wallet = Wallet()
+            self.wallet = wallet
+        return wallet.total
 
     @balance.setter
     def balance(self, amount):
@@ -247,6 +251,7 @@ class Player(Node):
 
     max_outflow = Column(Float)
     goal_funded = Column(Float, default=0.0)
+    unclaimed_budget = Column(Float, default=0.0)
 
     goal_id = Column(
         CHAR(36),
@@ -281,6 +286,7 @@ class Player(Node):
         self.leak = 0.0
         self.max_outflow = 0.0
         self.rank = 0
+        self.unclaimed_budget = 0.0
         self.token = default_uuid()
         self.wallet = Wallet()
 
