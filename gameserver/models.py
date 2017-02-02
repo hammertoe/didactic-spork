@@ -177,7 +177,7 @@ class Node(Base):
             # not active so stop here
             return
         # yes we are active so distribute funds
-        if self.balance < 0:
+        if self.balance <= 0:
             return # no balance to propogate
 
         total_balance = self.balance
