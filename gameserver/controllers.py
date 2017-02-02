@@ -300,7 +300,7 @@ def get_table(id):
         for l in n.lower_edges:
             links.append({'source': n.id,
                           'target': l.higher_node.id,
-                          'weight': "{:.2f}".format(l.weight),
+                          'weight': float("{:.2f}".format(l.weight)),
                           })
     for n in network['policies']:
         nodes[n.id] = {'id': n.id,
@@ -314,7 +314,7 @@ def get_table(id):
         for l in n.lower_edges:
             links.append({'source': n.id,
                           'target': l.higher_node.id,
-                          'weight': "{:.2f}".format(l.weight),
+                          'weight': float("{:.2f}".format(l.weight)),
                           })
 
     for i,n in enumerate(network['goals'], start=1):
