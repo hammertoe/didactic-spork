@@ -20,11 +20,10 @@ class WalletType(types.TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):
+        w = Wallet()
         if value is not None:
-            w = Wallet()
             w.loads(value)
-            return w
-        return value
+        return w
 
     def compare_values(self, x, y):
         return x == y

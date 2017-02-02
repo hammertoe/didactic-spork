@@ -142,11 +142,7 @@ class Node(Base):
 
     @property
     def balance(self):
-        wallet = self.wallet
-        if wallet is None:
-            wallet = Wallet()
-            self.wallet = wallet
-        return wallet.total
+        return self.wallet.total
 
     @balance.setter
     def balance(self, amount):
