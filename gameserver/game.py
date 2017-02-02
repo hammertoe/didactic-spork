@@ -253,13 +253,12 @@ class Game:
                 joinedload('lower_edges')).order_by(Goal.name).all()
             junk2 = db_session.query(Policy).options(
                 joinedload('lower_edges')).all()
-            goals = set()
-            policies = set()
+            nodes = set()
             for player in players:
-                goals.add(player.goal)
-                p = [ x for x in node_recurse_generator(player) \
-                      if isinstance(x, Policy) ]
-                policies.update(p)
+                nodes.update(node_recurse_generator(player))
+
+            goals = [ x for x in nodes if isinstance(x, Goal) ]
+            policies = [ x for x in nodes if isinstance(x, Policy) ]
             
         return dict(goals=goals, policies=policies)
 
