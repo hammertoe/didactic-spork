@@ -194,6 +194,19 @@ class CoreGameTests(DBTestCase):
         self.assertIn(a, b.parents())
         self.assertIn(b, a.children())
 
+    def testPlayerFundedPolicies(self):
+        p1 = self.game.add_policy('Policy 1', 0.1)
+        p2 = self.game.add_policy('Policy 2', 0.2)
+        p3 = self.game.add_policy('Policy 3', 0.2)
+        p = self.game.create_player('Matt')
+
+        p.fund(p1, 20)
+        p.fund(p2, 30)
+        p.fund(p3, 0)
+
+        self.assertEqual(sorted(p.policies), sorted([p1,p2,p3]))
+        self.assertEqual(sorted(p.funded_policies), sorted([p1,p2]))
+
     def testSimpleNetwork(self):
         n1 = self.game.add_policy('Policy 1', 0.1)
         n2 = self.game.add_goal('Goal 1', 0.2)

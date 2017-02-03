@@ -255,7 +255,9 @@ class Game:
                 joinedload('lower_edges')).all()
             nodes = set()
             for player in players:
-                nodes.update(node_recurse_generator(player))
+                nodes.add(player)
+                for policy in player.funded_policies:
+                    nodes.update(node_recurse_generator(policy))
 
             goals = [ x for x in nodes if isinstance(x, Goal) ]
             policies = [ x for x in nodes if isinstance(x, Policy) ]

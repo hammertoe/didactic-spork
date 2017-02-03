@@ -308,6 +308,14 @@ class Player(Node):
             db_session.add(f)
 
     @property
+    def funded_policies(self):
+        return [ e.higher_node for e in self.lower_edges if e.weight ]
+
+    @property
+    def policies(self):
+        return [ e.higher_node for e in self.lower_edges ]
+
+    @property
     def active(self):
         return True
 
