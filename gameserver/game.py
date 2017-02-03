@@ -256,6 +256,7 @@ class Game:
             nodes = set()
             for player in players:
                 nodes.add(player)
+                nodes.add(player.goal)
                 for policy in player.funded_policies:
                     nodes.update(node_recurse_generator(policy))
 
