@@ -1744,6 +1744,7 @@ class RestAPITests(DBTestCase):
 
         random.seed(0)
         p1 = self.game.create_player('Matt')
+        p1.fund(p1.policies[0], 10)
 
         table = self.game.create_table('Table A')
         table.players.append(p1)
@@ -1755,8 +1756,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['nodes']), 7)
-        self.assertEquals(len(result['network']['links']), 6)
+        self.assertEquals(len(result['network']['nodes']), 4)
+        self.assertEquals(len(result['network']['links']), 2)
 
     def testGetTableWithTwoPlayers(self):
         data = json.load(open('examples/new-network.json', 'r'))
@@ -1765,6 +1766,8 @@ class RestAPITests(DBTestCase):
         random.seed(0)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
+        p1.fund(p1.policies[0], 10)
+        p2.fund(p2.policies[0], 10)
 
         table = self.game.create_table('Table A')
         table.players.append(p1)
@@ -1777,8 +1780,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['nodes']), 12)
-        self.assertEquals(len(result['network']['links']), 12)
+        self.assertEquals(len(result['network']['nodes']), 8)
+        self.assertEquals(len(result['network']['links']), 7)
 
     def testGetFunding(self):
         self.add_20_goals_and_policies()
