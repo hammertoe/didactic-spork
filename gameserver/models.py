@@ -91,6 +91,8 @@ class Node(Base):
                 primary_key=True, default=default_uuid)
 
     name = Column(String(200))
+    short_name = Column(String(50))
+    group = Column(Integer)
     leak = Column(Float)
     node_type = Column(String(10))
     activation = Column(Float)
@@ -102,6 +104,8 @@ class Node(Base):
     def __init__(self, name, leak):
         self.id = default_uuid()
         self.name = name
+        self.short_name = ''
+        self.group = 0
         self.leak = leak
         self.activation = 0.0
         self.max_level = 0.0

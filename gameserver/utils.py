@@ -23,6 +23,8 @@ def node_to_dict(node):
 
     data = {"id": node.id,
             "name": node.name,
+            "short_name": node.short_name,
+            "group": node.group,
             "leakage": "{:.2f}".format(node.leak),
             "max_amount": "{:.2f}".format(node.max_level),
             "activation_amount": "{:.2f}".format(node.activation),
