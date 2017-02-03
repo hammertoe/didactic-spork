@@ -223,60 +223,11 @@ def buy_policy(player_id, offer):
     except ValueError, e:
         return str(e), 400
    
-def convert_to_d3(players, network):
-    nodes = {}
-    links = []
-
-    for n in players:
-        nodes[n['id']] = {'id': n['id'],
-                          'name': n['name'],
-                          'group': 1,
-                          'resources': n['balance'],
-                          }
-    for n in network['policies']:
-        nodes[n['id']] = {'id': n['id'],
-                          'name': n['name'],
-                          'group': 9,
-                          'resources': n['balance'],
-                          }
-        for l in n['connections']:
-            links.append({'source': l['from_id'],
-                          'target': l['to_id'],
-                          'value': l['weight'],
-                          })
-    for n in network['goals']:
-        nodes[n['id']] = {'id': n['id'],
-                          'name': n['name'],
-                          'group': 3,
-                          'resources': n['balance'],
-                          }
-        for l in n['connections']:
-            links.append({'source': l['from_id'],
-                          'target': l['to_id'],
-                          'value': l['weight'],
-                          })
-
-    links = [ l for l in links 
-              if l['source'] in nodes
-              and l['target'] in nodes
-              ]
-
-    return {'nodes': nodes.values(), 'links': links}
-
-def table_to_dict(table):
-    players = [ player_to_dict(p) for p in table.players ]
-    return dict(id=table.id,
-                name=table.name,
-                players=players,
-                network=convert_to_d3(players, game.get_network(table.players)),
-                )
-
-
 @require_api_key
 def create_table(table = None):
     table = game.create_table(table['name'])
     db_session.commit()
-    return table_to_dict(table), 201
+    return generate_table_data(table), 201
 
 @require_api_key
 def get_table(id):
@@ -284,6 +235,9 @@ def get_table(id):
     if not table:
         return "Table not found", 404
 
+    return generate_table_data(table), 200
+
+def generate_table_data(table):
     name = table.name
     players = table.players
     network = game.get_network(players)
@@ -339,7 +293,7 @@ def get_table(id):
                 name=name,
                 players=players,
                 network=network,
-                ), 200
+                )
 
 @require_api_key
 def get_tables():
