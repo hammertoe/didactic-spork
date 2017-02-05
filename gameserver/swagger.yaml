@@ -472,6 +472,28 @@ paths:
       - hasMore: "true"
         tag: "table"
       - tag: "network"
+  /tables/{id}/clear:
+    put:
+      security:
+      - APISecurity: []
+      tags:
+      - "table"
+      summary: "Clear all the players off this table"
+      operationId: "gameserver.controllers.clear_table"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The id of this object"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+        404:
+          description: "Table not found"
+      x-tags:
+      - hasMore: "true"
+        tag: "table"
 securityDefinitions:
   UserSecurity:
     type: "apiKey"

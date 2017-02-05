@@ -2163,6 +2163,29 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response.status_code, 200)
         self.assertNotIn(p1, table.players)
 
+    def testRemoveAllPlayersFromTable(self):
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+
+        table = self.game.create_table('Table A')
+        p1.table = table
+        p2.table = table
+        self.assertIn(p1, table.players)
+        self.assertIn(p2, table.players)
+
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/tables/{}/clear".format(table.id),
+                                   headers=headers,
+                                   content_type='application/json')
+
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(table.players, [])
+        self.assertEquals(p1.table, None)
+        self.assertEquals(p2.table, None)
+
+
 class Utils(DBTestCase): # pragma: no cover
 
     def createDB(self):

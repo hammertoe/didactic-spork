@@ -230,6 +230,18 @@ def create_table(table = None):
     return generate_table_data(table), 201
 
 @require_api_key
+def clear_table(id):
+    table = game.get_table(id)
+    if not table:
+        return "Table not found", 404
+
+    table.players = []
+
+    db_session.commit()
+
+    return "table cleared", 200
+
+@require_api_key
 def get_table(id):
     table = game.get_table(id)
     if not table:
