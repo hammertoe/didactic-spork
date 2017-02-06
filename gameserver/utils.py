@@ -28,6 +28,7 @@ def node_to_dict(node):
             "leakage": "{:.2f}".format(node.leak),
             "max_amount": "{:.2f}".format(node.max_level),
             "activation_amount": "{:.2f}".format(node.activation),
+            "active_level": "{:.2f}".format(node.active_level),
             "balance": "{:.2f}".format(node.balance),
             "connections": connections
             }
