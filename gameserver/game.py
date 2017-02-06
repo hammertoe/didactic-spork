@@ -307,3 +307,29 @@ class Game:
 
         db_session.commit()
 
+    def update_network(self, network):
+        goals = network['goals']
+        policies = network['policies']
+        links = []
+
+        for node in nodes+policies:
+            n = self.get_node(node['id'])
+            if not n:
+                return "node id {id} name {name} not found in network".format(**node)
+            n.name = node['name']
+            n.short_name = node['short_name']
+            n.group = int(node['group'])
+            n.leak = float(node['leak'])
+            n.max_level = float(node['max_amount'])
+            n.activation = float(node['activation_amount'])
+
+            for conn in node['connections']:
+                link.append(conn)
+
+        for link in links:
+            pass
+
+        self.rank_nodes()
+
+        db_session.commit()
+        
