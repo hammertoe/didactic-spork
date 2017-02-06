@@ -69,6 +69,15 @@ def get_network():
     return network, 200
 
 @require_api_key
+def update_network(network):
+    game.update_network(network)
+    network =  game.get_network()
+    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
+    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+
+    return network, 200
+
+@require_api_key
 def get_node(id):
     node = game.get_node(id)
     if not node:

@@ -88,6 +88,25 @@ paths:
           description: "Success"
       x-tags:
       - tag: "network"
+    put:
+      security:
+      - APISecurity: []
+      tags:
+      - "network"
+      summary: "Updates an existing network from a JSON upload"
+      operationId: "gameserver.controllers.update_network"
+      parameters:
+        - in: body
+          name: network
+          description: JSON file of the network to update.
+          required: true
+          schema:
+            $ref: "#/definitions/Network"
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "network"
   /network/{id}:
     get:
       security:

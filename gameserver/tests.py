@@ -1484,7 +1484,6 @@ class DataLoadTests(DBTestCase):
         self.assertEqual(37, db_session.query(Policy).count())
         self.assertEqual(7, db_session.query(Goal).count())
 
-
     @unittest.skip("needs fixing after network re-jig")
     def testCreateThenGetNetwork(self):
         data = json.load(open('examples/new-network.json', 'r'))
@@ -1690,8 +1689,6 @@ class RestAPITests(DBTestCase):
         self.assertEqual(37, db_session.query(Policy).count())
         self.assertEqual(7, db_session.query(Goal).count())
 
-
-    
     @unittest.skip("needs fixing after network re-jig")
     def testCreateThenGetNetwork(self):
         data = json.load(open('examples/new-network.json', 'r'))
@@ -1708,6 +1705,42 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(response.json['goals']), 7)
 
         self.assertEqual(data, response.json)
+
+    def testUpdateNetwork(self):
+        data = json.load(open('examples/new-network.json', 'r'))
+
+        self.game.create_network(data)
+
+        self.assertEqual(80, db_session.query(Edge).count())
+        self.assertEqual(44, db_session.query(Node).count())
+        self.assertEqual(37, db_session.query(Policy).count())
+        self.assertEqual(7, db_session.query(Goal).count())
+
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/network/", headers=headers)
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(len(response.json['policies']), 37)
+        self.assertEquals(len(response.json['goals']), 7)
+
+        expected = response.json
+        e = expected['goals'][0]
+
+        e['short_name'] = 'new short name'
+        e['group'] = 1
+        e['name'] = 'long name'
+        e['max_amount'] = 100.0
+        e['activation_amount'] = 10.0
+        e['leakage'] = 0.2
+
+        id_ = e['id']
+
+        response2 = self.client.put("/v1/network/", data=json.dumps(expected),
+                                    headers=headers,
+                                    content_type='application/json')
+        self.assertEquals(response2.status_code, 200)
+        d = { x['id']: x for x in response2.json['goals'] }
+        self.assertEqual(d[id_]['short_name'], 'new short name')
+        self.assertEqual(sorted(expected), sorted(response2.json))
 
     def testCreateTable(self):
         data = {'name': 'Table A'}

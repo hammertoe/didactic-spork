@@ -18,19 +18,19 @@ def node_to_dict(node):
             {"id": edge.id,
              "to_id": edge.higher_node.id,
              "from_id": node.id,
-             "weight": "{:.2f}".format(edge.weight),
+             "weight": float("{:.2f}".format(edge.weight)),
              }
             )
 
     data = {"id": node.id,
             "name": node.name,
             "short_name": node.short_name,
-            "group": node.group,
-            "leakage": "{:.2f}".format(node.leak),
-            "max_amount": "{:.2f}".format(node.max_level),
-            "activation_amount": "{:.2f}".format(node.activation),
-            "active_level": "{:.2f}".format(node.active_level),
-            "balance": "{:.2f}".format(node.balance),
+            "group": int(node.group),
+            "leakage": float("{:.2f}".format(node.leak)),
+            "max_amount": float("{:.2f}".format(node.max_level)),
+            "activation_amount": float("{:.2f}".format(node.activation)),
+            "active_level": float("{:.2f}".format(node.active_level)),
+            "balance": float("{:.2f}".format(node.balance)),
             "connections": connections
             }
     

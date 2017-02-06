@@ -155,6 +155,9 @@ class Game:
         self._needs_ranking = 1
         return l
 
+    def get_link(self, id):
+        return db_session.query(Edge).filter(Edge.id == id).one_or_none()
+
     def add_fund(self, player, node, amount):
         self._needs_ranking = 1
         return player.fund(node, amount)
@@ -312,22 +315,25 @@ class Game:
         policies = network['policies']
         links = []
 
-        for node in nodes+policies:
+        for node in goals+policies:
             n = self.get_node(node['id'])
             if not n:
                 return "node id {id} name {name} not found in network".format(**node)
             n.name = node['name']
             n.short_name = node['short_name']
             n.group = int(node['group'])
-            n.leak = float(node['leak'])
+            n.leak = float(node['leakage'])
             n.max_level = float(node['max_amount'])
             n.activation = float(node['activation_amount'])
 
             for conn in node['connections']:
-                link.append(conn)
+                links.append(conn)
 
         for link in links:
-            pass
+            l = self.get_link(link['id'])
+            if not l:
+                return "link id {id} not found in network".format(**link)
+            l.weight = link['weight']
 
         self.rank_nodes()
 
