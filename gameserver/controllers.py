@@ -58,6 +58,8 @@ def league_table():
 @require_api_key
 def create_network(network):
     game.create_network(network)
+
+    db_session.commit()
     return None, 201
 
 @require_api_key
@@ -75,6 +77,7 @@ def update_network(network):
     network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
     network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
 
+    db_session.commit()
     return network, 200
 
 @require_api_key

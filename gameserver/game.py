@@ -308,8 +308,6 @@ class Game:
 
         self.rank_nodes()
 
-        db_session.commit()
-
     def update_network(self, network):
         goals = network['goals']
         policies = network['policies']
@@ -336,6 +334,4 @@ class Game:
             l.weight = link['weight']
 
         self.rank_nodes()
-
-        db_session.commit()
         
