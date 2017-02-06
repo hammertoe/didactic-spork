@@ -305,6 +305,7 @@ def generate_table_data(table):
     checksum = sha1()
     for link in sorted(links, key=lambda x: x['source']):
         checksum.update(link['source'])
+        checksum.update(link['target'])
 
     return dict(id=table.id,
                 name=name,

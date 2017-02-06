@@ -15,7 +15,8 @@ def node_to_dict(node):
     connections = []
     for edge in node.lower_edges:
         connections.append(
-            {"to_id": edge.higher_node.id,
+            {"id": edge.id,
+             "to_id": edge.higher_node.id,
              "from_id": node.id,
              "weight": "{:.2f}".format(edge.weight),
              }
