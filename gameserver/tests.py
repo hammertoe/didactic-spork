@@ -1783,6 +1783,46 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(result['network']['nodes']), 8)
         self.assertEquals(len(result['network']['links']), 7)
 
+    def testGetTableChecksum(self):
+        data = json.load(open('examples/new-network.json', 'r'))
+        self.game.create_network(data)
+
+        random.seed(0)
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+        p1.fund(p1.policies[0], 10)
+        p2.fund(p2.policies[0], 10)
+
+        table = self.game.create_table('Table A')
+        table.players.append(p1)
+
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        chksum1 = result['layout_checksum']
+
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertEqual(chksum1, result['layout_checksum'])
+
+        p1.policies[0].lower_edges[0].weight = 0.5
+
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertEqual(chksum1, result['layout_checksum'])
+
+        p1.fund(p1.policies[1], 10)
+
+        response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
+        self.assertEquals(response.status_code, 200)
+        result = response.json
+        self.assertNotEqual(chksum1, result['layout_checksum'])
+
+
+
     def testGetFunding(self):
         self.add_20_goals_and_policies()
         random.seed(0)

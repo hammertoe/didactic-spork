@@ -4,6 +4,7 @@ from flask import request, abort
 from gameserver.game import Game
 from gameserver.database import db
 from gameserver.utils import node_to_dict
+from hashlib import sha1
 
 db_session = db.session
 game = Game()
@@ -299,12 +300,17 @@ def generate_table_data(table):
               ]
 
     network =  {'nodes': nodes.values(), 'links': links}
-    players = [ player_to_dict(p) for p in players ]
+    players_dict = [ player_to_dict(p) for p in players ]
+
+    checksum = sha1()
+    for link in sorted(links, key=lambda x: x['source']):
+        checksum.update(link['source'])
 
     return dict(id=table.id,
                 name=name,
-                players=players,
+                players=players_dict,
                 network=network,
+                layout_checksum=checksum.hexdigest(),
                 )
 
 @require_api_key
