@@ -36,6 +36,17 @@ def node_to_dict(node):
     
     return data
 
+def update_node_from_dict(node, d):
+    node.id = d['id']
+    node.name = d['name']
+    if d.get('short_name') is not None: 
+        node.short_name = d['short_name']
+    if d.get('group') is not None:
+        node.group = int(d['group'])
+    node.leak = float(d['leakage'])
+    node.max_level = float(d['max_amount'])
+    node.activation = float(d['activation_amount'])
+
 
 def pack_amount(value):
     return binascii.hexlify(struct.pack("f", value)).decode('ascii')

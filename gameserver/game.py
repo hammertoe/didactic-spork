@@ -1,5 +1,5 @@
 import json
-from gameserver.utils import random, node_to_dict
+from gameserver.utils import random, node_to_dict, update_node_from_dict
 
 from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client
@@ -84,7 +84,7 @@ class Game:
     def get_player(self, id):
         return db_session.query(Player).filter(Player.id == id).one_or_none()
 
-    def add_policy(self, name, leak):
+    def add_policy(self, name, leak=0):
         p = Policy(name, leak)
         db_session.add(p)
         self._needs_ranking = 1
@@ -112,7 +112,7 @@ class Game:
 
         return buyer.buy_policy(seller, policy, price, chk)
         
-    def add_goal(self, name, leak):
+    def add_goal(self, name, leak=0):
         g = Goal(name, leak)
         db_session.add(g)
         self._needs_ranking = 1
@@ -201,41 +201,45 @@ class Game:
             return None
         return self.get_network(table.players)
 
-    def load_json(self, json_file):
-        data = json.load(json_file)
+    def create_network(self, data):
         
-        goals = data['Goals']
-        policies = data['Policies']
+        goals = data['goals']
+        policies = data['policies']
 
         id_mapping = {}
         links = []
         
         for policy in policies:
-            p = self.add_policy(policy['Name'], policy['Leakage'])
-            p.max_level = policy['MaxAmount']
-            p.activation = policy['ActivationAmount']
-            id_mapping[policy['Id']] = p
+            p = self.add_policy(policy['name'])
+            update_node_from_dict(p, policy)
+            id_mapping[policy['id']] = p
+
+            for conn in policy['connections']:
+                i = conn['id']
+                a = conn['from_id']
+                b = conn['to_id']
+                w = conn['weight']
+                links.append((i,a,b,w))
 
         for goal in goals:
-            g = self.add_goal(goal['Name'], goal['Leakage'])
-            g.max_level = goal['MaxAmount'] 
-            g.activation = goal['ActivationAmount']  
-            id_mapping[goal['Id']] = g
+            g = self.add_goal(goal['name'])
+            update_node_from_dict(g, goal)
+            id_mapping[goal['id']] = g
 
-            for conn in goal['Connections']:
-                a = conn['FromId']
-                b = conn['ToId']
-                w = conn['Weight']
-                links.append((a,b,w))
+            for conn in goal['connections']:
+                i = conn['id']
+                a = conn['from_id']
+                b = conn['to_id']
+                w = conn['weight']
+                links.append((i,a,b,w))
 
-        for a,b,w in links:
+        for i,a,b,w in links:
             a = id_mapping[a]
             b = id_mapping[b]
-            self.add_link(a,b,w)
+            l = self.add_link(a,b,w)
+            l.id = i
 
         self.rank_nodes()
-
-        db_session.commit()
 
     def get_network(self, players=None):
 
@@ -268,46 +272,6 @@ class Game:
             
         return dict(goals=goals, policies=policies)
 
-
-
-    def create_network(self, network):
-        
-#        db_session.execute(Edge.__table__.delete())
-#        db_session.execute(Player.__table__.delete())
-#        db_session.execute(Goal.__table__.delete())
-#        db_session.execute(Policy.__table__.delete())
-
-        goals = network['goals']
-        policies = network['policies']
-        edges = network['edges']
-
-        id_mapping = {}
-        links = []
-        
-        for policy in policies:
-            p = self.add_policy(policy['name'], policy.get('leakage', 0))
-            p.id = policy['id']
-            p.max_level = policy.get('max_amount', 0)
-            p.activation = policy.get('activation_amount', 0)
-            id_mapping[p.id] = p
-
-        for goal in goals:
-            g = self.add_goal(goal['name'], goal.get('leakage', 0))
-            g.id = goal['id']
-            g.max_level = goal.get('max_amount', 0)
-            g.activation = goal.get('activation_amount', 0)
-            id_mapping[g.id] = g
-
-
-        for edge in edges:
-            i = id_mapping
-            l = self.add_link(i[edge['source']],
-                              i[edge['target']],
-                              edge['weight'],
-                              )
-
-        self.rank_nodes()
-
     def update_network(self, network):
         goals = network['goals']
         policies = network['policies']
@@ -317,12 +281,7 @@ class Game:
             n = self.get_node(node['id'])
             if not n:
                 return "node id {id} name {name} not found in network".format(**node)
-            n.name = node['name']
-            n.short_name = node['short_name']
-            n.group = int(node['group'])
-            n.leak = float(node['leakage'])
-            n.max_level = float(node['max_amount'])
-            n.activation = float(node['activation_amount'])
+            update_node_from_dict(n, node)
 
             for conn in node['connections']:
                 links.append(conn)

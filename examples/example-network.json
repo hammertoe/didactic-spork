@@ -1,0 +1,1007 @@
+{
+  "goals": [
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 1 End poverty in all its forms everywhere", 
+      "short_name": "No Poverty"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 13 Take urgent action to combat climate change and its impacts", 
+      "short_name": "Climate Action"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 14 Conserve and sustainably use the oceans seas and marine resources for sustainable development", 
+      "short_name": "Life Below Water"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 2 End hunger achieve food security and improved nutrition and promote sustainable agriculture", 
+      "short_name": "No Hunger"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.01, 
+      "connections": [], 
+      "id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 3 Ensure healthy lives and promote well being for all at all ages", 
+      "short_name": "Good Health"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 5 Achieve gender equality and empower all women and girls", 
+      "short_name": "Gender Equality"
+    }, 
+    {
+      "activation_amount": 1000000.0, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [], 
+      "id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+      "leakage": 0.050000000000000003, 
+      "max_amount": 2000000.0, 
+      "name": "Goal 9 Build resilient infrastructure promote inclusive and sustainable industrialization and foster innovation", 
+      "short_name": "Innovation & Infrastructure"
+    }
+  ], 
+  "policies": [
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "2ff13137-ea25-419b-bf74-078e81fb1b5c", 
+          "id": "25759a80-e739-11e6-be9b-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "2ff13137-ea25-419b-bf74-078e81fb1b5c", 
+          "id": "2575a957-e739-11e6-bffb-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "2ff13137-ea25-419b-bf74-078e81fb1b5c", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Allocate appropriate level of funds for financing climate change mitigation needs", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 253949.03, 
+      "connections": [
+        {
+          "from_id": "d7ea54ef-fe79-4262-8f6f-a661887a90b2", 
+          "id": "25757ec2-e739-11e6-9d00-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "d7ea54ef-fe79-4262-8f6f-a661887a90b2", 
+          "id": "25758d9c-e739-11e6-aa15-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "d7ea54ef-fe79-4262-8f6f-a661887a90b2", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Allocate appropriate level of funds for financing climate resilient infrastructure", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 145734.0, 
+      "connections": [
+        {
+          "from_id": "4484b05b-50a7-4031-96f1-6ae1e3a9f3cd", 
+          "id": "2575393d-e739-11e6-9048-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "4484b05b-50a7-4031-96f1-6ae1e3a9f3cd", 
+          "id": "25754dee-e739-11e6-a866-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "4484b05b-50a7-4031-96f1-6ae1e3a9f3cd", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Create a carbon pricing regime for energy use", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 97732.0, 
+      "connections": [
+        {
+          "from_id": "3a64110e-8649-414a-85cc-cddb09e6d1ee", 
+          "id": "25756f23-e739-11e6-ade6-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "3a64110e-8649-414a-85cc-cddb09e6d1ee", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Create financial incentives for private investment to undertake green investments", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 61637.82, 
+      "connections": [
+        {
+          "from_id": "698585cc-6e5e-4383-8e48-d7c01d3281c2", 
+          "id": "257507a1-e739-11e6-a22a-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "698585cc-6e5e-4383-8e48-d7c01d3281c2", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Create financing instruments that promote asset lifetime cost and benefits analysis", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 83919.0, 
+      "connections": [
+        {
+          "from_id": "ededca00-4dd8-4c52-957a-89a434f1f406", 
+          "id": "2574fea3-e739-11e6-b0cb-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "ededca00-4dd8-4c52-957a-89a434f1f406", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Create innovation funds that pay for transfer of technology", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 27744.0, 
+      "connections": [
+        {
+          "from_id": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9", 
+          "id": "2575fc8c-e739-11e6-9f39-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": -0.10000000000000001
+        }, 
+        {
+          "from_id": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9", 
+          "id": "25760a9c-e739-11e6-884f-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": -0.10000000000000001
+        }, 
+        {
+          "from_id": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9", 
+          "id": "25761847-e739-11e6-b1b8-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "0e7b3724-1eb5-4ee9-9e6b-9b1a8b1d09b9", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Demarcate sections of coast for natural preservation", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "b04d2802-01f1-48ea-a952-fcffdf352501", 
+          "id": "25752423-e739-11e6-8baf-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "b04d2802-01f1-48ea-a952-fcffdf352501", 
+          "id": "25752fdc-e739-11e6-bf66-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "b04d2802-01f1-48ea-a952-fcffdf352501", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Develop INDCs with appropriate reduction in GHG emissions", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 10653.6, 
+      "connections": [
+        {
+          "from_id": "95cd06dc-bd5c-46d7-b848-58def2589284", 
+          "id": "2575574f-e739-11e6-a946-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "95cd06dc-bd5c-46d7-b848-58def2589284", 
+          "id": "25756178-e739-11e6-8ee9-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "95cd06dc-bd5c-46d7-b848-58def2589284", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Eliminate fossil fuel subsidies", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "f0bfec38-9e76-4c39-a490-89fe2548ca3e", 
+          "id": "2574c217-e739-11e6-ad63-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "f0bfec38-9e76-4c39-a490-89fe2548ca3e", 
+          "id": "2574cc40-e739-11e6-9e2b-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "f0bfec38-9e76-4c39-a490-89fe2548ca3e", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement laws prohibiting child labour", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 17195.0, 
+      "connections": [
+        {
+          "from_id": "9307de47-17cc-4992-9f6f-196048a9d2c2", 
+          "id": "2575e1fd-e739-11e6-998e-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "9307de47-17cc-4992-9f6f-196048a9d2c2", 
+          "id": "2575ef45-e739-11e6-a5d1-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "9307de47-17cc-4992-9f6f-196048a9d2c2", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement laws prohibiting over fishing of marine ecosystem", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "6c4be7ab-3a45-4334-84f2-811e82485542", 
+          "id": "257485f0-e739-11e6-a4ea-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "6c4be7ab-3a45-4334-84f2-811e82485542", 
+          "id": "25749017-e739-11e6-9ad9-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "6c4be7ab-3a45-4334-84f2-811e82485542", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement laws that give women property and inheritance rights at par with men", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 157341.0, 
+      "connections": [
+        {
+          "from_id": "c1931b11-03be-41b1-902a-1c0d86d78ee8", 
+          "id": "2569011c-e739-11e6-840d-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "c1931b11-03be-41b1-902a-1c0d86d78ee8", 
+          "id": "25691a80-e739-11e6-b937-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "c1931b11-03be-41b1-902a-1c0d86d78ee8", 
+          "id": "25692f33-e739-11e6-99cd-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "c1931b11-03be-41b1-902a-1c0d86d78ee8", 
+          "id": "2569431e-e739-11e6-935f-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 10.0
+        }
+      ], 
+      "id": "c1931b11-03be-41b1-902a-1c0d86d78ee8", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement nationally appropriate social protection systems", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "99ae5096-dbed-4ac3-be11-aaed8b53e9cf", 
+          "id": "2574ac9c-e739-11e6-a74e-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "99ae5096-dbed-4ac3-be11-aaed8b53e9cf", 
+          "id": "2574b726-e739-11e6-ac5f-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "99ae5096-dbed-4ac3-be11-aaed8b53e9cf", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement salary equality across genders", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "b008c889-0047-4a1d-b22f-d7a5968fef52", 
+          "id": "25749914-e739-11e6-8ad4-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "b008c889-0047-4a1d-b22f-d7a5968fef52", 
+          "id": "2574a39e-e739-11e6-aa8c-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "b008c889-0047-4a1d-b22f-d7a5968fef52", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement targetted affirmative access to education for girls", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 39150.0, 
+      "connections": [
+        {
+          "from_id": "2d0b6b93-7f54-4c53-8aa6-6d16251ca5c8", 
+          "id": "2573f568-e739-11e6-acc5-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "2d0b6b93-7f54-4c53-8aa6-6d16251ca5c8", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Implement universal coverage of 8 basic child immunisations", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 306.0, 
+      "connections": [
+        {
+          "from_id": "77dae349-c0f2-4b47-b92c-d1e1b6d587c5", 
+          "id": "25744963-e739-11e6-ba3b-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "77dae349-c0f2-4b47-b92c-d1e1b6d587c5", 
+          "id": "2574538c-e739-11e6-88ba-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 10.0
+        }
+      ], 
+      "id": "77dae349-c0f2-4b47-b92c-d1e1b6d587c5", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase access to childbirth in hospitals", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 6500.0, 
+      "connections": [
+        {
+          "from_id": "0a5dc585-7d1b-43a5-910c-a5d41718b298", 
+          "id": "25735c47-e739-11e6-a74d-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "0a5dc585-7d1b-43a5-910c-a5d41718b298", 
+          "id": "25736d78-e739-11e6-bb78-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "0a5dc585-7d1b-43a5-910c-a5d41718b298", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase access to food commodity markets", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 143870.41, 
+      "connections": [
+        {
+          "from_id": "2f629aad-4cb8-4a73-8947-d264d5ff4e91", 
+          "id": "257625f3-e739-11e6-a2e0-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "2f629aad-4cb8-4a73-8947-d264d5ff4e91", 
+          "id": "2576339e-e739-11e6-b0f5-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "2f629aad-4cb8-4a73-8947-d264d5ff4e91", 
+          "id": "2576401e-e739-11e6-8666-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "2f629aad-4cb8-4a73-8947-d264d5ff4e91", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase access to international fish markets to small fisheries", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "5eed9159-ece5-4814-b263-ee3972dc7b16", 
+          "id": "25740378-e739-11e6-8180-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "5eed9159-ece5-4814-b263-ee3972dc7b16", 
+          "id": "257412b3-e739-11e6-952a-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "5eed9159-ece5-4814-b263-ee3972dc7b16", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase access to trained community health workers", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 89714.0, 
+      "connections": [
+        {
+          "from_id": "adcb3c41-7ca5-4273-9c73-b6745fbb28d5", 
+          "id": "25734ca6-e739-11e6-b308-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "adcb3c41-7ca5-4273-9c73-b6745fbb28d5", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase agriculture R D in tropical agriculture", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "6cc92ebb-6cb1-4ade-88a4-586c67c377d0", 
+          "id": "25743707-e739-11e6-86d3-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "6cc92ebb-6cb1-4ade-88a4-586c67c377d0", 
+          "id": "257440cc-e739-11e6-970a-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "6cc92ebb-6cb1-4ade-88a4-586c67c377d0", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase health care benefits and insurance for elderly above age 60 ", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "30369542-d9a8-4543-a551-c2ee54300e6b", 
+          "id": "2573b170-e739-11e6-8ab7-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "30369542-d9a8-4543-a551-c2ee54300e6b", 
+          "id": "2573c368-e739-11e6-adce-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "30369542-d9a8-4543-a551-c2ee54300e6b", 
+          "id": "2573d4fa-e739-11e6-b2f9-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "30369542-d9a8-4543-a551-c2ee54300e6b", 
+          "id": "2573e5c7-e739-11e6-8e27-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 30.0
+        }
+      ], 
+      "id": "30369542-d9a8-4543-a551-c2ee54300e6b", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase investment in irrigation management", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 262141.97, 
+      "connections": [
+        {
+          "from_id": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6", 
+          "id": "2574d668-e739-11e6-9443-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6", 
+          "id": "2574e08f-e739-11e6-b526-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6", 
+          "id": "2574e98c-e739-11e6-99e2-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "293f21b3-4293-43c3-8e0d-1e51e7d7d3a6", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase R D on climate change resilient technology in middle and low income countries", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 27078.73, 
+      "connections": [
+        {
+          "from_id": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30", 
+          "id": "25737d17-e739-11e6-aee2-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30", 
+          "id": "25738eab-e739-11e6-acc8-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30", 
+          "id": "25739f14-e739-11e6-a372-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": -0.29999999999999999
+        }
+      ], 
+      "id": "6ccbcd2b-d189-4a32-9c21-608cb3dbae30", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Increase yield of farming and fishing", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 57883.550000000003, 
+      "connections": [
+        {
+          "from_id": "6821d23a-d848-452a-a621-1cc0c3e6f04f", 
+          "id": "25751100-e739-11e6-ad5e-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "6821d23a-d848-452a-a621-1cc0c3e6f04f", 
+          "id": "25751ac5-e739-11e6-8083-e5db5a6ac747", 
+          "to_id": "94b3c078-0e2e-4405-9bff-ec582984eb1a", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "6821d23a-d848-452a-a621-1cc0c3e6f04f", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Integrate climate change measures into national policies strategies and planning", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 107609.00999999999, 
+      "connections": [
+        {
+          "from_id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+          "id": "25698ee8-e739-11e6-a628-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+          "id": "2569a338-e739-11e6-8549-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+          "id": "2569b5f8-e739-11e6-a427-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+          "id": "2572cf45-e739-11e6-a8fb-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+          "id": "2572e6b3-e739-11e6-aaad-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": -0.10000000000000001
+        }
+      ], 
+      "id": "876f9aaf-77df-4c5d-b40a-13e17419a994", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Promote greater access to basic services health housing education and security for the poor and marginalised", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 60600.0, 
+      "connections": [
+        {
+          "from_id": "0dd8e57a-b0ef-4e8c-89e5-46bdbdd65a02", 
+          "id": "2572f8ae-e739-11e6-80cc-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "0dd8e57a-b0ef-4e8c-89e5-46bdbdd65a02", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Promote greater access to climate change resilient crops", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "8035f13b-2d1a-4acc-a211-213f7b1b9e61", 
+          "id": "256956a6-e739-11e6-b0e9-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 50.0
+        }, 
+        {
+          "from_id": "8035f13b-2d1a-4acc-a211-213f7b1b9e61", 
+          "id": "25696a2e-e739-11e6-9083-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "8035f13b-2d1a-4acc-a211-213f7b1b9e61", 
+          "id": "25697c28-e739-11e6-b4fd-e5db5a6ac747", 
+          "to_id": "16027565-cf06-4d30-9c1e-c26ba93773bf", 
+          "weight": 30.0
+        }
+      ], 
+      "id": "8035f13b-2d1a-4acc-a211-213f7b1b9e61", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Promote greater access to productive natural assets land water etc for the poor and marginalised", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 159900.0, 
+      "connections": [
+        {
+          "from_id": "489c43bd-de9e-4841-8be9-c0fc74f746fd", 
+          "id": "257470d9-e739-11e6-a82b-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "489c43bd-de9e-4841-8be9-c0fc74f746fd", 
+          "id": "25747bc7-e739-11e6-872c-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "489c43bd-de9e-4841-8be9-c0fc74f746fd", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Provide access to sewage and sanitation facilities", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 33825.0, 
+      "connections": [
+        {
+          "from_id": "1e1eac9c-64c1-4aad-a138-519da1e6b5cc", 
+          "id": "25745db5-e739-11e6-9ad6-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 10.0
+        }, 
+        {
+          "from_id": "1e1eac9c-64c1-4aad-a138-519da1e6b5cc", 
+          "id": "257467dc-e739-11e6-9bc8-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "1e1eac9c-64c1-4aad-a138-519da1e6b5cc", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Provide clean and reliable drinking water", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "a345a689-1b94-4c20-839e-b8b4ec11ec2d", 
+          "id": "25741ed1-e739-11e6-8e30-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "a345a689-1b94-4c20-839e-b8b4ec11ec2d", 
+          "id": "25742c19-e739-11e6-a3ee-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "a345a689-1b94-4c20-839e-b8b4ec11ec2d", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Provide universal health insurance", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 7958.0, 
+      "connections": [
+        {
+          "from_id": "c7d9930a-164e-489a-9311-7875bffdcebb", 
+          "id": "2574f542-e739-11e6-9655-e5db5a6ac747", 
+          "to_id": "9ed84ad4-86ca-4bc5-93a0-6fb8f6d5251e", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "c7d9930a-164e-489a-9311-7875bffdcebb", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Reduce barriers to transfer of technology from high income to middle and low income countries", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "dcfb16e7-40bf-495e-93da-db33bdf3c898", 
+          "id": "25764ef8-e739-11e6-9d9e-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": -0.10000000000000001
+        }, 
+        {
+          "from_id": "dcfb16e7-40bf-495e-93da-db33bdf3c898", 
+          "id": "25765d6b-e739-11e6-97b9-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "dcfb16e7-40bf-495e-93da-db33bdf3c898", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Reduce end subsidies to commercial fishing", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 32868.910000000003, 
+      "connections": [
+        {
+          "from_id": "23537501-7cb8-4d0f-8aac-d96879ed5985", 
+          "id": "25732bd7-e739-11e6-b04b-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": -0.10000000000000001
+        }, 
+        {
+          "from_id": "23537501-7cb8-4d0f-8aac-d96879ed5985", 
+          "id": "25733d6e-e739-11e6-9187-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "23537501-7cb8-4d0f-8aac-d96879ed5985", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Reduce farming subsidies in high income countries", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 5676.0, 
+      "connections": [
+        {
+          "from_id": "ede30571-feac-4da6-9d8e-6b5a5d89110a", 
+          "id": "25730a40-e739-11e6-ac6e-e5db5a6ac747", 
+          "to_id": "5437ea35-ad2e-4c67-bafa-de3b129a33e0", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "ede30571-feac-4da6-9d8e-6b5a5d89110a", 
+          "id": "25731b70-e739-11e6-aefe-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "ede30571-feac-4da6-9d8e-6b5a5d89110a", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Reduce trade barriers in agricultural produce", 
+      "short_name": null
+    }, 
+    {
+      "activation_amount": 0.20000000000000001, 
+      "active_level": 0.0, 
+      "balance": 0.0, 
+      "connections": [
+        {
+          "from_id": "48fc2d38-929e-479c-bce5-9dedb0c085fa", 
+          "id": "2575b8f8-e739-11e6-80ec-e5db5a6ac747", 
+          "to_id": "201cb7e8-a7d6-47d4-b951-c314838da7d4", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "48fc2d38-929e-479c-bce5-9dedb0c085fa", 
+          "id": "2575c835-e739-11e6-aeef-e5db5a6ac747", 
+          "to_id": "8646638d-6517-4928-a02d-ae3e0ca5d76d", 
+          "weight": 30.0
+        }, 
+        {
+          "from_id": "48fc2d38-929e-479c-bce5-9dedb0c085fa", 
+          "id": "2575d57d-e739-11e6-bf9b-e5db5a6ac747", 
+          "to_id": "b39e189d-3126-4e6e-8d84-e224c603eead", 
+          "weight": 50.0
+        }
+      ], 
+      "id": "48fc2d38-929e-479c-bce5-9dedb0c085fa", 
+      "leakage": 0.0, 
+      "max_amount": 0.0, 
+      "name": "Reduce water pollution through improved sewage and sanitation systems", 
+      "short_name": null
+    }
+  ]
+}

@@ -1436,13 +1436,13 @@ class CoreGameTests(DBTestCase):
 
 class DataLoadTests(DBTestCase):
 
-    def testLoadJsonFile(self):
-        json_file = open('examples/example-graph.json', 'r')
-        self.game.load_json(json_file)
-        self.assertEqual(61, db_session.query(Edge).count())
-        self.assertEqual(36, db_session.query(Node).count())
-        self.assertEqual(30, db_session.query(Policy).count())
-        self.assertEqual(6, db_session.query(Goal).count())
+    def testCreateNetwork(self):
+        json_file = open('examples/example-network.json', 'r')
+        self.game.create_network(json.load(json_file))
+        self.assertEqual(80, db_session.query(Edge).count())
+        self.assertEqual(44, db_session.query(Node).count())
+        self.assertEqual(37, db_session.query(Policy).count())
+        self.assertEqual(7, db_session.query(Goal).count())
 
     def testGetNetwork(self):
         p1 = self.game.create_player('Matt')
@@ -1473,25 +1473,6 @@ class DataLoadTests(DBTestCase):
         self.assertEqual(len(goals), 3)
 
         # todo: add more tests here
-
-    def testCreateNetwork(self):
-        data = json.load(open('examples/new-network.json', 'r'))
-
-        self.game.create_network(data)
-
-        self.assertEqual(80, db_session.query(Edge).count())
-        self.assertEqual(44, db_session.query(Node).count())
-        self.assertEqual(37, db_session.query(Policy).count())
-        self.assertEqual(7, db_session.query(Goal).count())
-
-    @unittest.skip("needs fixing after network re-jig")
-    def testCreateThenGetNetwork(self):
-        data = json.load(open('examples/new-network.json', 'r'))
-
-        self.game.create_network(data)
-        network = self.game.get_network()
-
-        self.assertEqual(data, network)
 
     def testGetWallets(self):
         self.add_20_goals_and_policies()
@@ -1676,7 +1657,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(response.json['goals']), 3)
 
     def testCreateNetwork(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/network/", data=json.dumps(data),
@@ -1691,7 +1672,7 @@ class RestAPITests(DBTestCase):
 
     @unittest.skip("needs fixing after network re-jig")
     def testCreateThenGetNetwork(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/network/", data=json.dumps(data),
@@ -1707,7 +1688,7 @@ class RestAPITests(DBTestCase):
         self.assertEqual(data, response.json)
 
     def testUpdateNetwork(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
 
         self.game.create_network(data)
 
@@ -1756,7 +1737,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(self.game.get_table(id).id, id)
 
     def testGetTableEmpty(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
         table = self.game.create_table('Table A')
@@ -1772,7 +1753,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(result['network']['links']), 80)
 
     def testGetTableWithOnePlayer(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
         random.seed(0)
@@ -1793,7 +1774,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(result['network']['links']), 2)
 
     def testGetTableWithTwoPlayers(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
         random.seed(0)
@@ -1817,7 +1798,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(len(result['network']['links']), 7)
 
     def testGetTableChecksum(self):
-        data = json.load(open('examples/new-network.json', 'r'))
+        data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
         random.seed(0)
@@ -2277,7 +2258,7 @@ class Utils(DBTestCase): # pragma: no cover
     
     def loadNet2(self):
         self.createDB()
-        f = open('new-network.json')
+        f = open('example-network.json')
         network = json.load(f)
         game = self.game
         nodes = {}
