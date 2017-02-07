@@ -25,7 +25,6 @@ def node_to_dict(node):
     data = {"id": node.id,
             "name": node.name,
             "short_name": node.short_name,
-            "group": int(node.group),
             "leakage": float("{:.2f}".format(node.leak)),
             "max_amount": float("{:.2f}".format(node.max_level)),
             "activation_amount": float("{:.2f}".format(node.activation)),
@@ -33,6 +32,8 @@ def node_to_dict(node):
             "balance": float("{:.2f}".format(node.balance)),
             "connections": connections
             }
+    if node.group is not None:
+        data["group"] = int(node.group)
     
     return data
 
