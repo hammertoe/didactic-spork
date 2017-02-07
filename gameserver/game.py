@@ -260,9 +260,7 @@ class Game:
                 joinedload('lower_edges.higher_node')).order_by(Policy.name).all()
         else:
             # preload goals and policies
-            junk1 = db_session.query(Goal).options(
-                joinedload('lower_edges')).order_by(Goal.name).all()
-            junk2 = db_session.query(Policy).options(
+            junk2 = db_session.query(Node).options(
                 joinedload('lower_edges')).all()
             nodes = set()
             for player in players:
