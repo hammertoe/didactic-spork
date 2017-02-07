@@ -139,10 +139,15 @@ def player_to_dict(player):
 
 @require_api_key
 def get_player(player_id):
-    player = game.get_player(player_id)
-    if not player:
-        return "Player not found", 404
-    return player_to_dict(player), 200
+    mkey = "{}-player".format(player_id)
+    data = memcache.get(mkey)
+    if data is None:
+        player = game.get_player(player_id)
+        if not player:
+            return "Player not found", 404
+        data = player_to_dict(player)
+        memcache.add(mkey, data, 3)
+    return data, 200
 
 
 @require_api_key
