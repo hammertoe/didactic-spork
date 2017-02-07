@@ -15,6 +15,8 @@ from gameserver.wallet_sqlalchemy import Wallet
 from gameserver.app import app, create_app
 from flask_testing import TestCase
 
+from gameserver.utils import fake_memcache as memcache
+
 db.app = app
 
 db_session = db.session
@@ -46,6 +48,11 @@ class UnitTests(unittest.TestCase):
 
         c3 = checksum('1', '2', 3.15, 'salt')
         self.assertNotEqual(c1, c3)
+
+    def testFakeMemcache(self):
+        memcache.add('foo', 'bar', 100)
+        res = memcache.get('foo')
+        self.assertEqual(res, None)
 
 class DBTestCase(TestCase):
 

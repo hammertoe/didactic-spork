@@ -6,6 +6,11 @@ from gameserver.database import db
 from gameserver.utils import node_to_dict
 from hashlib import sha1
 
+try:
+    from google.appengine.api import memcache
+except ImportError:
+    from gameserver.utils import fake_memcache as memcache
+
 db_session = db.session
 game = Game()
 
@@ -13,20 +18,28 @@ game = Game()
 def require_user_key(f, *args, **kw):
     key = request.headers.get('X-USER-KEY')
     player_id = request.view_args['player_id']
-    player = game.get_player(player_id)
-    if not player:
-        abort(404)
-    if not (key and player.token == key):
-        abort(401)
+    mkey = "{}-player-token".format(player_id)
+    token = memcache.get(mkey)
+    if token is None or token != key:
+        player = game.get_player(player_id)
+        if not player:
+            abort(404)
+        if not (key and player.token == key):
+            abort(401)
+        memcache.add(mkey, player.token, 3600)
 
     return f(*args, **kw)
 
 @decorator
 def require_api_key(f, *args, **kw):
     key = request.headers.get('X-API-KEY')
-    client_name = game.validate_api_key(key)
-    if not (key and client_name is not None):
-        abort(401)
+    mkey = "{}-client-key".format(key)
+    client_name = memcache.get(mkey)
+    if client_name is None:
+        client_name = game.validate_api_key(key)
+        if not (key and client_name is not None):
+            abort(401)
+        memcache.add(mkey, client_name, 3600)
 
     return f(*args, **kw)
 
@@ -38,20 +51,23 @@ def do_tick():
 
 @require_api_key
 def league_table():
-    res = []
-    top = game.top_players()
-    for t in top:
+    res = memcache.get('league_table')
+    if res is None:
+        res = []
+        top = game.top_players()
+        for t in top:
 
-        if not t.goal:
-            continue 
+            if not t.goal:
+                continue 
 
-        r = {'id': t.id,
-             'name': t.name,
-             'goal': t.goal.name,
-             'goal_contribution': "{:.2f}".format(t.goal_funded),
-             'goal_total': "{:.2f}".format(t.goal.balance),
-             }
-        res.append(r)
+            r = {'id': t.id,
+                 'name': t.name,
+                 'goal': t.goal.name,
+                 'goal_contribution': "{:.2f}".format(t.goal_funded),
+                 'goal_total': "{:.2f}".format(t.goal.balance),
+                 }
+            res.append(r)
+        memcache.add('league_table', res, 30)
 
     return dict(rows=res)
 
@@ -64,9 +80,12 @@ def create_network(network):
 
 @require_api_key
 def get_network():
-    network =  game.get_network()
-    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
-    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+    network =  memcache.get("network")
+    if network is None:
+        network =  game.get_network()
+        network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
+        network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+        memcache.add(key="network", value=network, time=3)
 
     return network, 200
 
@@ -256,11 +275,17 @@ def clear_table(id):
 
 @require_api_key
 def get_table(id):
-    table = game.get_table(id)
-    if not table:
-        return "Table not found", 404
+    mkey = "{}-table".format(id)
+    data = memcache.get(mkey)
+    if data is None:
+        table = game.get_table(id)
+        if not table:
+            return "Table not found", 404
 
-    return generate_table_data(table), 200
+        data = generate_table_data(table)
+        memcache.add(mkey, data, 3)
+
+    return data, 200
 
 def generate_table_data(table):
     name = table.name

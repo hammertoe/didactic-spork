@@ -58,3 +58,12 @@ def unpack_amount(value):
 def checksum(seller_id, policy_id, price, salt):
     input = "{}{}{}{}".format(seller_id, policy_id, pack_amount(price), salt)
     return hashlib.sha1(input).hexdigest()
+
+class FakeMemcache:
+    def add(self, *kw, **kwargs):
+        pass
+
+    def get(self, *kw, **kwargs):
+        return None
+
+fake_memcache = FakeMemcache()
