@@ -23,8 +23,11 @@ TICKINTERVAL = 3
 
 while 1:
     t1 = time()
-    game.tick()
-    db_session.commit()
+    try:
+        game.tick()
+        db_session.commit()
+    except:
+        print "Error!"
     t2 = time()
     duration = t2-t1
     print "tick! {:.2f}s".format(duration)
