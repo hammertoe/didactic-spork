@@ -82,7 +82,10 @@ class Game:
         return db_session.query(Player).all()
 
     def get_player(self, id):
-        return db_session.query(Player).filter(Player.id == id).one_or_none()
+        return db_session.query(Player).options(
+            joinedload('lower_edges'),
+            joinedload('goal'),
+            joinedload('lower_edges.higher_node')).filter(Player.id == id).one_or_none()
 
     def add_policy(self, name, leak=0):
         p = Policy(name, leak)
@@ -253,7 +256,8 @@ class Game:
             goals = db_session.query(Goal).options(
                 joinedload('lower_edges')).order_by(Goal.name).all()
             policies = db_session.query(Policy).options(
-                joinedload('lower_edges')).order_by(Policy.name).all()
+                joinedload('lower_edges'),
+                joinedload('lower_edges.higher_node')).order_by(Policy.name).all()
         else:
             # preload goals and policies
             junk1 = db_session.query(Goal).options(
