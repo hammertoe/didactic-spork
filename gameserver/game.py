@@ -296,7 +296,7 @@ class Game:
                 return "node id {id} name {name} not found in network".format(**node)
             update_node_from_dict(n, node)
 
-            for conn in node['connections']:
+            for conn in  node.get('connections', []):
                 links.append(conn)
 
         for link in links:
