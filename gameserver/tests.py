@@ -108,6 +108,20 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p.goal.name, 'G10')
         self.assertEqual([x.name for x in p.children()], ['P13', 'P5', 'P10', 'P9', 'P2'])
 
+    def testGameClearPlayers(self):
+        self.add_20_goals_and_policies()
+        random.seed(1)
+        p1 = self.game.create_player('Matt')
+        p2 = self.game.create_player('Simon')
+        self.assertEqual(db_session.query(Player).count(), 2)
+        self.assertEqual(db_session.query(Edge).count(), 10)
+
+        self.game.clear_players()
+        db_session.flush()
+        
+        self.assertEqual(db_session.query(Player).count(), 0)
+        self.assertEqual(db_session.query(Edge).count(), 0)        
+
     def testPlayerHasWallet(self):
 
         p = self.game.create_player('Matt')

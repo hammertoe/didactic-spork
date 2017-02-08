@@ -146,7 +146,11 @@ class Node(Base):
 
     @property
     def balance(self):
-        return self.wallet.total
+        wallet = self.wallet
+        if wallet is not None:
+            return wallet.total
+        else:
+            return 0.0
 
     @balance.setter
     def balance(self, amount):
@@ -154,13 +158,15 @@ class Node(Base):
 
     def do_leak(self):
         leak = self.get_leak()
-        balance = self.wallet.total
-        if balance and leak:
+        if self.balance and leak:
             self.wallet.leak(leak)
 
     @property
     def wallet_owner_map(self):
         return self.wallet.todict()
+
+    def reset(self):
+        self.wallet = Wallet()
 
     def do_propogate_funds(self, total_player_inflow):
         previous_balance = self.balance
@@ -175,7 +181,10 @@ class Node(Base):
             # if we are over out level then remove excess
             self.wallet -= new_balance - max_level
         # set the active level on the node
-        self.active_level = (new_balance - previous_balance) / total_player_inflow
+        if total_player_inflow > 0:
+            self.active_level = (new_balance - previous_balance) / total_player_inflow
+        else:
+            self.active_level = 1.0
         # check if we are active
         if self.active_level < self.activation:
             # not active so stop here

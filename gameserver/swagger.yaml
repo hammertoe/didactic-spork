@@ -36,6 +36,20 @@ paths:
           description: "Success"
       x-tags:
       - tag: "game"
+  /game/clear_players:
+    put:
+      security:
+      - APISecurity: []
+      tags:
+      - "game"
+      summary: "Causes all players to be cleared and balances on the network zeroed"
+      operationId: "gameserver.controllers.clear_players"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
   /game/league_table:
     get:
       security:

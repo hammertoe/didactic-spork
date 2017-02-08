@@ -43,9 +43,16 @@ def require_api_key(f, *args, **kw):
 
     return f(*args, **kw)
 
-#@require_api_key
+@require_api_key
 def do_tick():
     game.tick()
+    db_session.commit()
+    return None, 200
+
+@require_api_key
+def clear_players():
+    game.clear_players()
+
     db_session.commit()
     return None, 200
 

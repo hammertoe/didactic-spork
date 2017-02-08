@@ -66,6 +66,17 @@ class Game:
     def top_players(self, max_num=20):
         return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
 
+    def clear_players(self):
+        for player in self.get_players():
+            player.table = None
+            player.goal = None
+            for edge in player.lower_edges:
+                db_session.delete(edge)
+            db_session.delete(player)
+
+        for node in self.get_nodes():
+            node.reset()
+
     def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
