@@ -272,7 +272,8 @@ class Game:
         else:
             # preload goals and policies
             junk2 = db_session.query(Node).options(
-                joinedload('lower_edges')).all()
+                joinedload('lower_edges'),
+                joinedload('lower_edges.higher_node')).all()
             nodes = set()
             for player in players:
                 nodes.add(player)

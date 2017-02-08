@@ -6,6 +6,9 @@ from gameserver.database import db
 from gameserver.utils import node_to_dict
 from hashlib import sha1
 
+from gameserver.models import Player, Goal, Edge, Policy
+from sqlalchemy.orm import joinedload, noload
+
 try:
     from google.appengine.api import memcache
 except ImportError:
@@ -46,6 +49,12 @@ def require_api_key(f, *args, **kw):
 @require_api_key
 def do_tick():
     game.tick()
+
+    network =  game.get_network()
+    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
+    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+    memcache.add(key="network", value=network, time=120)
+
     db_session.commit()
     return None, 200
 
@@ -92,7 +101,7 @@ def get_network():
         network =  game.get_network()
         network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
         network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
-        memcache.add(key="network", value=network, time=3)
+        memcache.add(key="network", value=network, time=10)
 
     return network, 200
 
@@ -144,12 +153,14 @@ def player_to_dict(player):
                 table=player.table_id,
                 )
 
-@require_api_key
+#@require_api_key
 def get_player(player_id):
     mkey = "{}-player".format(player_id)
     data = memcache.get(mkey)
     if data is None:
-        player = game.get_player(player_id)
+        player = db_session.query(Player).filter(Player.id == player_id).options(
+            joinedload(Player.goal.of_type(Goal)),
+            joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
         if not player:
             return "Player not found", 404
         data = player_to_dict(player)

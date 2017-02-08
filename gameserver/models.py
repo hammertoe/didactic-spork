@@ -407,13 +407,14 @@ class Edge(Base):
         Node,
         primaryjoin=lower_id == Node.id,
         order_by='Node.id',
-        backref=backref('lower_edges', lazy='subquery'))
+        backref='lower_edges')
+#        backref=backref('lower_edges', lazy='subquery'))
 
     higher_node = relationship(
         Node,
         primaryjoin=higher_id == Node.id,
         order_by='Node.id',
-        lazy='joined',
+#        lazy='joined',
         backref='higher_edges')
 
     weight = Column(Float())
