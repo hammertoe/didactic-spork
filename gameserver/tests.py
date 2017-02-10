@@ -1742,6 +1742,8 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response2.status_code, 200)
         d = { x['id']: x for x in response2.json['goals'] }
         self.assertEqual(d[id_]['short_name'], 'new short name')
+        # remove generation time
+        del expected['generated']
         self.assertEqual(sorted(expected), sorted(response2.json))
 
     def testCreateTable(self):
