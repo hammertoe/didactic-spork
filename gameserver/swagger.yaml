@@ -22,6 +22,18 @@ consumes:
 produces:
 - "application/json"
 paths:
+  /game/app_version:
+    get:
+      tags:
+      - "game"
+      summary: "Get the app version"
+      operationId: "gameserver.controllers.app_version"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
   /game/tick:
     put:
       security:

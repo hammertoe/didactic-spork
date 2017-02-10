@@ -17,6 +17,9 @@ except ImportError:
 db_session = db.session
 game = Game()
 
+def app_version():
+    return dict(version="0.13")
+
 @decorator
 def require_user_key(f, *args, **kw):
     key = request.headers.get('X-USER-KEY')
