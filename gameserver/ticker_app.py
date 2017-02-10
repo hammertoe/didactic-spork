@@ -1,16 +1,23 @@
 import logging.config
 import os
-from time import sleep
+from time import sleep, time
 
 from google.appengine.ext import deferred
+from google.appengine.api import memcache
 
 from flask import Flask, Blueprint, request
 
 from gameserver.database import db
-
 from gameserver import settings
+from gameserver.game import Game
+
+from gameserver.controllers import _do_tick, _league_table
 
 log = logging.getLogger(__name__)
+db_session = db.session
+game = Game()
+
+TICKINTERVAL = 3
 
 def configure_app(flask_app):
     flask_app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', settings.SQLALCHEMY_DATABASE_URI)
@@ -20,11 +27,11 @@ def configure_app(flask_app):
     flask_app.config['RESTPLUS_MASK_SWAGGER'] = settings.RESTPLUS_MASK_SWAGGER
     flask_app.config['ERROR_404_HELP'] = settings.RESTPLUS_ERROR_404_HELP
     flask_app.config['DEBUG'] = True
-    flask_app.config['SQLALCHEMY_ECHO'] = True
+    flask_app.config['SQLALCHEMY_ECHO'] = False
 
 def initialize_app(flask_app):
     configure_app(flask_app)
-
+    db.app = flask_app
     db.init_app(flask_app)
     with flask_app.app_context():
         import models
@@ -42,10 +49,27 @@ def start():
     log.info('Ticker instance started')
     return tick()
 
+@app.route('/tick')
 def tick():
-    log.info('Tick!')
-    deferred.defer(tick, _countdown=3)
-    return "tick!", 200
+    t1 = time()
+    try:
+        # tick the game
+        _do_tick()
+        # pre-cache the new league table
+        _league_table()
+        # commit result
+        db_session.commit()
+    except:
+        log.error("Error")
+        raise
+    t2 = time()
+    duration = t2-t1
+    log.info('Tick! {:.2f}s'.format(duration))
+    interval = TICKINTERVAL - duration
+    interval = max(0, interval)
+
+    deferred.defer(tick, _countdown=interval)
+    return 'Tick! {:.2f}s'.format(duration), 200
 
 def main(): # pragma: no cover
     app = create_app()
