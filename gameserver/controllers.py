@@ -5,6 +5,7 @@ from gameserver.game import Game
 from gameserver.database import db
 from gameserver.utils import node_to_dict
 from hashlib import sha1
+from time import asctime
 
 from gameserver.models import Player, Goal, Edge, Policy
 from sqlalchemy.orm import joinedload, noload
@@ -51,12 +52,16 @@ def require_api_key(f, *args, **kw):
 
 @require_api_key
 def do_tick():
+    return _do_tick()
+
+def _do_tick():
     game.tick()
 
     network =  game.get_network()
     network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
     network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
-    memcache.add(key="network", value=network, time=120)
+    network['generated'] = asctime()
+    memcache.set(key="network", value=network, time=120)
 
     db_session.commit()
     return None, 200
@@ -70,6 +75,9 @@ def clear_players():
 
 @require_api_key
 def league_table():
+    return _league_table()
+
+def _league_table():
     res = memcache.get('league_table')
     if res is None:
         res = []
@@ -86,7 +94,7 @@ def league_table():
                  'goal_total': "{:.2f}".format(t.goal.balance),
                  }
             res.append(r)
-        memcache.add('league_table', res, 30)
+        memcache.set('league_table', res, 30)
 
     return dict(rows=res)
 
@@ -104,9 +112,10 @@ def get_network():
         network =  game.get_network()
         network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
         network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
-        memcache.add(key="network", value=network, time=10)
+        network['generated'] = asctime()
+        return network, 200, {'x-cache': 'miss'}
 
-    return network, 200
+    return network, 200, {'x-cache': 'hit'}
 
 @require_api_key
 def update_network(network):
