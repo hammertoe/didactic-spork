@@ -66,4 +66,7 @@ class FakeMemcache:
     def get(self, *kw, **kwargs):
         return None
 
+    def set(self, *kw, **kwargs):
+        return None
+
 fake_memcache = FakeMemcache()
