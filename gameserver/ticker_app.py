@@ -3,6 +3,7 @@ import os
 from time import sleep
 
 from google.appengine.ext import deferred
+from google.appengine.api import taskqueue
 
 from flask import Flask, Blueprint, request
 
@@ -40,6 +41,28 @@ app = create_app()
 @app.route('/_ah/start')
 def start():
     log.info('Ticker instance started')
+    q = taskqueue.Queue('pullq')
+    while True:
+        try:
+            tasks = q.lease_tasks_by_tag(600, 100, deadline=60)
+        except (taskqueue.TransientError,
+                apiproxy_errors.DeadlineExceededError) as e:
+            logging.exception(e)
+            time.sleep(1)
+            continue
+        if tasks:
+            key = tasks[0].tag
+
+            import pdb; pdb.set_trace()
+
+            try:
+                update_counter()
+            except Exception as e:
+                logging.exception(e)
+            else:
+                q.delete_tasks(tasks)
+        time.sleep(0.5)
+
     return tick()
 
 def tick():

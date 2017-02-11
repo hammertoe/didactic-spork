@@ -9,6 +9,8 @@ from hashlib import sha1
 from gameserver.models import Player, Goal, Edge, Policy
 from sqlalchemy.orm import joinedload, noload
 
+from google.appengine.api import taskqueue
+
 try:
     from google.appengine.api import memcache
 except ImportError:
@@ -16,6 +18,24 @@ except ImportError:
 
 db_session = db.session
 game = Game()
+
+@decorator
+def cached_precalc(f, *args, **kw):
+    cache_key = request.path
+    res = memcache.get(cache_key)
+    if res:
+        return res
+
+    res = f(*args, **kw)
+    memcache.set(cache_key, res, 60)
+    return res
+
+@decorator
+def precache(f, *args, **kw):
+    cache_key = request.path
+    res = f(*args, **kw)
+    memcache.set(cache_key, res, 60)
+    return res
 
 @decorator
 def require_user_key(f, *args, **kw):
@@ -154,17 +174,14 @@ def player_to_dict(player):
                 )
 
 #@require_api_key
+@cached_precalc
 def get_player(player_id):
-    mkey = "{}-player".format(player_id)
-    data = memcache.get(mkey)
-    if data is None:
-        player = db_session.query(Player).filter(Player.id == player_id).options(
-            joinedload(Player.goal.of_type(Goal)),
-            joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
-        if not player:
-            return "Player not found", 404
-        data = player_to_dict(player)
-        memcache.add(mkey, data, 3)
+    player = db_session.query(Player).filter(Player.id == player_id).options(
+        joinedload(Player.goal.of_type(Goal)),
+        joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
+    if not player:
+        return "Player not found", 404
+    data = player_to_dict(player)
     return data, 200
 
 
