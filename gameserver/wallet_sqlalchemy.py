@@ -1,4 +1,5 @@
 import sqlalchemy.types as types
+from copy import deepcopy
 from gameserver.wallet import Wallet as BaseWallet
 from sqlalchemy.ext.mutable import Mutable
 from uuid import uuid4, UUID
@@ -33,7 +34,9 @@ class Wallet(Mutable, BaseWallet):
     @classmethod
     def coerce(cls, key, value):
         if not isinstance(value, cls):
-            return cls(value.items())
+            w = cls()
+            w.__dict__ = value.__dict__
+            return w
         else:
             return value
 
