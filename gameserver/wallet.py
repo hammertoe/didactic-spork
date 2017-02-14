@@ -157,13 +157,15 @@ class Wallet:
         if not isinstance(other, self.__class__):
             raise ValueError
 
-        a = self.todict()
-        b = other.todict()
+        a = self._entries
+        b = other._entries
         new_wallet = Wallet()
 
-        keys = set.union(set(a), set(b))
-        for key in keys:
-            new_wallet.add(key, a.get(key, 0.0) + b.get(key, 0.0))
+        nwa = new_wallet._add
+        aget = a.get
+        bget = b.get
+        for key in set(a) | set(b):
+            nwa(key, aget(key, 0.0) + bget(key, 0.0))
 
         return new_wallet
 

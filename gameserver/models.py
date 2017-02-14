@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, CHAR, create_engine, event, Table as SATable, inspect
+    Float, CHAR, DateTime, create_engine, event, Table as SATable, inspect
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -21,8 +21,12 @@ ledger = SATable("ledger", db.metadata,
                  Column("node_id", CHAR(36), primary_key=True),
                  Column("wallet", WalletType),
                  )    
+settings = SATable("settings", db.metadata,
+                   Column("next_budget", DateTime),
+                   Column("budget_per_cycle", Float),
+                   )
 
-@event.listens_for(SignallingSession, 'before_flush')
+#@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
     # Only do this on MySQL
     if session.connection().engine.dialect.name != 'mysql':
@@ -388,7 +392,6 @@ class Player(Node):
         self.fund(policy, 0.0)
 
         return True
-
 
 
 class Edge(Base):

@@ -3,10 +3,11 @@ from flask import request, abort
 
 from gameserver.game import Game
 from gameserver.database import db
-from gameserver.utils import node_to_dict
+from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict
 from hashlib import sha1
+from time import asctime
 
-from gameserver.models import Player, Goal, Edge, Policy
+from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
 
 try:
@@ -16,6 +17,20 @@ except ImportError:
 
 db_session = db.session
 game = Game()
+
+def app_version():
+    return dict(version="0.13")
+
+@decorator
+def cached(f, *args, **kw):
+    cache_key = request.path
+    res = memcache.get(cache_key)
+    if res:
+        return res
+
+    res = f(*args, **kw)
+    memcache.set(cache_key, res, 60)
+    return res
 
 @decorator
 def require_user_key(f, *args, **kw):
@@ -48,15 +63,81 @@ def require_api_key(f, *args, **kw):
 
 @require_api_key
 def do_tick():
-    game.tick()
-
-    network =  game.get_network()
-    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
-    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
-    memcache.add(key="network", value=network, time=120)
-
+    _do_tick()
     db_session.commit()
     return None, 200
+
+def _do_tick():
+    to_cache = {}
+    network = {'goals': [],
+               'policies': []}
+    players = []
+    player_dicts = []
+    tables = game.get_tables()
+    # tick the game and get the resultant nodes
+    game_nodes = game.tick()
+    for node in game_nodes:
+        # cache each node, incl players
+        key = "/v1/network/{}".format(node.id)
+        if isinstance(node, Goal):
+            d = node_to_dict(node)
+            network['goals'].append(d)
+        elif isinstance(node, Policy):
+            d = node_to_dict(node)
+            network['policies'].append(d)
+        elif isinstance(node, Player):
+            key = "/v1/players/{}".format(node.id)
+            players.append(node)
+            d = player_to_dict(node)
+            player_dicts.append(player_to_league_dict(node))
+            node.network = game.get_network_for_player(node)
+        to_cache[key] = (d, 200, {'x-cache':'hit'})
+    # cache the network
+    network['generated'] = asctime()
+    to_cache['/v1/network/'] = (network, 200, {'x-cache':'hit'})
+    # calculate new league table
+    player_dicts.sort(key=lambda x: ['goal_contribution'], reverse=True)
+    league_table = dict(rows=player_dicts[:50])
+    to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
+
+    # calculate the new player tables
+    for table in tables:
+        players = table.players
+        if players:
+            # there are players on the table so collect the nodes and edges
+            # from all players
+            nodes = set()
+            edges = set()
+            for player in players:
+                nodes.update(player.network['nodes'])
+                edges.update(player.network['edges'])
+        else:
+            # get all game nodes that are Policies or Goals
+            nodes = [ n for n in game_nodes if isinstance(n, Policy) or isinstance(n, Goal) ]
+            # get all the edges from those nodes
+            edges = [ n.lower_edges for n in nodes ]
+            # flatten the list of edges
+            edges = [item for sublist in edges for item in sublist]
+
+        # convert the lists into lists of dicts for json
+        nlist = [ node_to_dict2(n) for n in nodes ]
+        elist = [ edge_to_dict(e) for e in edges ]
+        plist = [ player_to_dict(p) for p in table.players ]
+
+        # constuct the final object
+        data = dict(id=table.id,
+                    name=table.name,
+                    players=plist,
+                    network={'nodes': nlist, 'links': elist},
+                    layout_checksum=edges_to_checksum(elist),
+                    )
+
+        # put it in the cache
+        key = "/v1/tables/{}".format(table.id)
+        to_cache[key] = (data, 200, {'x-cache':'hit'}) 
+
+    # send everything to the cache
+    memcache.set_multi(to_cache, time=60)
 
 @require_api_key
 def clear_players():
@@ -66,24 +147,26 @@ def clear_players():
     return None, 200
 
 @require_api_key
+@cached
 def league_table():
-    res = memcache.get('league_table')
-    if res is None:
-        res = []
-        top = game.top_players()
-        for t in top:
+    res = _league_table()
+    return res, 200
 
-            if not t.goal:
-                continue 
+def _league_table():
+    res = []
+    top = game.top_players()
+    for t in top:
+        
+        if not t.goal:
+            continue 
 
-            r = {'id': t.id,
-                 'name': t.name,
-                 'goal': t.goal.name,
-                 'goal_contribution': "{:.2f}".format(t.goal_funded),
-                 'goal_total': "{:.2f}".format(t.goal.balance),
-                 }
-            res.append(r)
-        memcache.add('league_table', res, 30)
+        r = {'id': t.id,
+             'name': t.name,
+             'goal': t.goal.name,
+             'goal_contribution': "{:.2f}".format(t.goal_funded),
+             'goal_total': "{:.2f}".format(t.goal.balance),
+             }
+        res.append(r)
 
     return dict(rows=res)
 
@@ -95,14 +178,12 @@ def create_network(network):
     return None, 201
 
 @require_api_key
+@cached
 def get_network():
-    network =  memcache.get("network")
-    if network is None:
-        network =  game.get_network()
-        network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
-        network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
-        memcache.add(key="network", value=network, time=10)
-
+    network =  game.get_network()
+    network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
+    network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
+    network['generated'] = asctime()
     return network, 200
 
 @require_api_key
@@ -136,35 +217,15 @@ def get_wallets(id):
 
     return res, 200
     
-def player_to_dict(player):
-    if player.goal:
-        goal = dict(id=player.goal.id,
-                    name=player.goal.name)
-    else:
-        goal = None
-
-    policies = [dict(id=x.id, name=x.name) for x in player.children()]
-
-    return dict(id=player.id,
-                name=player.name,
-                balance=player.balance,
-                goal=goal,
-                policies=policies,
-                table=player.table_id,
-                )
-
-#@require_api_key
+@require_api_key
+@cached
 def get_player(player_id):
-    mkey = "{}-player".format(player_id)
-    data = memcache.get(mkey)
-    if data is None:
-        player = db_session.query(Player).filter(Player.id == player_id).options(
-            joinedload(Player.goal.of_type(Goal)),
-            joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
-        if not player:
-            return "Player not found", 404
-        data = player_to_dict(player)
-        memcache.add(mkey, data, 3)
+    player = db_session.query(Player).filter(Player.id == player_id).options(
+        joinedload(Player.goal.of_type(Goal)),
+        joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
+    if not player:
+        return "Player not found", 404
+    data = player_to_dict(player)
     return data, 200
 
 
@@ -279,6 +340,20 @@ def buy_policy(player_id, offer):
         return str(e), 400
    
 @require_api_key
+@require_user_key
+def claim_budget(player_id):
+    try:
+        player = game.get_player(player_id)
+        if player is None:
+            return "Player not found", 404
+        player.balance = player.unclaimed_budget
+        player.unclaimed_budget = 0
+        db_session.commit()
+        return "budget claimed", 200
+    except ValueError, e:
+        return str(e), 400
+
+@require_api_key
 def create_table(table = None):
     table = game.create_table(table['name'])
     db_session.commit()
@@ -297,17 +372,13 @@ def clear_table(id):
     return "table cleared", 200
 
 @require_api_key
+@cached
 def get_table(id):
-    mkey = "{}-table".format(id)
-    data = memcache.get(mkey)
-    if data is None:
-        table = game.get_table(id)
-        if not table:
-            return "Table not found", 404
+    table = game.get_table(id)
+    if not table:
+        return "Table not found", 404
 
-        data = generate_table_data(table)
-        memcache.add(mkey, data, 3)
-
+    data = generate_table_data(table)
     return data, 200
 
 def generate_table_data(table):
@@ -324,35 +395,17 @@ def generate_table_data(table):
                        'group': 8,
                        'resources': "{:.2f}".format(n.balance),
                        }
-        for l in n.lower_edges:
-            links.append({'source': n.id,
-                          'target': l.higher_node.id,
-                          'weight': float("{:.2f}".format(l.weight)),
-                          })
-    for n in network['policies']:
-        nodes[n.id] = {'id': n.id,
-                       'name': n.name,
-                       'group': 9,
-                       'active': n.active and True or False,
-                       'active_level': "{:.2f}".format(n.active_level),
-                       'active_percent': "{:.2f}".format(n.active_percent),
-                       'resources': "{:.2f}".format(n.balance),
-                       }
-        for l in n.lower_edges:
-            links.append({'source': n.id,
-                          'target': l.higher_node.id,
-                          'weight': float("{:.2f}".format(l.weight)),
-                          })
+        links.extend([edge_to_dict(e) for e in n.lower_edges])
 
-    for i,n in enumerate(network['goals'], start=1):
-        nodes[n.id] = {'id': n.id,
-                       'name': n.name,
-                       'group': i,
-                       'active': n.active and True or False,
-                       'active_level': "{:.2f}".format(n.active_level),
-                       'active_percent': "{:.2f}".format(n.active_percent),
-                       'resources': "{:.2f}".format(n.balance),
-                       }
+    for n in network['policies']:
+        data = node_to_dict2(n)
+        data['group'] = 9
+        nodes[n.id] = data
+        links.extend([edge_to_dict(e) for e in n.lower_edges])
+
+    for n in network['goals']:
+        data = node_to_dict2(n)
+        nodes[n.id] = data
 
     links = [ l for l in links 
               if l['source'] in nodes
@@ -362,16 +415,11 @@ def generate_table_data(table):
     network =  {'nodes': nodes.values(), 'links': links}
     players_dict = [ player_to_dict(p) for p in players ]
 
-    checksum = sha1()
-    for link in sorted(links, key=lambda x: x['source']):
-        checksum.update(link['source'])
-        checksum.update(link['target'])
-
     return dict(id=table.id,
                 name=name,
                 players=players_dict,
                 network=network,
-                layout_checksum=checksum.hexdigest(),
+                layout_checksum=edges_to_checksum(links),
                 )
 
 @require_api_key

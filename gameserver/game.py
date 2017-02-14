@@ -28,9 +28,7 @@ class Game:
             node.rank = node.calc_rank()
 
     def get_nodes(self):
-        # preload players
-        junk = db_session.query(Player).all()
-        return db_session.query(Node).options(
+        return db_session.query(Node).with_polymorphic("*").options(
             joinedload('higher_edges'),
             joinedload('lower_edges')).order_by(Node.rank).all()
     
@@ -55,6 +53,7 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
+        res = []
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
@@ -62,6 +61,8 @@ class Game:
         for node in self.get_nodes():
             node.do_leak()
             node.do_propogate_funds(total_players_inflow)
+            res.append(node)
+        return res
 
     def top_players(self, max_num=20):
         return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
@@ -254,6 +255,35 @@ class Game:
             l.id = i
 
         self.rank_nodes()
+
+    def get_network_for_player(self, player):
+
+        def get_breadth_first_nodes(root):
+            nodes = set()
+            edges = set()
+            stack = [root]
+            while stack:
+                cur_node = stack[0]
+                stack = stack[1:]
+                nodes.add(cur_node)
+                edges.update(cur_node.lower_edges)
+                for child in cur_node.children():
+                    stack.append(child)
+            return nodes, edges
+
+        edges = set()
+        nodes = set()
+        for edge in player.lower_edges:
+            if edge.weight:
+                edges.add(edge)
+                n,e = get_breadth_first_nodes(edge.higher_node)
+                nodes.update(n)
+                edges.update(e)
+
+        nodes.add(player.goal)
+        nodes.add(player)
+        return dict(nodes=list(nodes), edges=list(edges))
+
 
     def get_network(self, players=None):
 
