@@ -256,6 +256,35 @@ class Game:
 
         self.rank_nodes()
 
+    def get_network_for_player(self, player):
+
+        def get_breadth_first_nodes(root):
+            nodes = set()
+            edges = set()
+            stack = [root]
+            while stack:
+                cur_node = stack[0]
+                stack = stack[1:]
+                nodes.add(cur_node)
+                edges.update(cur_node.lower_edges)
+                for child in cur_node.children():
+                    stack.append(child)
+            return nodes, edges
+
+        edges = set()
+        nodes = set()
+        for edge in player.lower_edges:
+            if edge.weight:
+                edges.add(edge)
+                n,e = get_breadth_first_nodes(edge.higher_node)
+                nodes.update(n)
+                edges.update(e)
+
+        nodes.add(player.goal)
+        nodes.add(player)
+        return dict(nodes=list(nodes), edges=list(edges))
+
+
     def get_network(self, players=None):
 
         def node_recurse_generator(node):
