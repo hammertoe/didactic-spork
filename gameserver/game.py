@@ -53,6 +53,7 @@ class Game:
             player.balance = self.money_per_budget_cycle
 
     def tick(self):
+        res = []
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
@@ -60,6 +61,8 @@ class Game:
         for node in self.get_nodes():
             node.do_leak()
             node.do_propogate_funds(total_players_inflow)
+            res.append(node)
+        return res
 
     def top_players(self, max_num=20):
         return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
