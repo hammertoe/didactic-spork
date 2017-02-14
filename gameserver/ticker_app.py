@@ -55,13 +55,10 @@ def tick():
     try:
         # tick the game
         _do_tick()
-        # pre-cache the new league table
-        _league_table()
-        # commit result
-        db_session.commit()
     except:
         log.error("Error")
         raise
+    db_session.commit()
     t2 = time()
     duration = t2-t1
     log.info('Tick! {:.2f}s'.format(duration))
