@@ -36,7 +36,7 @@ def player_to_dict(player):
                 unclaimed_budget=player.unclaimed_budget or 0.0,
                 goal=goal,
                 goal_contribution='{:.2f}'.format(player.goal_funded),
-                goal_total='{:.2f}'.format(player.goal.balance),
+                goal_total='{:.2f}'.format(player.goal.balance if player.goal else 0),
                 policies=policies,
                 table=player.table_id,
                 )
