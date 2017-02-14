@@ -28,9 +28,7 @@ class Game:
             node.rank = node.calc_rank()
 
     def get_nodes(self):
-        # preload players
-        junk = db_session.query(Player).all()
-        return db_session.query(Node).options(
+        return db_session.query(Node).with_polymorphic("*").options(
             joinedload('higher_edges'),
             joinedload('lower_edges')).order_by(Node.rank).all()
     
