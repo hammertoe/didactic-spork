@@ -291,6 +291,20 @@ def buy_policy(player_id, offer):
         return str(e), 400
    
 @require_api_key
+@require_user_key
+def claim_budget(player_id):
+    try:
+        player = game.get_player(player_id)
+        if player is None:
+            return "Player not found", 404
+        player.balance = player.unclaimed_budget
+        player.unclaimed_budget = 0
+        db_session.commit()
+        return "budget claimed", 200
+    except ValueError, e:
+        return str(e), 400
+
+@require_api_key
 def create_table(table = None):
     table = game.create_table(table['name'])
     db_session.commit()

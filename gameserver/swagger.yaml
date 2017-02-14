@@ -318,6 +318,30 @@ paths:
           description: "Player not found"
       x-tags:
       - tag: "players"
+  /players/{player_id}/claim_budget:
+    put:
+      security:
+      - UserSecurity: []
+      - APISecurity: []
+      tags:
+      - "players"
+      summary: "Claims the budget that has been allocated for a player"
+      operationId: "gameserver.controllers.claim_budget"
+      parameters:
+      - name: "player_id"
+        in: "path"
+        description: "The player id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+        401:
+          description: "Unauthorised"
+        404:
+          description: "Player not found"
+      x-tags:
+      - tag: "players"
   /players/{player_id}/table/{table_id}:
     put:
       security:
