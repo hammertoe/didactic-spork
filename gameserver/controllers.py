@@ -235,6 +235,9 @@ def create_player(player=None):
     Creates a new game player.
     """
     if player:
+        game_id = player.get('game_id')
+        if game_id != 'Global Festival of Ideas for Sustainable Development':
+            return "Game not found", 404
         player = game.create_player(player['name'])
         db_session.commit()
         d = player_to_dict(player)
