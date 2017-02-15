@@ -14,11 +14,24 @@ class WalletType(types.TypeDecorator):
 
     impl = types.LargeBinary
 
+    def bind_processor(self, dialect):
+        if dialect.dbapi is None:
+            return None
+
+        def process(value):
+            if value is not None:
+                return self.process_bind_param(value, dialect)
+            else:
+                return None
+
+        return process
+
+
     def process_bind_param(self, value, dialect):
         if value is not None:
             value = value.dumps()
 
-        return value
+        return bytearray(value)
 
     def process_result_value(self, value, dialect):
         w = Wallet()
