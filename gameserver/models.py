@@ -304,6 +304,7 @@ class Player(Node):
         self.unclaimed_budget = 0.0
         self.token = default_uuid()
         self.wallet = Wallet()
+        self.group = 8
 
     def transfer_funds_to_node(self, node, amount):
         self.wallet.transfer(node.wallet, amount)
