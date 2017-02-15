@@ -1577,8 +1577,22 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/nobody", headers=headers)
         self.assertEquals(response.status_code, 404)
 
-    def testCreateNewPlayer(self):
+    def testCreateNewPlayerBadGameId(self):
         data = dict(name='Matt')
+
+        num1 = db_session.query(Player).count()
+
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.post("/v1/players/", data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 404)
+
+        num2 = db_session.query(Player).count()
+        self.assertEqual(num1, num2)
+
+    def testCreateNewPlayer(self):
+        data = dict(name='Matt', game_id='Global Festival of Ideas for Sustainable Development')
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
