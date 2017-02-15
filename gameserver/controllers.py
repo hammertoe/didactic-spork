@@ -73,7 +73,6 @@ def _do_tick():
                'policies': []}
     players = []
     player_dicts = []
-    tables = game.get_tables()
     # tick the game and get the resultant nodes
     game_nodes = game.tick()
     for node in game_nodes:
@@ -101,6 +100,7 @@ def _do_tick():
     to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
 
     # calculate the new player tables
+    tables = game.get_tables()
     for table in tables:
         players = table.players
         if players:
