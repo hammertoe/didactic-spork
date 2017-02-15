@@ -21,10 +21,12 @@ ledger = SATable("ledger", db.metadata,
                  Column("node_id", CHAR(36), primary_key=True),
                  Column("wallet", WalletType),
                  )    
-settings = SATable("settings", db.metadata,
-                   Column("next_budget", DateTime),
-                   Column("budget_per_cycle", Float),
-                   )
+#settings = SATable("settings", db.metadata,
+#                   Column("next_budget", DateTime),
+#                   Column("budget_per_cycle", Float),
+#                   Column("game_id", String),
+#                   )
+
 
 #@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
