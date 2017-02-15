@@ -55,6 +55,8 @@ def node_to_dict2(node):
             "max_amount": float("{:.2f}".format(node.max_level or 0)),
             "activation_amount": float("{:.2f}".format(node.activation or 0)),
             "active_level": float("{:.2f}".format(node.active_level)),
+            "active": node.active and True or False,
+            "active_percent": node.active_percent,
             "balance": float("{:.2f}".format(node.balance)),
             "resources": float("{:.2f}".format(node.balance)),
             }
