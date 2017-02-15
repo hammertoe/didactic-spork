@@ -244,7 +244,7 @@ def create_player(player=None):
         d['token'] = player.token
         return d, 201
     else:
-        return 500
+        return "error", 500
 
 @require_api_key
 @require_user_key
