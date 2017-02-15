@@ -18,9 +18,14 @@ class WalletType(types.TypeDecorator):
         if dialect.dbapi is None:
             return None
 
+        if dialect and dialect.name == 'mysql':
+            DBAPIBinary = bytearray
+        else:
+            DBAPIBinary = dialect.dbapi.Binary
+
         def process(value):
             if value is not None:
-                return self.process_bind_param(value, dialect)
+                return DBAPIBinary(self.process_bind_param(value, dialect))
             else:
                 return None
 
@@ -31,7 +36,7 @@ class WalletType(types.TypeDecorator):
         if value is not None:
             value = value.dumps()
 
-        return bytearray(value)
+        return value
 
     def process_result_value(self, value, dialect):
         w = Wallet()

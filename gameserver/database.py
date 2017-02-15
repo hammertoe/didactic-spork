@@ -25,6 +25,10 @@ def str_encoder(s, dummy=None):
 
 @event.listens_for(Pool, 'connect')
 def set_encoders(dbapi_conn, conn_record):
-    dbapi_conn.encoders[bytes] = bytes_encoder
-    dbapi_conn.encoders[bytearray] = bytes_encoder
-    dbapi_conn.encoders[str] = str_encoder
+    try:
+        dbapi_conn.encoders[bytes] = bytes_encoder
+        dbapi_conn.encoders[bytearray] = bytes_encoder
+        dbapi_conn.encoders[str] = str_encoder
+    except AttributeError:
+        # sqlite doesn't allow this, and not needed so just pass silently
+        pass
