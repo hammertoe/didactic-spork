@@ -1495,6 +1495,21 @@ class DataLoadTests(DBTestCase):
 
         # todo: add more tests here
 
+    def testClearNetwork(self):
+        json_file = open('examples/example-network.json', 'r')
+        self.game.create_network(json.load(json_file))
+        self.assertEqual(80, db_session.query(Edge).count())
+        self.assertEqual(44, db_session.query(Node).count())
+        self.assertEqual(37, db_session.query(Policy).count())
+        self.assertEqual(7, db_session.query(Goal).count())
+
+        self.game.clear_network()
+        self.assertEqual(0, db_session.query(Edge).count())
+        self.assertEqual(0, db_session.query(Node).count())
+        self.assertEqual(0, db_session.query(Policy).count())
+        self.assertEqual(0, db_session.query(Goal).count())
+
+
     def testGetWallets(self):
         self.add_20_goals_and_policies()
 

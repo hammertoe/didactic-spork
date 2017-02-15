@@ -78,6 +78,23 @@ class Game:
         for node in self.get_nodes():
             node.reset()
 
+    def clear_network(self):
+        for player in self.get_players():
+            player.goal = None
+            for edge in player.lower_edges:
+                db_session.delete(edge)
+
+        for edge in db_session.query(Edge).all():
+            edge.higher_node = None
+            edge.lower_node = None
+            db_session.delete(edge)
+
+        for goal in db_session.query(Goal).all():
+            db_session.delete(goal)
+
+        for policy in db_session.query(Policy).all():
+            db_session.delete(policy)
+
     def create_player(self, name):
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
