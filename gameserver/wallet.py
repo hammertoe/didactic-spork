@@ -88,6 +88,9 @@ class Wallet:
         if amount > self.total:
             raise ValueError, "Transfer amount too high"
 
+        if not self.total:
+            return
+
         ratio = amount / self.total
         amounts = {}
 
