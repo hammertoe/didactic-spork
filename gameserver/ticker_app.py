@@ -55,10 +55,10 @@ def tick():
     try:
         # tick the game
         _do_tick()
-    except:
-        log.error("Error")
-        raise
-    db_session.commit()
+        db_session.commit()
+    except Exception as e:
+        log.exception("Error ticking")
+        db_session.rollback()
     t2 = time()
     duration = t2-t1
     log.info('Tick! {:.2f}s'.format(duration))
