@@ -34,6 +34,18 @@ paths:
           description: "Success"
       x-tags:
       - tag: "game"
+  /game:
+    get:
+      tags:
+      - "game"
+      summary: "Get the game metadata"
+      operationId: "gameserver.controllers.get_metadata"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
   /game/tick:
     put:
       security:

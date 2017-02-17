@@ -10,6 +10,8 @@ from time import asctime
 from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
 
+from datetime import datetime, timedelta
+
 try:
     from google.appengine.api import memcache
 except ImportError:
@@ -18,8 +20,10 @@ except ImportError:
 db_session = db.session
 game = Game()
 
+APP_VERSION = "0.13"
+
 def app_version():
-    return dict(version="0.13")
+    return dict(version=APP_VERSION)
 
 @decorator
 def cached(f, *args, **kw):
@@ -172,19 +176,23 @@ def _league_table():
 
 @require_api_key
 def create_network(network):
+    game.clear_network()
     game.create_network(network)
 
     db_session.commit()
-    return None, 201
+    return _get_network(), 201
 
 @require_api_key
 @cached
 def get_network():
+    return _get_network(), 200
+
+def _get_network():
     network =  game.get_network()
     network['goals'] = [ node_to_dict(g) for g in network['goals'] ]
     network['policies'] = [ node_to_dict(p) for p in network['policies'] ]
     network['generated'] = asctime()
-    return network, 200
+    return network
 
 @require_api_key
 def update_network(network):
@@ -429,3 +437,14 @@ def generate_table_data(table):
 def get_tables():
     tables = game.get_tables()
     return [ dict(id=t.id,name=t.name) for t in tables ], 200
+
+@require_api_key
+def get_metadata():
+    start = datetime(2017, 02, 17, 11,40)
+    td = timedelta(hours=2)
+    return {'game_year': start.year,
+            'game_year_start': start,
+            'next_game_year': start.year+1,
+            'next_game_year_start': start+td,
+            'version': APP_VERSION,
+            }
