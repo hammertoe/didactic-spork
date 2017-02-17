@@ -99,7 +99,7 @@ def _do_tick():
     network['generated'] = asctime()
     to_cache['/v1/network/'] = (network, 200, {'x-cache':'hit'})
     # calculate new league table
-    player_dicts.sort(key=lambda x: ['goal_contribution'], reverse=True)
+    player_dicts.sort(key=lambda x: x['goal_contribution'], reverse=True)
     league_table = dict(rows=player_dicts[:50])
     to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
 

@@ -17,8 +17,8 @@ def player_to_league_dict(player):
             'goal': player.goal.name if player.goal else None,
             'goal_id': player.goal.id if player.goal else None,
             'goal_short_name': player.goal.short_name if player.goal else None,
-            'goal_contribution': "{:.2f}".format(player.goal_funded),
-            'goal_total': "{:.2f}".format(player.goal.balance if player.goal else 0),
+            'goal_contribution': float("{:.2f}".format(player.goal_funded)),
+            'goal_total': float("{:.2f}".format(player.goal.balance if player.goal else 0)),
             }
     return data
 
