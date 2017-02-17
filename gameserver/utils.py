@@ -14,11 +14,11 @@ random.seed()
 def player_to_league_dict(player):
     data = {'id': player.id,
             'name': player.name,
-            'goal': player.goal.name,
-            'goal_id': player.goal.id,
-            'goal_short_name': player.goal.short_name,
+            'goal': player.goal.name if player.goal else None,
+            'goal_id': player.goal.id if player.goal else None,
+            'goal_short_name': player.goal.short_name if player.goal else None,
             'goal_contribution': "{:.2f}".format(player.goal_funded),
-            'goal_total': "{:.2f}".format(player.goal.balance),
+            'goal_total': "{:.2f}".format(player.goal.balance if player.goal else 0),
             }
     return data
 
