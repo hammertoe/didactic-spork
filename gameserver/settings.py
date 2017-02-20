@@ -10,3 +10,7 @@ RESTPLUS_ERROR_404_HELP = False
 # SQLAlchemy settings
 SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+APP_VERSION = "0.13"
+GAME_ID = "Global Festival of Ideas for Sustainable Development"
+
