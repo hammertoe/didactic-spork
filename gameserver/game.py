@@ -137,6 +137,8 @@ class Game:
 
     def offer_policy(self, seller_id, policy_id, price):
         seller = self.get_player(seller_id)
+        if seller is None:
+            return None
         return seller.offer_policy(policy_id, price)
 
     def buy_policy(self, buyer_id, data):

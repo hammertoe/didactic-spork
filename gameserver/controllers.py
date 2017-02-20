@@ -62,18 +62,6 @@ def require_api_key(f, *args, **kw):
 
     return f(*args, **kw)
 
-@decorator
-def invalidates_player(f, *args, **kw):
-    ret = f(*args, **kw)
-
-    player_id = args[0]
-    data = _get_player(player_id)
-    if data:
-        cache_key = '/v1/players/{}'.format(player_id)
-        memcache.set(cache_key, data, 60)
-
-    return ret
-
 @require_api_key
 def do_tick():
     _do_tick()
@@ -148,10 +136,6 @@ def _do_tick():
         # put it in the cache
         key = "/v1/tables/{}".format(table.id)
         to_cache[key] = (data, 200, {'x-cache':'hit'}) 
-
-    # update game metadata
-    data = _get_metadata()
-    to_cache["/v1/game"] = (data, 200, {'x-cache':'hit'}) 
 
     # send everything to the cache
     memcache.set_multi(to_cache, time=60)
@@ -247,20 +231,14 @@ def get_wallets(id):
 @require_api_key
 @cached
 def get_player(player_id):
-    data = _get_player(player_id)
-    if data:
-        return data, 200
-    else:
-        return "Player not found", 404
-        
-def _get_player(player_id):
     player = db_session.query(Player).filter(Player.id == player_id).options(
         joinedload(Player.goal.of_type(Goal)),
         joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
     if not player:
-        return None
+        return "Player not found", 404
     data = player_to_dict(player)
-    return data
+    return data, 200
+
 
 @require_api_key
 def create_player(player=None):
@@ -361,6 +339,8 @@ def get_policy_offer(player_id, policy_id, price=None):
         price = game.default_offer_price
     try:
         offer = game.offer_policy(player_id, policy_id, price)
+        if offer is None:
+            return "Player of policy not found", 404
         return offer, 200
     except ValueError, e:
         return str(e), 400
@@ -377,7 +357,6 @@ def buy_policy(player_id, offer):
    
 @require_api_key
 @require_user_key
-@invalidates_player
 def claim_budget(player_id):
     try:
         player = game.get_player(player_id)
@@ -465,11 +444,7 @@ def get_tables():
     return [ dict(id=t.id,name=t.name) for t in tables ], 200
 
 @require_api_key
-@cached
 def get_metadata():
-    return _get_metadata(), 200
-
-def _get_metadata():
     settings = game.settings
     return {'game_year': settings.current_game_year,
             'next_game_year': settings.current_game_year+1,
