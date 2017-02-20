@@ -51,20 +51,25 @@ def start():
 
 @app.route('/tick')
 def tick():
-    t1 = time()
+    duration = 0
     try:
         # tick the game
-        _do_tick()
-        db_session.commit()
+        if game.is_running():
+            t1 = time()
+            _do_tick()
+            db_session.commit()
+            t2 = time()
+            duration = t2-t1
+            log.info('Tick! {:.2f}s'.format(duration))
+        else:
+            log.info('Tick skipped as game stopped')
+            db_session.rollback()
     except Exception as e:
         log.exception("Error ticking")
         db_session.rollback()
-    t2 = time()
-    duration = t2-t1
-    log.info('Tick! {:.2f}s'.format(duration))
+
     interval = TICKINTERVAL - duration
     interval = max(0, interval)
-
     deferred.defer(tick, _countdown=interval)
     return 'Tick! {:.2f}s'.format(duration), 200
 
