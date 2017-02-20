@@ -1455,6 +1455,19 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 150000)
         self.assertEqual(buyer.balance, 150000)
 
+    def testGameStartStop(self):
+        self.assertFalse(self.game.is_running())
+
+        year = self.game.start(2017)
+        self.assertEqual(year, 2017)
+
+        self.assertTrue(self.game.is_running())
+
+        year = self.game.stop()
+        self.assertEqual(year, 2017)
+
+        self.assertFalse(self.game.is_running())
+
 class DataLoadTests(DBTestCase):
 
     def testCreateNetwork(self):
