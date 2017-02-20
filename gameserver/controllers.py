@@ -4,13 +4,12 @@ from flask import request, abort
 from gameserver.game import Game
 from gameserver.database import db
 from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict
+from gameserver.settings import APP_VERSION
 from hashlib import sha1
 from time import asctime
 
 from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
-
-from datetime import datetime, timedelta
 
 try:
     from google.appengine.api import memcache
@@ -19,8 +18,6 @@ except ImportError:
 
 db_session = db.session
 game = Game()
-
-APP_VERSION = "0.13"
 
 def app_version():
     return dict(version=APP_VERSION)
@@ -140,8 +137,18 @@ def _do_tick():
         key = "/v1/tables/{}".format(table.id)
         to_cache[key] = (data, 200, {'x-cache':'hit'}) 
 
+    # update game metadata
+    data = _get_metadata()
+    to_cache["/v1/game"] = (data, 200, {'x-cache':'hit'}) 
+
     # send everything to the cache
     memcache.set_multi(to_cache, time=60)
+
+    # if we are passed the next year start then replenish funds
+    if game.is_passed_year_end():
+        year = game.current_year()
+        game.start(year+1)
+        game.do_replenish_budget()
 
 @require_api_key
 def clear_players():
@@ -228,14 +235,20 @@ def get_wallets(id):
 @require_api_key
 @cached
 def get_player(player_id):
+    data = _get_player(player_id)
+    if data:
+        return data, 200
+    else:
+        return "Player not found", 404
+        
+def _get_player(player_id):
     player = db_session.query(Player).filter(Player.id == player_id).options(
         joinedload(Player.goal.of_type(Goal)),
         joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
     if not player:
-        return "Player not found", 404
+        return None
     data = player_to_dict(player)
-    return data, 200
-
+    return data
 
 @require_api_key
 def create_player(player=None):
@@ -244,7 +257,7 @@ def create_player(player=None):
     """
     if player:
         game_id = player.get('game_id')
-        if game_id != 'Global Festival of Ideas for Sustainable Development':
+        if game_id != game.settings.game_id:
             return "Game not found", 404
         player = game.create_player(player['name'])
         db_session.commit()
@@ -352,6 +365,7 @@ def buy_policy(player_id, offer):
    
 @require_api_key
 @require_user_key
+@invalidates_player
 def claim_budget(player_id):
     try:
         player = game.get_player(player_id)
@@ -439,12 +453,29 @@ def get_tables():
     return [ dict(id=t.id,name=t.name) for t in tables ], 200
 
 @require_api_key
+@cached
 def get_metadata():
-    start = datetime(2017, 02, 17, 11,40)
-    td = timedelta(hours=2)
-    return {'game_year': start.year,
-            'game_year_start': start,
-            'next_game_year': start.year+1,
-            'next_game_year_start': start+td,
+    return _get_metadata(), 200
+
+def _get_metadata():
+    settings = game.settings
+    return {'game_year': settings.current_game_year,
+            'next_game_year': settings.current_game_year+1,
+            'next_game_year_start': settings.next_game_year_start.isoformat(),
             'version': APP_VERSION,
             }
+
+# move to game class
+@require_api_key
+def stop_game():
+    year = game.stop()
+    db_session.commit()
+    return "game stopped at year {}".format(year), 200
+
+@require_api_key
+def start_game(params):
+    year = game.start(params['year'])
+    db_session.commit()
+    return "game started, year {}".format(year), 200
+
+        

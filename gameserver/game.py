@@ -1,11 +1,14 @@
 import json
+from datetime import datetime, timedelta
+
 from gameserver.utils import random, node_to_dict, update_node_from_dict
 
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client
+from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings
+from gameserver.settings import APP_VERSION, GAME_ID
 
 from sqlalchemy.orm import joinedload, subqueryload
-from sqlalchemy import func
+from sqlalchemy import func, select
 
 db_session = db.session
 
@@ -15,6 +18,10 @@ class Game:
         self.money_per_budget_cycle = 150000
         self.standard_max_player_outflow = 100
         self.default_offer_price = 20000
+
+    @property
+    def settings(self):
+        return db_session.query(Settings).one()
 
     def validate_api_key(self, token):
         return db_session.query(Client.name).filter(Client.id == token).scalar()
@@ -355,3 +362,32 @@ class Game:
 
         self.rank_nodes()
         
+    def start(self, year):
+        td = timedelta(hours=2)
+        now = datetime.now()
+        next_game_year_start = now + td
+
+        self.settings.next_game_year_start = next_game_year_start
+        self.settings.current_game_year = year
+
+        return year
+
+    def stop(self):
+        year = self.settings.current_game_year
+        self.settings.next_game_year_start = None
+        return year
+
+    def current_year(self):
+        return self.settings.current_game_year
+
+    def is_running(self):
+        if self.settings.next_game_year_start is not None:
+            return True
+        return False
+        
+    def is_passed_year_end(self):
+        next_game_year_start = self.settings.next_game_year_start
+        if next_game_year_start and datetime.now() > next_game_year_start:
+            return True
+
+        return False

@@ -46,6 +46,36 @@ paths:
           description: "Success"
       x-tags:
       - tag: "game"
+  /game/start:
+    put:
+      tags:
+      - "game"
+      summary: "Start the game ticker"
+      operationId: "gameserver.controllers.start_game"
+      parameters:
+        - in: body
+          name: params
+          description: Game parameters
+          required: true
+          schema:
+            $ref: "#/definitions/GameStart"
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
+  /game/stop:
+    put:
+      tags:
+      - "game"
+      summary: "Stop the game ticker from advancing any further"
+      operationId: "gameserver.controllers.stop_game"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
   /game/tick:
     put:
       security:
@@ -775,6 +805,11 @@ definitions:
       goal_contribution:
         type: "number"
         description: "amount this player funded their goal"
+  GameStart:
+    properties:
+      year:
+        type: "number"
+        description: "The start year of the game"
   ErrorMessage:
     properties:
       longMessage:
