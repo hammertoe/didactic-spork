@@ -57,7 +57,7 @@ class Game:
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
-            player.balance = self.money_per_budget_cycle
+            player.unclaimed_budget = self.money_per_budget_cycle
 
     def tick(self):
         res = []
