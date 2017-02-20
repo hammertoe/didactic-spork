@@ -21,12 +21,12 @@ ledger = SATable("ledger", db.metadata,
                  Column("node_id", CHAR(36), primary_key=True),
                  Column("wallet", WalletType),
                  )    
-#settings = SATable("settings", db.metadata,
-#                   Column("next_budget", DateTime),
-#                   Column("budget_per_cycle", Float),
-#                   Column("game_id", String),
-#                   )
-
+settings = SATable("settings", db.metadata,
+                   Column("game_id", String(100), primary_key=True),
+                   Column("current_game_year", Integer),
+                   Column("next_game_year_start", DateTime),
+                   Column("budget_per_cycle", Float),
+                   )
 
 #@event.listens_for(SignallingSession, 'before_flush')
 def before_flush(session, flush_context, instances): # pragma: no cover
@@ -66,6 +66,13 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
     id = Column(CHAR(36), primary_key=True, default=default_uuid)
+
+
+class Settings(Base):
+    game_id = Column(String(100), primary_key=True)
+    current_game_year= Column(Integer)
+    next_game_year_start = Column(DateTime)
+    budget_per_cycle = Column(Float)
 
 
 class Table(Base):
