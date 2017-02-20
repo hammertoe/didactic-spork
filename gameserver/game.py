@@ -15,8 +15,8 @@ db_session = db.session
 class Game:
 
     def __init__(self):
-        self.money_per_budget_cycle = 150000
-        self.standard_max_player_outflow = 100
+        self.money_per_budget_cycle = 1500000
+        self.standard_max_player_outflow = 1000
         self.default_offer_price = 20000
 
     @property
