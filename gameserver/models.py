@@ -64,7 +64,8 @@ class Base(object):
 
 class Settings(Base):
     game_id = Column(String(100), primary_key=True)
-    current_game_year= Column(Integer)
+    current_game_year = Column(Integer)
+    current_game_year_start = Column(DateTime)
     next_game_year_start = Column(DateTime)
     budget_per_cycle = Column(Float)
 

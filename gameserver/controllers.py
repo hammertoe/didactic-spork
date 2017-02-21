@@ -447,6 +447,7 @@ def get_tables():
 def get_metadata():
     settings = game.settings
     return {'game_year': settings.current_game_year,
+            'game_year_start': settings.current_game_year_start,
             'next_game_year': settings.current_game_year+1,
             'next_game_year_start': settings.next_game_year_start.isoformat(),
             'version': APP_VERSION,

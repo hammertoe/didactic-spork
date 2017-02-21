@@ -369,8 +369,9 @@ class Game:
         now = datetime.now()
         next_game_year_start = now + td
 
-        self.settings.next_game_year_start = next_game_year_start
+        self.settings.current_game_year_start = now
         self.settings.current_game_year = year
+        self.settings.next_game_year_start = next_game_year_start
 
         return year
 
