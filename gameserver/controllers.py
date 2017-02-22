@@ -3,10 +3,11 @@ from flask import request, abort
 
 from gameserver.game import Game
 from gameserver.database import db
-from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict
+from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict, message_to_dict
 from gameserver.settings import APP_VERSION
 from hashlib import sha1
 from time import asctime
+import dateutil.parser
 
 from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
@@ -479,4 +480,27 @@ def start_game(params):
     db_session.commit()
     return "game started, year {}".format(year), 200
 
-        
+@require_api_key
+def set_messages(messages):
+    game.clear_messages()
+    for m in messages['budgets']:
+        ts = dateutil.parser.parse(m['time'])
+        game.add_message(ts, "budget", m['message'])
+    for m in messages['events']:
+        ts = dateutil.parser.parse(m['time'])
+        game.add_message(ts, "event", m['message'])
+    db_session.commit()
+
+@require_api_key
+@cached
+def get_messages():
+    budgets = []
+    events = []
+    for m in sorted(game.get_messages(), key=lambda x: x.timestamp):
+        data = message_to_dict(m)
+        if m.type == 'budget':
+            budgets.append(data)
+        elif m.type == 'event':
+            budgets.append(data)
+
+    return dict(budgets=budgets, events=events), 200

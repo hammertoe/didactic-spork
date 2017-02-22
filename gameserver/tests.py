@@ -3,6 +3,7 @@ import unittest
 import os
 from gameserver.utils import random, pack_amount, unpack_amount, checksum
 import time
+from datetime import datetime
 
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
@@ -1468,6 +1469,30 @@ class CoreGameTests(DBTestCase):
 
         self.assertFalse(self.game.is_running())
 
+    def testMessages(self):
+        messages = self.game.get_messages()
+        self.assertEqual(len(messages), 0)
+        
+        t1 = datetime.now()
+        m1 = self.game.add_message(t1, "policy", "message 1")
+
+        messages = self.game.get_messages()
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].timestamp, t1)
+        self.assertEqual(messages[0].message, "message 1")
+        self.assertEqual(messages[0].type, "policy")
+
+        t2 = datetime.now()
+        m2 = self.game.add_message(t2, "event", "message 2")
+        messages = self.game.get_messages()
+
+        self.assertEqual(len(messages), 2)
+        
+        self.game.clear_messages()
+        messages = self.game.get_messages()
+        self.assertEqual(len(messages), 0)
+        
+
 class DataLoadTests(DBTestCase):
 
     def testCreateNetwork(self):
@@ -2303,6 +2328,50 @@ class RestAPITests(DBTestCase):
         self.assertEquals(table.players, [])
         self.assertEquals(p1.table, None)
         self.assertEquals(p2.table, None)
+
+    def testSetMessages(self):
+        headers = {'X-API-KEY': self.api_key}
+        data = {'budgets': [{'time': '2017-02-22T12:50:00',
+                             'message': 'message 1',
+                             },
+                            {'time': '2017-02-22T12:51:00',
+                             'message': 'message 2',
+                             }],
+                'events': [{'time': '2017-02-22T13:50:00',
+                             'message': 'message 3',
+                             },
+                            {'time': '2017-02-22T13:51:00',
+                             'message': 'message 4',
+                             }],
+                }
+        response = self.client.put("/v1/game/messages",
+                                   headers=headers,
+                                   data=json.dumps(data),
+                                   content_type='application/json')
+
+        self.assertEquals(response.status_code, 200)
+        messages = self.game.get_messages()
+        self.assertEqual(len(messages), 4)
+
+    def testGetMessages(self):
+        t1 = datetime(2017,02,22,12,50)
+        m1 = self.game.add_message(t1, "budget", "message 1")
+        t2 = datetime(2017,02,22,13,50)
+        m2 = self.game.add_message(t2, "event", "message 2")
+
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/game/messages", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        expected = {'budgets': [{'time': '2017-02-22T12:50:00',
+                                 'message': 'message 1'}
+                                ],
+                    'events': [{'time': '2017-02-22T13:50:00',
+                                'message': 'message 2'},
+                               ],
+                    }
+
+        self.assertEqual(sorted(response.json), sorted(expected))
+
 
 
 class Utils(DBTestCase): # pragma: no cover

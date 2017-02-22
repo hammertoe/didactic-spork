@@ -11,6 +11,12 @@ db_session = db.session
 random = orig_random.Random()
 random.seed()
 
+def message_to_dict(message):
+    data = {'time': message.timestamp.isoformat(),
+            'message': message.message,
+            }
+    return data
+
 def player_to_league_dict(player):
     data = {'id': player.id,
             'name': player.name,

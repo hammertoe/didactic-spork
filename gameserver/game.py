@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from gameserver.utils import random, node_to_dict, update_node_from_dict
 
 from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings
+from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings, Message
 from gameserver.settings import APP_VERSION, GAME_ID
 
 from sqlalchemy.orm import joinedload, subqueryload
@@ -22,6 +22,18 @@ class Game:
     @property
     def settings(self):
         return db_session.query(Settings).one()
+
+    def get_messages(self):
+        return db_session.query(Message).all()
+
+    def add_message(self, timestamp, type, message):
+        m = Message(timestamp, type, message)
+        db_session.add(m)
+        return m
+
+    def clear_messages(self):
+        for m in self.get_messages():
+            db_session.delete(m)
 
     def validate_api_key(self, token):
         return db_session.query(Client.name).filter(Client.id == token).scalar()

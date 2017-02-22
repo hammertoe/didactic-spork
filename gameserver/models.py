@@ -91,6 +91,20 @@ class Client(Base):
         self.id = default_uuid()
         self.name = name
 
+class Message(Base):
+    id = Column(CHAR(36),
+                primary_key=True, default=default_uuid)
+
+    timestamp = Column(DateTime)
+    type = Column(String(30))
+    message = Column(String(256))
+
+    def __init__(self, timestamp, type, message):
+        self.id = default_uuid()
+        self.timestamp = timestamp
+        self.type = type
+        self.message = message
+
 class Node(Base):
 
     discriminator = Column(String(32))

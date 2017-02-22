@@ -22,6 +22,38 @@ consumes:
 produces:
 - "application/json"
 paths:
+  /game/messages:
+    get:
+      tags:
+      - "game"
+      summary: "Get the messages to display in the app"
+      operationId: "gameserver.controllers.get_messages"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/GameMessages"
+      x-tags:
+      - tag: "game"
+    put:
+      tags:
+      - "game"
+      summary: "Update the messages to be sent to the clients"
+      operationId: "gameserver.controllers.set_messages"
+      parameters:
+        - in: body
+          name: messages
+          description: Game messages
+          required: true
+          schema:
+            $ref: "#/definitions/GameMessages"
+      responses:
+        200:
+          description: "Success"
+      x-tags:
+      - tag: "game"
+
   /game/app_version:
     get:
       tags:
@@ -810,6 +842,26 @@ definitions:
       year:
         type: "number"
         description: "The start year of the game"
+  GameMessages:
+    properties:
+      budgets:
+        type: "array"
+        description: "budget messages"
+        items:
+          $ref: "#/definitions/Message"
+      events:
+        type: "array"
+        description: "event messages"
+        items:
+          $ref: "#/definitions/Message"
+  Message:
+    properties:
+      time:
+        type: "string"
+        description: "time to publish message, ISO8601"
+      message:
+        type: "string"
+        description: "the message to show to the player"
   ErrorMessage:
     properties:
       longMessage:
