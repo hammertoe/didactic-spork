@@ -62,6 +62,18 @@ def require_api_key(f, *args, **kw):
 
     return f(*args, **kw)
 
+@decorator
+def invalidates_player(f, *args, **kw):
+    ret = f(*args, **kw)
+
+    player_id = args[0]
+    data = _get_player(player_id)
+    if data:
+        cache_key = '/v1/players/{}'.format(player_id)
+        memcache.set(cache_key, data, 60)
+
+    return ret
+
 @require_api_key
 def do_tick():
     _do_tick()
@@ -357,6 +369,7 @@ def buy_policy(player_id, offer):
    
 @require_api_key
 @require_user_key
+@invalidates_player
 def claim_budget(player_id):
     try:
         player = game.get_player(player_id)
