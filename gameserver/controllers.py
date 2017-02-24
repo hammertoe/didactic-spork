@@ -239,7 +239,7 @@ def get_wallets(id):
     for player_id, amount in wallet.items():
         res.append({'owner': player_id,
                     'location': id,
-                    'balance': amount,
+                    'balance': float("{:.2f}".format(amount)),
                     })
 
     return res, 200
