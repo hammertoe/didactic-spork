@@ -381,8 +381,13 @@ class Player(Node):
                                
 
     def offer_policy(self, policy_id, price):
-        policy = db_session.query(Policy).filter(Policy.id == policy_id).one()
-        if policy not in self.children():
+        policy = None
+        for child in self.children():
+            if policy_id == child.id:
+                policy = child
+                break
+
+        if policy is None:
             raise ValueError, "Seller doesn't have this policy"
         
         chk = checksum(self.id, policy_id, price, self.token)
