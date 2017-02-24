@@ -1656,7 +1656,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response.status_code, 404)
 
     def testCreateNewPlayerBadGameId(self):
-        data = dict(name='Matt')
+        data = dict(name='Matt', game_id='dummy')
 
         num1 = db_session.query(Player).count()
 

@@ -655,10 +655,14 @@ definitions:
   PlayerCreation:
     required:
     - "name"
+    - "game_id"
     properties:
       name:
         type: "string"
         description: "The name of this player"
+      game_id:
+        type: "string"
+        description: "The Id of the game to join"
   Player:
     type: "object"
     properties:
