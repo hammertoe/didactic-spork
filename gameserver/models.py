@@ -260,6 +260,11 @@ class Goal(Node):
     id = Column(CHAR(36), ForeignKey(Node.id),
                 primary_key=True, default=default_uuid)
 
+    @property
+    def active(self):
+        return self.balance >= self.activation
+
+
 class Policy(Node):
 
     __mapper_args__ = {
