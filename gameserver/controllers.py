@@ -52,6 +52,9 @@ def require_user_key(f, *args, **kw):
 
 @decorator
 def require_api_key(f, *args, **kw):
+    if request.headers.get('X-AppEngine-TaskName'):
+        return f(*args, **kw)
+
     key = request.headers.get('X-API-KEY')
     mkey = "{}-client-key".format(key)
     client_name = memcache.get(mkey)
