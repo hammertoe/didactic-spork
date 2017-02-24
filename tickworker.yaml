@@ -6,6 +6,7 @@
 runtime: python27
 api_version: 1
 threadsafe: yes
+service: tickworker
 
 # Handlers define how to route requests to your application.
 handlers:
@@ -14,7 +15,11 @@ handlers:
   script: gameserver.app.app
 
 #use F4 for heavy load
-#instance_class: F4
+manual_scaling:
+  instances: 1
+
+# use B8 for heavy load
+instance_class: B8
 
 libraries:
 - name: MySQLdb

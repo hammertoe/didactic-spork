@@ -6,6 +6,7 @@
 runtime: python27
 api_version: 1
 threadsafe: yes
+service: tickworker
 
 # Handlers define how to route requests to your application.
 handlers:
@@ -26,7 +27,8 @@ env_variables:
     CLOUDSQL_USER: root
     CLOUDSQL_PASSWORD: foobar
     SQLALCHEMY_DATABASE_URI: >-
-        mysql+mysqldb://root:foobar@/freeicecream?unix_socket=/cloudsql/free-ice-cream:europe-west1:free-ice-cream
+        mysql+mysqldb://root:foobar@localhost:3306/freeicecream
+#        mysql+mysqldb://root:foobar@/freeicecream?unix_socket=/cloudsql/free-ice-cream:europe-west1:free-ice-cream
 # [END env_variables]
 
 beta_settings:

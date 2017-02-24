@@ -4,6 +4,7 @@ from time import sleep, time
 
 from google.appengine.ext import deferred
 from google.appengine.api import memcache
+from google.appengine.api import taskqueue
 
 from flask import Flask, Blueprint, request
 
@@ -45,33 +46,20 @@ def create_app():
 app = create_app()
 
 @app.route('/_ah/start')
-def start():
+def scheduler():
     log.info('Ticker instance started')
-    return tick()
-
-@app.route('/tick')
-def tick():
-    duration = 0
-    try:
-        # tick the game
-        if game.is_running():
-            t1 = time()
-            _do_tick()
-            db_session.commit()
-            t2 = time()
-            duration = t2-t1
-            log.info('Tick! {:.2f}s'.format(duration))
+    while True:
+        if game.is_running(): 
+            task = taskqueue.add(
+                url='/v1/game/tick',
+                queue_name='tickqueue',
+                method='PUT',
+                target='tickworker',
+                )
         else:
             log.info('Tick skipped as game stopped')
-            db_session.rollback()
-    except Exception as e:
-        log.exception("Error ticking")
         db_session.rollback()
-
-    interval = TICKINTERVAL - duration
-    interval = max(0, interval)
-    deferred.defer(tick, _countdown=interval)
-    return 'Tick! {:.2f}s'.format(duration), 200
+        sleep(TICKINTERVAL)
 
 def main(): # pragma: no cover
     app = create_app()
