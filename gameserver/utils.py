@@ -4,10 +4,6 @@ import binascii
 import struct
 import hashlib
 
-from gameserver.database import db
-
-db_session = db.session
-
 random = orig_random.Random()
 random.seed()
 
