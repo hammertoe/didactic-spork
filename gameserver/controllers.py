@@ -247,16 +247,21 @@ def get_wallets(id):
 @require_api_key
 @cached
 def get_player(player_id):
-    return _get_player(player_id), 200
+    player = _get_player(player_id)
+    if player:
+        return player, 200
+    else:
+        return "Player not found", 404
 
 def _get_player(player_id):
     player = db_session.query(Player).filter(Player.id == player_id).options(
         joinedload(Player.goal.of_type(Goal)),
         joinedload(Player.lower_edges.of_type(Edge)).joinedload(Edge.higher_node.of_type(Policy))).one_or_none()
-    if not player:
-        return "Player not found", 404
-    data = player_to_dict(player)
-    return data
+    if player:
+        data = player_to_dict(player)
+        return data
+    else:
+        return None
 
 
 @require_api_key
