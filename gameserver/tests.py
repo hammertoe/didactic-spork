@@ -17,6 +17,7 @@ from gameserver.app import app, create_app
 from flask_testing import TestCase
 
 from gameserver.utils import fake_memcache as memcache
+from gameserver.settings import GAME_ID
 
 db.app = app
 
@@ -415,11 +416,11 @@ class CoreGameTests(DBTestCase):
 
     def testGameTotalInflow(self):
         p1 = self.game.create_player('Matt')
-        self.assertEqual(self.game.total_players_inflow, 100)
+        self.assertEqual(self.game.total_players_inflow, 1000)
         p2 = self.game.create_player('Simon')
-        self.assertEqual(self.game.total_players_inflow, 200)
+        self.assertEqual(self.game.total_players_inflow, 2000)
         p2.max_outflow = 50
-        self.assertEqual(self.game.total_players_inflow, 150)
+        self.assertEqual(self.game.total_players_inflow, 1050)
 
     def testPlayerTotalFunding(self):
         p1 = self.game.create_player('Matt')
@@ -447,18 +448,37 @@ class CoreGameTests(DBTestCase):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
-        self.game.add_fund(p1, po1, 10)
+        self.game.add_fund(p1, po1, 100)
         po2 = self.game.add_policy('Policy 2', 1.0)
-        self.game.add_fund(p1, po2, 20)
+        self.game.add_fund(p1, po2, 200)
         po3 = self.game.add_policy('Policy 3', 1.0)
 
         with self.assertRaises(ValueError):
-            self.game.add_fund(p1, po3, 80)
+            self.game.add_fund(p1, po3, 800)
 
-        self.assertEqual(p1.total_funding, 30)
+        self.assertEqual(p1.total_funding, 300)
 
-        self.game.add_fund(p1, po3, 70)
-        self.assertEqual(p1.total_funding, 100)
+        self.game.add_fund(p1, po3, 700)
+        self.assertEqual(p1.total_funding, 1000)
+
+    def testGoalActive(self):
+        p1 = self.game.create_player('Player 1')
+        p1.balance = 1000
+        po1 = self.game.add_policy('Policy 1', 0.0)
+        g1 = self.game.add_goal('Goal 1', 0.0)
+        g1.activation = 400
+        l1 = self.game.add_link(po1, g1, 200.0)
+        self.game.add_fund(p1, po1, 200.0)
+        self.game.do_propogate_funds()
+
+        self.assertAlmostEqual(p1.balance, 800)
+
+        self.assertAlmostEqual(g1.balance, 200)
+        self.assertFalse(g1.active)
+
+        self.game.do_propogate_funds()
+        self.assertTrue(g1.active)
+
 
     def testNodeActivationFromPlayer(self):
         p1 = self.game.create_player('Matt')
@@ -468,14 +488,14 @@ class CoreGameTests(DBTestCase):
 
         self.assertFalse(po1.active)
         self.assertAlmostEqual(po1.active_level, 0)
-        self.game.add_fund(p1, po1, 30.0)
+        self.game.add_fund(p1, po1, 200.0)
         self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
 
     def testNodeActivationFromNode(self):
         p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
+        p1.balance = 10000.0
         po1 = self.game.add_policy('Policy 1', 1.0)
         po1.activation = 0.1
 
@@ -484,12 +504,12 @@ class CoreGameTests(DBTestCase):
 
         po2 = self.game.add_policy('Policy 2', 1.0)
         po2.activation = 0.2
-        l1 = self.game.add_link(po1, po2, 5.0)
+        l1 = self.game.add_link(po1, po2, 50.0)
 
         self.assertAlmostEqual(po1.active, 0.0)
         self.assertFalse(po1.active)
 
-        self.game.add_fund(p1, po1, 20.0)
+        self.game.add_fund(p1, po1, 200.0)
         for x in range(5):
             self.game.do_propogate_funds()
         
@@ -498,13 +518,13 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
 
-        self.game.add_fund(p1, po1, 40.0)
+        self.game.add_fund(p1, po1, 400.0)
         self.assertTrue(po1.active)
         self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
         self.assertAlmostEqual(po2.active_percent, 0.25)
 
-        l1.weight = 40.0
+        l1.weight = 400.0
         self.game.do_propogate_funds()
         self.assertTrue(po1.active)
         self.assertTrue(po2.active)
@@ -749,9 +769,14 @@ class CoreGameTests(DBTestCase):
 
         self.game.do_replenish_budget()
 
-        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle-100)
+        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle-200)
+        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle-400)
+
+        self.assertAlmostEqual(p1.unclaimed_budget, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p2.unclaimed_budget, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p3.unclaimed_budget, self.game.money_per_budget_cycle)
+
 
         self.assertAlmostEqual(n1.balance, 100+200+400)
         
@@ -1169,11 +1194,11 @@ class CoreGameTests(DBTestCase):
 
     def testActivationLevelHigh(self):
         p1 = self.game.create_player('Matt')
-        p1.balance = 1000
+        p1.balance = 10000
         po1 = self.game.add_policy('Arms Embargo', 0.1)
         po1.activation = 0.2
         g1 = self.game.add_goal('World Peace', 0.5)
-        self.game.add_fund(p1, po1, 25.0)
+        self.game.add_fund(p1, po1, 250.0)
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
@@ -1181,8 +1206,8 @@ class CoreGameTests(DBTestCase):
         for x in range(10):
             self.game.do_propogate_funds()
 
-        self.assertEqual(p1.balance, 750)
-        self.assertEqual(po1.balance, 240)
+        self.assertEqual(p1.balance, 7500)
+        self.assertEqual(po1.balance, 2490)
         self.assertEqual(g1.balance, 10)
 
     def testGetFunding(self):
@@ -1308,9 +1333,9 @@ class CoreGameTests(DBTestCase):
 
         self.game.tick()
 
-        self.assertEqual(p1.balance, 149990)
-        self.assertEqual(p2.balance, 149940)
-        self.assertEqual(p3.balance, 149985)
+        self.assertEqual(p1.balance, 1499990)
+        self.assertEqual(p2.balance, 1499940)
+        self.assertEqual(p3.balance, 1499985)
 
         p1.calc_goal_funded()
         p2.calc_goal_funded()
@@ -1345,7 +1370,7 @@ class CoreGameTests(DBTestCase):
         self.game.tick()
         p1.calc_goal_funded()
 
-        self.assertEqual(p1.balance, 149960)
+        self.assertEqual(p1.balance, 1499960)
         self.assertEqual(p1.goal_funded, 10)
 
         self.game.tick()
@@ -1370,8 +1395,8 @@ class CoreGameTests(DBTestCase):
         seller = self.game.create_player('Matt')
         buyer = self.game.create_player('Simon')
 
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
         p1 = self.game.add_policy('Policy 1', 0)
         
@@ -1384,16 +1409,16 @@ class CoreGameTests(DBTestCase):
 
         self.assertIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000+20000)
-        self.assertEqual(buyer.balance, 150000-20000)
+        self.assertEqual(seller.balance, 1500000+20000)
+        self.assertEqual(buyer.balance, 1500000-20000)
         
     def testBuyPolicyFailDupe(self):
         
         seller = self.game.create_player('Matt')
         buyer = self.game.create_player('Simon')
 
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
         p1 = self.game.add_policy('Policy 1', 0)
         
@@ -1408,16 +1433,16 @@ class CoreGameTests(DBTestCase):
 
         self.assertIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
         
     def testBuyPolicyFailNoFunds(self):
         
         seller = self.game.create_player('Matt')
         buyer = self.game.create_player('Simon')
 
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
         p1 = self.game.add_policy('Policy 1', 0)
         
@@ -1425,22 +1450,22 @@ class CoreGameTests(DBTestCase):
         self.assertIn(p1, seller.children())
         self.assertNotIn(p1, buyer.children())
 
-        offer = self.game.offer_policy(seller.id, p1.id, 200000)
+        offer = self.game.offer_policy(seller.id, p1.id, 2000000)
         with self.assertRaises(ValueError):
             self.game.buy_policy(buyer.id, offer)
 
         self.assertNotIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
         
     def testBuyPolicyFailNoPolicy(self):
         
         seller = self.game.create_player('Matt')
         buyer = self.game.create_player('Simon')
 
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
         p1 = self.game.add_policy('Policy 1', 0)
         
@@ -1453,8 +1478,8 @@ class CoreGameTests(DBTestCase):
 
         self.assertNotIn(p1, buyer.children())
         self.assertNotIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
     def testGameStartStop(self):
         self.assertFalse(self.game.is_running())
@@ -1575,7 +1600,7 @@ class DataLoadTests(DBTestCase):
             for player_id,amount in n.wallet.todict().items():
                 wallets.append(dict(location=n.id,
                                     owner=self.game.get_player(player_id).name,
-                                    balance=amount))
+                                    balance=float("{:.2f}".format(amount))))
                 
         expected = [{'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
                     {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
@@ -1661,7 +1686,7 @@ class RestAPITests(DBTestCase):
 
     def testCreateThenGetNewPlayer(self):
         name = 'Matt {}'.format(time.time())
-        data = dict(name=name)
+        data = dict(name=name, game_id=GAME_ID)
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
@@ -1680,7 +1705,7 @@ class RestAPITests(DBTestCase):
 
         random.seed(0)
         name = 'Matt {}'.format(time.time())
-        data = dict(name=name)
+        data = dict(name=name, game_id=GAME_ID)
         db_session.begin(subtransactions=True)
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
@@ -1700,7 +1725,7 @@ class RestAPITests(DBTestCase):
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
-        data = dict(name=name)
+        data = dict(name=name, game_id=GAME_ID)
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
                                     content_type='application/json')
@@ -2016,7 +2041,7 @@ class RestAPITests(DBTestCase):
         self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
 
         for x in range(5):
-            data[x]['amount'] = x*20
+            data[x]['amount'] = x*200
 
         headers = {'X-API-KEY': self.api_key,
                    'X-USER-KEY': player.token}
@@ -2093,7 +2118,7 @@ class RestAPITests(DBTestCase):
 
     def testGetOfferDefaultPrice(self):
         seller = self.game.create_player('Matt')
-        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
         p1 = self.game.add_policy('Policy 1', 0)
         
         seller.fund(p1, 0)
@@ -2109,7 +2134,7 @@ class RestAPITests(DBTestCase):
 
     def testGetOfferCustomPrice(self):
         seller = self.game.create_player('Matt')
-        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
         p1 = self.game.add_policy('Policy 1', 0)
         
         seller.fund(p1, 0)
@@ -2128,8 +2153,8 @@ class RestAPITests(DBTestCase):
         seller = self.game.create_player('Matt')
         buyer = self.game.create_player('Simon')
 
-        self.assertEqual(seller.balance, 150000)
-        self.assertEqual(buyer.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
+        self.assertEqual(buyer.balance, 1500000)
 
         p1 = self.game.add_policy('Policy 1', 0)
         
@@ -2155,8 +2180,8 @@ class RestAPITests(DBTestCase):
 
         self.assertIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000+20000)
-        self.assertEqual(buyer.balance, 150000-20000)
+        self.assertEqual(seller.balance, 1500000+20000)
+        self.assertEqual(buyer.balance, 1500000-20000)
         
     def testBuyPolicyFail(self):
         
@@ -2164,7 +2189,7 @@ class RestAPITests(DBTestCase):
         buyer = self.game.create_player('Simon')
         buyer.balance = 1000
 
-        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1000)
 
         p1 = self.game.add_policy('Policy 1', 0)
@@ -2191,7 +2216,7 @@ class RestAPITests(DBTestCase):
 
         self.assertNotIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 150000)
+        self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1000)
 
     def testLeagueTable(self):
@@ -2212,9 +2237,9 @@ class RestAPITests(DBTestCase):
 
         self.game.tick()
 
-        self.assertEqual(p1.balance, 149990)
-        self.assertEqual(p2.balance, 149980)
-        self.assertEqual(p3.balance, 149985)
+        self.assertEqual(p1.balance, 1499990)
+        self.assertEqual(p2.balance, 1499980)
+        self.assertEqual(p3.balance, 1499985)
 
         p1.calc_goal_funded()
         p2.calc_goal_funded()
