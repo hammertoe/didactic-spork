@@ -2405,6 +2405,30 @@ class Utils(DBTestCase): # pragma: no cover
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
 
+    def createSuperUser(self):
+        p = self.game.create_player('Super User')
+        p.id = '89663963-fada-11e6-9949-0c4de9cfe672'
+        p.token = '89663b3a-fada-11e6-be7e-0c4de9cfe672'
+        for policy in self.game.get_policies():
+            self.game.add_fund(p, policy, 0)
+
+        db_session.commit()
+        db_session.commit()
+        db_session.commit()
+
+    def genFreebiePolicyCodes(self):
+        # [checksum] [policy_id] [price] [seller_id]
+        id = '89663963-fada-11e6-9949-0c4de9cfe672'
+        token = '89663b3a-fada-11e6-be7e-0c4de9cfe672'
+        for policy in self.game.get_policies():
+            chk = checksum(id, policy.id, 0, token)
+
+            img = """"<img src='https://chart.googleapis.com/chart?cht=qr&chl={}%20{}%200%20{}&chs=280x280&choe=UTF-8&chld=L|2' alt=''>""".format(chk.upper(), policy.id.upper(), id.upper(), policy.name)
+            print "<h1>{}</h1>".format(policy.name)
+            print img
+            print "<hr />"
+#            print "{} {} {} {} {}".format(chk.upper(), policy.id.upper(), 0, id.upper(), policy.name)
+
     def GenNetFile(self):
         json_file = open('examples/example-graph.json', 'r')
         self.game.load_json(json_file)
@@ -2441,7 +2465,6 @@ class Utils(DBTestCase): # pragma: no cover
         db_session.commit()
         db_session.commit()
         db_session.commit()
-
 
 
 if __name__ == '__main__':
