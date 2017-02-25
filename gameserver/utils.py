@@ -113,13 +113,21 @@ def checksum(seller_id, policy_id, price, salt):
     return hashlib.sha1(input).hexdigest()
 
 class FakeMemcache:
-    def add(self, *kw, **kwargs):
-        pass
 
-    def get(self, *kw, **kwargs):
-        return None
+    def __init__(self):
+        self.cache = {}
 
-    def set(self, *kw, **kwargs):
-        return None
+    def add(self, key, value, time=0, min_compress_len=0, namespace=None):
+        self.cache[key] = value
+
+    def get(self, key, namespace=None, for_cas=False):
+        return self.cache.get(key)
+
+    def set(self, key, value, time=0, min_compress_len=0, namespace=None):
+        self.cache[key] = value
+
+    def set_multi(self, mapping, time=0, key_prefix='', min_compress_len=0, namespace=None):
+        for k,v in mapping.items():
+            self.set(k, v, time)
 
 fake_memcache = FakeMemcache()
