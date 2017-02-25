@@ -152,6 +152,22 @@ paths:
             $ref: "#/definitions/LeagueTable"
       x-tags:
       - tag: "game"
+  /game/player_fundings:
+    get:
+      security:
+      - APISecurity: []
+      tags:
+      - "game"
+      - "players"
+      summary: "Returns a list of player fundings"
+      operationId: "gameserver.controllers.player_fundings"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/LeagueTable"
+      x-tags:
+      - tag: "game"
       
   /network/:
     get:

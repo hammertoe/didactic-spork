@@ -16,7 +16,7 @@ from gameserver.wallet_sqlalchemy import Wallet
 from gameserver.app import app, create_app
 from flask_testing import TestCase
 
-from gameserver.utils import fake_memcache as memcache
+from gameserver.utils import fake_memcache as memcache, checksum
 from gameserver.settings import GAME_ID
 
 db.app = app
@@ -1620,6 +1620,59 @@ class GameTests(DBTestCase):
         self.assertIsNone(player)
 
 class RestAPITests(DBTestCase):
+
+    def testTick(self):
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/game/tick",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+
+    def testPlayerFunding(self):
+        headers = {'X-API-KEY': self.api_key}
+
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000.0
+        p2 = self.game.create_player('Simon')
+        p2.balance = 1000.0
+        n1 = self.game.add_policy('Policy 1', 1.0)
+        n2 = self.game.add_policy('Policy 2', 1.0)
+        self.game.add_fund(p1, n1, 100)
+        self.game.add_fund(p1, n2, 100)
+        self.game.add_fund(p2, n2, 200)
+
+        # temp unavailable as not computed yet
+        response = self.client.get("/v1/game/player_fundings",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEquals(response.status_code, 503)
+
+        response = self.client.put("/v1/game/tick",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+
+        response = self.client.get("/v1/game/player_fundings",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+
+        expected = [{'id': p1.id,
+                     'name': p1.name,
+                     'funding': [{'id': n1.id,
+                                  'amount': 100,},
+                                 {'id': n2.id,
+                                  'amount': 100,},
+                                 ]},
+                    {'id': p2.id,
+                     'name': p2.name,
+                     'funding': [{'id': n2.id,
+                                  'amount': 200,},
+                                 ]}
+                    ]
+
+        self.assertEqual(sorted(expected), sorted(response.json))
+
 
     @unittest.skip("not implemented")
     def testGetEmptyPlayersList(self):

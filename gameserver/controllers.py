@@ -1,9 +1,10 @@
+import logging.config
 from decorator import decorator
 from flask import request, abort
 
 from gameserver.game import Game
 from gameserver.database import db
-from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict, message_to_dict
+from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict, message_to_dict, player_to_funding_dict
 from gameserver.settings import APP_VERSION
 from hashlib import sha1
 from time import asctime
@@ -11,6 +12,8 @@ import dateutil.parser
 
 from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
+
+log = logging.getLogger(__name__)
 
 try:
     from google.appengine.api import memcache
@@ -90,6 +93,7 @@ def _do_tick():
                'policies': []}
     players = []
     player_dicts = []
+    player_fundings = []
     # tick the game and get the resultant nodes
     game_nodes = game.tick()
     for node in game_nodes:
@@ -106,6 +110,7 @@ def _do_tick():
             players.append(node)
             d = player_to_dict(node)
             player_dicts.append(player_to_league_dict(node))
+            player_fundings.append(player_to_funding_dict(node))
             node.network = game.get_network_for_player(node)
         to_cache[key] = (d, 200, {'x-cache':'hit'})
     # cache the network
@@ -115,6 +120,8 @@ def _do_tick():
     player_dicts.sort(key=lambda x: x['goal_contribution'], reverse=True)
     league_table = dict(rows=player_dicts[:50])
     to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
+    # calculate player fundings
+    to_cache['/v1/game/player_fundings'] = (player_fundings, 200, {'x-cache':'hit'})
 
     # calculate the new player tables
     tables = game.get_tables()
@@ -174,6 +181,12 @@ def clear_players():
 def league_table():
     res = _league_table()
     return res, 200
+
+@require_api_key
+@cached
+def player_fundings():
+    return "Not computed yet", 503, {'Retry-After': 3}
+
 
 def _league_table():
     res = []
@@ -359,12 +372,14 @@ def get_funding(player_id):
 @require_api_key
 @require_user_key
 def get_policy_offer(player_id, policy_id, price=None):
+    log.info('get_policy_offer start {}'.format(id(db_session())))
     if price == None:
         price = game.default_offer_price
     try:
         offer = game.offer_policy(player_id, policy_id, price)
         if offer is None:
             return "Player of policy not found", 404
+        log.info('get_policy_offer end')
         return offer, 200
     except ValueError, e:
         return str(e), 400

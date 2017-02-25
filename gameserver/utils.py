@@ -13,6 +13,18 @@ def message_to_dict(message):
             }
     return data
 
+def player_to_funding_dict(player):
+    funding = []
+    for edge in player.lower_edges:
+        funding.append({'id': edge.higher_node.id,
+                        'amount': edge.weight
+                        })
+    data = {'id': player.id,
+            'name': player.name,
+            'funding': funding,
+            }
+    return data
+
 def player_to_league_dict(player):
     data = {'id': player.id,
             'name': player.name,
