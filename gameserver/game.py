@@ -59,11 +59,17 @@ class Game:
     def total_players_inflow(self):
         return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
 
+    @property
+    def total_active_players_inflow(self):
+        td = timedelta(hours=4)
+        window = datetime.now() - td
+        return db_session.query(func.sum(Player.max_outflow)).filter(Player.last_budget_claim > window).scalar() or 0.0
+
     def do_propogate_funds(self):
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
-        total_players_inflow = self.total_players_inflow
+        total_players_inflow = self.total_active_players_inflow
         for node in self.get_nodes():
             node.do_propogate_funds(total_players_inflow)
 
@@ -118,6 +124,7 @@ class Game:
         p = Player(name)
         p.max_outflow = self.standard_max_player_outflow
         p.balance = self.money_per_budget_cycle
+        p.last_budget_claim = datetime.now()
         p.goal = self.get_random_goal()
         for policy in self.get_n_policies(5):
             self.add_fund(p, policy, 0)

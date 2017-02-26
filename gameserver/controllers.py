@@ -9,6 +9,7 @@ from gameserver.settings import APP_VERSION
 from hashlib import sha1
 from time import asctime
 import dateutil.parser
+from datetime import datetime
 
 from gameserver.models import Player, Goal, Edge, Policy, Table
 from sqlalchemy.orm import joinedload, noload
@@ -122,6 +123,8 @@ def _do_tick():
     to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
     # calculate player fundings
     to_cache['/v1/game/player_fundings'] = (player_fundings, 200, {'x-cache':'hit'})
+    # calculate metadata
+    to_cache['/v1/game'] = (_get_metadata(), 200, {'x-cache':'hit'})
 
     # calculate the new player tables
     tables = game.get_tables()
@@ -483,13 +486,19 @@ def get_tables():
     return [ dict(id=t.id,name=t.name) for t in tables ], 200
 
 @require_api_key
+@cached
 def get_metadata():
+    return _get_metadata(), 200
+
+def _get_metadata():
     settings = game.settings
     return {'game_year': settings.current_game_year,
             'game_year_start': settings.current_game_year_start,
             'next_game_year': settings.current_game_year+1,
             'next_game_year_start': settings.next_game_year_start.isoformat(),
             'version': APP_VERSION,
+            'total_players_inflow': game.total_players_inflow,
+            'total_active_players_inflow': game.total_active_players_inflow,
             }
 
 # move to game class
