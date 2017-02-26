@@ -1634,7 +1634,7 @@ class RestAPITests(DBTestCase):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
         p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
+        p2.balance = 0
         n1 = self.game.add_policy('Policy 1', 1.0)
         n2 = self.game.add_policy('Policy 2', 1.0)
         self.game.add_fund(p1, n1, 100)
@@ -1660,14 +1660,17 @@ class RestAPITests(DBTestCase):
         expected = [{'id': p1.id,
                      'name': p1.name,
                      'funding': [{'id': n1.id,
-                                  'amount': 100,},
+                                  'amount_set': 100,
+                                  'amount_actual': 100},
                                  {'id': n2.id,
-                                  'amount': 100,},
+                                  'amount_set': 100,
+                                  'amount_actual': 100,},
                                  ]},
                     {'id': p2.id,
                      'name': p2.name,
                      'funding': [{'id': n2.id,
-                                  'amount': 200,},
+                                  'amount_set': 200,
+                                  'amount_actual': 0},
                                  ]}
                     ]
 

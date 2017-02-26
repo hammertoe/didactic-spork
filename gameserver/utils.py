@@ -17,7 +17,8 @@ def player_to_funding_dict(player):
     funding = []
     for edge in player.lower_edges:
         funding.append({'id': edge.higher_node.id,
-                        'amount': edge.weight
+                        'amount_set': edge.weight,
+                        'amount_actual': edge.weight if player.balance > 0 else 0,
                         })
     data = {'id': player.id,
             'name': player.name,
