@@ -82,7 +82,7 @@ class Game:
         if hasattr(self, '_needs_ranking'):
             self.rank_nodes()
             del self._needs_ranking
-        total_players_inflow =self.total_players_inflow
+        total_players_inflow = self.total_active_players_inflow
         for node in self.get_nodes():
             node.do_leak()
             node.do_propogate_funds(total_players_inflow)
