@@ -13,6 +13,7 @@ from gameserver.utils import pack_amount, checksum
 from gameserver.wallet_sqlalchemy import WalletType, Wallet
 
 from utils import random
+from datetime import datetime
 
 db_session = db.session
 
@@ -288,6 +289,7 @@ class Player(Node):
     max_outflow = Column(Float)
     goal_funded = Column(Float, default=0.0)
     unclaimed_budget = Column(Float, default=0.0)
+    last_budget_claim = Column(DateTime)
 
     goal_id = Column(
         CHAR(36),
@@ -422,6 +424,10 @@ class Player(Node):
 
         return True
 
+    def claim_budget(self):
+        self.balance = self.unclaimed_budget
+        self.unclaimed_budget = 0
+        self.last_budget_claim = datetime.now()
 
 class Edge(Base):
 

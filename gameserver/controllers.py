@@ -402,8 +402,7 @@ def claim_budget(player_id):
         player = game.get_player(player_id)
         if player is None:
             return "Player not found", 404
-        player.balance = player.unclaimed_budget
-        player.unclaimed_budget = 0
+        player.claim_budget()
         db_session.commit()
         return "budget claimed", 200
     except ValueError, e:
