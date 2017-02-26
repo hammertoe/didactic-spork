@@ -54,7 +54,18 @@ class UnitTests(unittest.TestCase):
     def testFakeMemcache(self):
         memcache.add('foo', 'bar', 100)
         res = memcache.get('foo')
-        self.assertEqual(res, None)
+        self.assertEqual(res, 'bar')
+
+        memcache.set('foo', 'baz', 100)
+        res = memcache.get('foo')
+        self.assertEqual(res, 'baz')
+
+        memcache.set_multi({'foo': 1, 'bar': 2}, 100)
+        res = memcache.get('foo')
+        self.assertEqual(res, 1)
+        res = memcache.get('bar')
+        self.assertEqual(res, 2)
+
 
 class DBTestCase(TestCase):
 
