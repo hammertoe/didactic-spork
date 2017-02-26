@@ -3,7 +3,7 @@ import unittest
 import os
 from gameserver.utils import random, pack_amount, unpack_amount, checksum
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
@@ -432,6 +432,21 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.total_players_inflow, 2000)
         p2.max_outflow = 50
         self.assertEqual(self.game.total_players_inflow, 1050)
+
+    def testGameTotalActiveInflow(self):
+        p1 = self.game.create_player('Matt')
+        self.assertEqual(self.game.total_active_players_inflow, 1000)
+        p2 = self.game.create_player('Simon')
+        self.assertEqual(self.game.total_active_players_inflow, 2000)
+        p2.max_outflow = 50
+        self.assertEqual(self.game.total_active_players_inflow, 1050)
+
+        p1.last_budget_claim = datetime.now()-timedelta(hours=6)
+        self.assertEqual(self.game.total_active_players_inflow, 50)
+
+        p1.claim_budget()
+        self.assertEqual(self.game.total_active_players_inflow, 1050)
+
 
     def testPlayerTotalFunding(self):
         p1 = self.game.create_player('Matt')
