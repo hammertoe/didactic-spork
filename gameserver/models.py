@@ -425,9 +425,10 @@ class Player(Node):
         return True
 
     def claim_budget(self):
-        self.balance = self.unclaimed_budget
-        self.unclaimed_budget = 0
-        self.last_budget_claim = datetime.now()
+        if self.unclaimed_budget > 0:
+            self.balance = self.unclaimed_budget
+            self.unclaimed_budget = 0
+            self.last_budget_claim = datetime.now()
 
 class Edge(Base):
 

@@ -1543,6 +1543,23 @@ class CoreGameTests(DBTestCase):
         messages = self.game.get_messages()
         self.assertEqual(len(messages), 0)
         
+    def testClaimBudget(self):
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000
+        p1.unclaimed_budget = 1500000
+
+        p1.claim_budget()
+
+        self.assertEqual(p1.balance, 1500000)
+        self.assertEqual(p1.unclaimed_budget, 0)
+
+        # 2nd claim with no unclaimed budget should do no-op
+        p1.balance = 1400000
+        p1.claim_budget()
+
+        self.assertEqual(p1.balance, 1400000)
+        self.assertEqual(p1.unclaimed_budget, 0)
+        
 
 class DataLoadTests(DBTestCase):
 
@@ -1638,6 +1655,7 @@ class DataLoadTests(DBTestCase):
                     {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'}]
 
         self.assertEqual(sorted(expected), sorted(wallets))
+
 
 class GameTests(DBTestCase):
     
