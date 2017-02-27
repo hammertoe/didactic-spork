@@ -1933,6 +1933,17 @@ class RestAPITests(DBTestCase):
         id = response.json['id']
         self.assertEquals(self.game.get_table(id).id, id)
 
+    def testDeleteTable(self):
+        table = self.game.create_table('Table A')
+        id = table.id
+
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.delete("/v1/tables/{}".format(id),
+                                    headers=headers,
+                                    content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(self.game.get_table(id), None)
+
     def testGetTableEmpty(self):
         data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)

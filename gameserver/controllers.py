@@ -439,6 +439,15 @@ def get_table(id):
     data = generate_table_data(table)
     return data, 200
 
+@require_api_key
+def delete_table(id):
+    if game.delete_table(id):
+        db_session.commit()
+        return "Table deleted", 200
+    else:
+        return "Table not found", 404
+
+
 def generate_table_data(table):
     name = table.name
     players = table.players

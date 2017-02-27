@@ -631,6 +631,26 @@ paths:
       - hasMore: "true"
         tag: "table"
       - tag: "network"
+    delete:
+      security:
+      - APISecurity: []
+      tags:
+      - "table"
+      summary: "Deletes a specific table"
+      operationId: "gameserver.controllers.delete_table"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The id of this object"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+        404:
+          description: "Table not found"
+      x-tags:
+        tag: "table"
   /tables/{id}/clear:
     put:
       security:

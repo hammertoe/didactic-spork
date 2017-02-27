@@ -256,6 +256,15 @@ class Game:
     def get_table(self, id):
         return db_session.query(Table).filter(Table.id == id).one_or_none()
 
+    def delete_table(self, id):
+        table = self.get_table(id)
+        if table:
+            db_session.delete(table)
+            return True
+        else:
+            return False
+
+
     def get_tables(self):
         return db_session.query(Table).all()
 
