@@ -485,7 +485,15 @@ class WalletTests(unittest.TestCase): # pragma: no cover
 
         self.assertEqual(len(w1), 2)
         self.assertEqual(w1.total, (100+200) * 0.9)
-        
+
+    def testWalletMultiplyBadType(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        with self.assertRaises(ValueError):
+            w1 *= w1
+
     def testWalletAddition(self):
         u1 = str(uuid4())
         u2 = str(uuid4())
@@ -495,6 +503,14 @@ class WalletTests(unittest.TestCase): # pragma: no cover
 
         self.assertEqual(len(w1), 2)
         self.assertEqual(w1.total, 100+200+50)
+
+    def testWalletAddBadType(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        with self.assertRaises(ValueError):
+            w1 += w1
         
     def testWalletSubtraction(self):
         u1 = str(uuid4())
@@ -516,6 +532,14 @@ class WalletTests(unittest.TestCase): # pragma: no cover
         expected = Wallet([(u1, 100.0), (u2, 300.0), (u3, 50.0)])
 
         self.assertEqual(w1 & w2, expected)
+
+    def testUnionWalletsBadType(self):
+        u1 = str(uuid4())
+        u2 = str(uuid4())
+        w1 = Wallet([(u1, 100.0), (u2, 200.0)])
+
+        with self.assertRaises(ValueError):
+            w1 &= 1.0
         
     def testAddExistingKeyTotalIsCorrect(self):
         u1 = str(uuid4())
@@ -556,6 +580,37 @@ class WalletTests(unittest.TestCase): # pragma: no cover
 
         self.assertAlmostEqual(w1.total, 0.0)
         self.assertEqual(len(w1), 0)
-                
-if __name__ == '__main__': # pragma: no cover
+
+    def testGetByUUID(self):
+        w1 = Wallet()
+
+        player1_id = uuid4()
+
+        w1.add(player1_id, 10.0)
+        
+        self.assertAlmostEqual(w1.get(player1_id), 10.0)
+
+    def testTransferFromEmptyWallet(self):
+        w1 = Wallet()
+        w2 = Wallet()
+ 
+        player1_id = uuid4()
+
+        w2.add(player1_id, 10.0)
+
+        w1.transfer(w2, 0)
+        
+        self.assertAlmostEqual(w1.total, 0)
+        self.assertAlmostEqual(w2.total, 10)
+
+    def testWalletItems(self):
+        w1 = Wallet()
+ 
+        player1_id = uuid4()
+
+        w1.add(player1_id, 10.0)
+
+        self.assertEqual(w1.items(), [(player1_id.bytes, 10.0)])
+
+if __name__ == '__main__': # pragma: no cover               
     unittest.main()
