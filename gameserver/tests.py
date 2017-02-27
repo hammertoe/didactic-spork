@@ -2517,9 +2517,10 @@ class Utils(DBTestCase): # pragma: no cover
         Base.metadata.create_all(bind=engine)
 
     def createSuperUser(self):
-        p = self.game.create_player('Super User')
+        p = Player('Super User')
         p.id = '89663963-fada-11e6-9949-0c4de9cfe672'
         p.token = '89663b3a-fada-11e6-be7e-0c4de9cfe672'
+        db_session.add(p)
         for policy in self.game.get_policies():
             self.game.add_fund(p, policy, 0)
 
