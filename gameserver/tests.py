@@ -439,6 +439,7 @@ class CoreGameTests(DBTestCase):
 
     def testGameTotalActiveInflow(self):
         p1 = self.game.create_player('Matt')
+        p1.unclaimed_budget = 1500000
         self.assertEqual(self.game.total_active_players_inflow, 1000)
         p2 = self.game.create_player('Simon')
         self.assertEqual(self.game.total_active_players_inflow, 2000)
@@ -1908,6 +1909,7 @@ class RestAPITests(DBTestCase):
         data = json.load(open('examples/example-network.json', 'r'))
 
         self.game.create_network(data)
+        self.game.tick()
 
         self.assertEqual(80, db_session.query(Edge).count())
         self.assertEqual(44, db_session.query(Node).count())
@@ -2040,6 +2042,8 @@ class RestAPITests(DBTestCase):
         table = self.game.create_table('Table A')
         table.players.append(p1)
 
+        self.game.tick()
+
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -2059,6 +2063,9 @@ class RestAPITests(DBTestCase):
         self.assertEqual(chksum1, result['layout_checksum'])
 
         p1.fund(p1.policies[1], 10)
+
+        memcache.clear()
+        self.game.tick()
 
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
