@@ -32,6 +32,8 @@ def cors_after_request(resp):
     headers_allow = request.headers.get('Access-Control-Request-Headers', '*')
     resp.headers['Access-Control-Allow-Headers'] = headers_allow
     resp.headers['Access-Control-Allow-Origin'] = '*'
+    methods_allow = request.headers.get('Access-Control-Request-Method', '*')
+    resp.headers['Access-Control-Allow-Methods'] = methods_allow
     return resp
 
 def create_app():
