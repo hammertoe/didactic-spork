@@ -66,6 +66,9 @@ class UnitTests(unittest.TestCase):
         res = memcache.get('bar')
         self.assertEqual(res, 2)
 
+        memcache.clear()
+        res = memcache.get('bar')
+        self.assertEqual(res, None)
 
 class DBTestCase(TestCase):
 
@@ -91,6 +94,7 @@ class DBTestCase(TestCase):
         self.game = Game()
         test_client = self.game.add_client('tests')
         self.api_key = test_client.id
+        memcache.clear()
 
     def tearDown(self):
         db_session.rollback()

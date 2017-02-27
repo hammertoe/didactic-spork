@@ -128,6 +128,9 @@ def checksum(seller_id, policy_id, price, salt):
 class FakeMemcache:
 
     def __init__(self):
+        self.clear()
+
+    def clear(self):
         self.cache = {}
 
     def add(self, key, value, time=0, min_compress_len=0, namespace=None):
