@@ -504,7 +504,7 @@ def _get_metadata():
     return {'game_year': settings.current_game_year,
             'game_year_start': settings.current_game_year_start,
             'next_game_year': settings.current_game_year+1 if settings.current_game_year else None,
-            'next_game_year_start': settings.next_game_year_start.isoformat() if settings.next_game_year_start else None,
+            'next_game_year_start': settings.next_game_year_start if settings.next_game_year_start else None,
             'version': APP_VERSION,
             'total_players_inflow': game.total_players_inflow,
             'total_active_players_inflow': game.total_active_players_inflow,
