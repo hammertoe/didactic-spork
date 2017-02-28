@@ -544,6 +544,6 @@ def get_messages():
         if m.type == 'budget':
             budgets.append(data)
         elif m.type == 'event':
-            budgets.append(data)
+            events.append(data)
 
     return dict(budgets=budgets, events=events), 200
