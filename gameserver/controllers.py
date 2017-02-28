@@ -527,10 +527,10 @@ def start_game(params):
 def set_messages(messages):
     game.clear_messages()
     for m in messages['budgets']:
-        ts = dateutil.parser.parse(m['time'])
+        ts = dateutil.parser.parse(m['time']).replace(tzinfo=None)
         game.add_message(ts, "budget", m['message'])
     for m in messages['events']:
-        ts = dateutil.parser.parse(m['time'])
+        ts = dateutil.parser.parse(m['time']).replace(tzinfo=None)
         game.add_message(ts, "event", m['message'])
     db_session.commit()
 

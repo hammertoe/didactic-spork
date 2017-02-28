@@ -2481,7 +2481,7 @@ class RestAPITests(DBTestCase):
         data = {'budgets': [{'time': '2017-02-22T12:50:00',
                              'message': 'message 1',
                              },
-                            {'time': '2017-02-22T12:51:00',
+                            {'time': '2017-02-22T12:51:00Z',
                              'message': 'message 2',
                              }],
                 'events': [{'time': '2017-02-22T13:50:00',
@@ -2509,15 +2509,15 @@ class RestAPITests(DBTestCase):
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/game/messages", headers=headers)
         self.assertEqual(response.status_code, 200)
-        expected = {'budgets': [{'time': '2017-02-22T12:50:00',
+        expected = {'budgets': [{'time': '2017-02-22T12:50:00Z',
                                  'message': 'message 1'}
                                 ],
-                    'events': [{'time': '2017-02-22T13:50:00',
+                    'events': [{'time': '2017-02-22T13:50:00Z',
                                 'message': 'message 2'},
                                ],
                     }
 
-        self.assertEqual(sorted(response.json), sorted(expected))
+        self.assertEqual(sorted(response.json.items()), sorted(expected.items()))
 
 
 

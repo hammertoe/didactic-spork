@@ -8,7 +8,7 @@ random = orig_random.Random()
 random.seed()
 
 def message_to_dict(message):
-    data = {'time': message.timestamp.isoformat(),
+    data = {'time': message.timestamp,
             'message': message.message,
             }
     return data
