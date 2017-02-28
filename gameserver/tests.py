@@ -2302,8 +2302,8 @@ class RestAPITests(DBTestCase):
 
         self.assertIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 1500000+20000)
-        self.assertEqual(buyer.balance, 1500000-20000)
+        self.assertEqual(seller.balance, 1500000+200000)
+        self.assertEqual(buyer.balance, 1500000-200000)
         
     def testBuyPolicyFail(self):
         

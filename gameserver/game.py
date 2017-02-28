@@ -17,7 +17,7 @@ class Game:
     def __init__(self):
         self.money_per_budget_cycle = 1500000
         self.standard_max_player_outflow = 1000
-        self.default_offer_price = 20000
+        self.default_offer_price = 200000
 
     @property
     def settings(self):
@@ -165,7 +165,7 @@ class Game:
         # hack to get free money
         if data['seller_id'] == '89663963-fada-11e6-9949-0c4de9cfe672' and \
                 data['policy_id'] == '701a46d9-fadf-11e6-a390-040ccee13a9a':
-            buyer.balance = buyer.balance + 20000
+            buyer.balance = buyer.balance + 200000
             return True
         seller = self.get_player(data['seller_id'])
         policy = self.get_policy(data['policy_id'])
