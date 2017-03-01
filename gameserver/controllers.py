@@ -7,7 +7,7 @@ from gameserver.database import db
 from gameserver.utils import node_to_dict, player_to_dict, node_to_dict2, edge_to_dict, edges_to_checksum, player_to_league_dict, message_to_dict, player_to_funding_dict
 from gameserver.settings import APP_VERSION
 from hashlib import sha1
-from time import asctime
+from time import asctime, time
 import dateutil.parser
 from datetime import datetime
 
@@ -95,6 +95,8 @@ def _do_tick():
     players = []
     player_dicts = []
     player_fundings = []
+    # calculate metadata
+    to_cache['/v1/game'] = (_get_metadata(), 200, {'x-cache':'hit'})
     # tick the game and get the resultant nodes
     game_nodes = game.tick()
     for node in game_nodes:
@@ -114,6 +116,7 @@ def _do_tick():
             player_fundings.append(player_to_funding_dict(node))
             node.network = game.get_network_for_player(node)
         to_cache[key] = (d, 200, {'x-cache':'hit'})
+
     # cache the network
     network['generated'] = asctime()
     to_cache['/v1/network/'] = (network, 200, {'x-cache':'hit'})
@@ -123,8 +126,6 @@ def _do_tick():
     to_cache['/v1/game/league_table'] = (league_table, 200, {'x-cache':'hit'})
     # calculate player fundings
     to_cache['/v1/game/player_fundings'] = (player_fundings, 200, {'x-cache':'hit'})
-    # calculate metadata
-    to_cache['/v1/game'] = (_get_metadata(), 200, {'x-cache':'hit'})
 
     # calculate the new player tables
     tables = game.get_tables()

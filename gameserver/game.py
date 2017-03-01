@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from time import time
 
 from gameserver.utils import random, node_to_dict, update_node_from_dict
 
@@ -7,7 +8,7 @@ from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings, Message
 from gameserver.settings import APP_VERSION, GAME_ID
 
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload, contains_eager
 from sqlalchemy import func, select
 
 db_session = db.session
@@ -48,8 +49,8 @@ class Game:
 
     def get_nodes(self):
         return db_session.query(Node).with_polymorphic("*").options(
-            joinedload('higher_edges'),
-            joinedload('lower_edges')).order_by(Node.rank).all()
+            subqueryload('higher_edges'),
+            subqueryload('lower_edges')).order_by(Node.rank).all()
     
     def do_leak(self):
         for node in self.get_nodes():
@@ -83,7 +84,8 @@ class Game:
             self.rank_nodes()
             del self._needs_ranking
         total_players_inflow = self.total_active_players_inflow
-        for node in self.get_nodes():
+        nodes = self.get_nodes()
+        for node in nodes:
             node.do_leak()
             node.do_propogate_funds(total_players_inflow)
             res.append(node)
