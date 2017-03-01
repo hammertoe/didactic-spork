@@ -229,7 +229,6 @@ class Node(Base):
         total_out_factor = min(1.0, total_balance / total_children_weight)
 
         for edge in self.lower_edges:
-            child = edge.higher_node
             amount = edge.weight
             if amount <= 0: # don't try to propogate negative values
                 continue
