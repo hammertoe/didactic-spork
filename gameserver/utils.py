@@ -91,7 +91,7 @@ def edge_to_dict2(edge):
     data = {'id': edge.id,
             'from_id': edge.lower_node.id,
             'to_id': edge.higher_node.id,
-            'weight': float("{:.2f}".format(edge.weight)),
+            'weight': float("{:.4f}".format(edge.weight)),
             }
     return data
 
