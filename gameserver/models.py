@@ -333,19 +333,22 @@ class Player(Node):
         self.wallet.transfer(node.wallet, amount)
 
     def fund(self, node, rate):
-        # Do we already fund this node? If so change value
-        f = db_session.query(Edge).filter(Edge.higher_node == node,
-                                          Edge.lower_node == self).one_or_none()
-        # check we are not exceeding our max fund outflow rate
-        tmp_rate = self.total_funding
-        if f is not None:
-            tmp_rate -= f.weight
-        tmp_rate += rate
-        if tmp_rate > self.max_outflow:
+        # do we already fund this node?
+        edge = None
+        for e in self.lower_edges:
+            if e.higher_node == node:
+                edge = e
+                break
+
+        # check not exceeded rate
+        current = edge.weight if edge is not None else 0
+        total = self.total_funding
+        if total - current + rate > self.max_outflow:
             raise ValueError, "Exceeded max outflow rate"
 
-        if f is not None:
-            f.weight = rate
+        # if so, change value
+        if edge is not None:
+            edge.weight = rate
         else: # create new fund link
             f = Edge(self, node, rate)
             db_session.add(f)
