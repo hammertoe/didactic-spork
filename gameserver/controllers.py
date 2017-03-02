@@ -86,10 +86,15 @@ def invalidates_player(f, *args, **kw):
 @require_api_key
 def do_tick():
     _do_tick()
+    t1 = time()
     db_session.commit()
+    t2 = time()
+    log.debug('session commit {:.2f}'.format(t2-t1))
+
     return None, 200
 
 def _do_tick():
+    t1 = time()
     to_cache = {}
     network = {'goals': [],
                'policies': []}
@@ -98,8 +103,12 @@ def _do_tick():
     player_fundings = []
     # calculate metadata
     to_cache['/v1/game'] = (_get_metadata(), 200, {'x-cache':'hit'})
+    is_passed_year_end = game.is_passed_year_end()
+    tables = game.get_tables()
     # tick the game and get the resultant nodes
     game_nodes = game.tick()
+    t2 = time()
+    log.debug('initial tick part {:.2f}'.format(t2-t1))
     for node in game_nodes:
         # cache each node, incl players
         key = "/v1/network/{}".format(node.id)
@@ -118,6 +127,8 @@ def _do_tick():
             node.network = game.get_network_for_player(node)
         to_cache[key] = (d, 200, {'x-cache':'hit'})
 
+    t3 = time()
+    log.debug('pre-cache nodes part {:.2f}'.format(t3-t2))
     # cache the network
     network['generated'] = asctime()
     to_cache['/v1/network/'] = (network, 200, {'x-cache':'hit'})
@@ -128,8 +139,10 @@ def _do_tick():
     # calculate player fundings
     to_cache['/v1/game/player_fundings'] = (player_fundings, 200, {'x-cache':'hit'})
 
+    t4 = time()
+    log.debug('pre-cache network part {:.2f}'.format(t4-t3))
+
     # calculate the new player tables
-    tables = game.get_tables()
     for table in tables:
         players = table.players
         if players:
@@ -165,14 +178,23 @@ def _do_tick():
         key = "/v1/tables/{}".format(table.id)
         to_cache[key] = (data, 200, {'x-cache':'hit'}) 
 
+    t5 = time()
+    log.debug('pre-cache tables part {:.2f}'.format(t5-t4))
+
     # send everything to the cache
     memcache.set_multi(to_cache, time=60)
 
+    t6 = time()
+    log.debug('send all the cache part {:.2f}'.format(t6-t5))
+
     # if we are passed the next year start then replenish funds
-    if game.is_passed_year_end():
+    if is_passed_year_end:
         year = game.current_year()
         game.start(year+1)
         game.do_replenish_budget()
+
+    t7 = time()
+    log.debug('total tick {:.2f}'.format(t7-t6))
 
 @require_api_key
 def clear_players():
