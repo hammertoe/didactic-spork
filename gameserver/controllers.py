@@ -544,6 +544,7 @@ def stop_game():
 @require_api_key
 def start_game(params):
     year = game.start(params['year'])
+    game.do_replenish_budget()
     db_session.commit()
     return "game started, year {}".format(year), 200
 
