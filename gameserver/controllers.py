@@ -85,11 +85,13 @@ def invalidates_player(f, *args, **kw):
 
 @require_api_key
 def do_tick():
-    _do_tick()
     t1 = time()
-    db_session.commit()
+    _do_tick()
     t2 = time()
-    log.debug('session commit {:.2f}'.format(t2-t1))
+    db_session.commit()
+    t3 = time()
+    log.debug('session commit {:.2f}'.format(t3-t2))
+    log.debug('entire tick {:.2f}'.format(t3-t1))
 
     return None, 200
 
