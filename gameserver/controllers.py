@@ -78,6 +78,7 @@ def invalidates_player(f, *args, **kw):
     data = _get_player(player_id)
     if data:
         cache_key = '/v1/players/{}'.format(player_id)
+        data = (data, 200, {'x-cache':'hit'})
         memcache.set(cache_key, data, 60)
 
     return ret
