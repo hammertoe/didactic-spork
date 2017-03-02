@@ -50,12 +50,17 @@ def scheduler():
     log.info('Ticker instance started')
     while True:
         if game.is_running(): 
-            task = taskqueue.add(
-                url='/v1/game/tick',
-                queue_name='tickqueue',
-                method='PUT',
-                target='tickworker',
-                )
+            try:
+                task = taskqueue.add(
+                    url='/v1/game/tick',
+                    queue_name='tickqueue',
+                    method='PUT',
+                    target='tickworker',
+                    name="tick-{}".format(int(time()) // TICKINTERVAL)
+                    )
+                log.info('Tick task added to queue')
+            except (taskqueue.TaskAlreadyExistsError, taskqueue.TombstonedTaskError):
+                pass
         else:
             log.info('Tick skipped as game stopped')
         db_session.rollback()
