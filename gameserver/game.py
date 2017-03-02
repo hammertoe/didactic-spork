@@ -1,3 +1,4 @@
+import logging.config
 import json
 from datetime import datetime, timedelta
 from time import time
@@ -10,6 +11,8 @@ from gameserver.settings import APP_VERSION, GAME_ID
 
 from sqlalchemy.orm import joinedload, subqueryload, contains_eager
 from sqlalchemy import func, select
+
+log = logging.getLogger(__name__)
 
 db_session = db.session
 
@@ -84,11 +87,16 @@ class Game:
             self.rank_nodes()
             del self._needs_ranking
         total_players_inflow = self.total_active_players_inflow
+        t1 = time()
         nodes = self.get_nodes()
+        t2 = time()
+        log.debug('get nodes {:.2f}'.format(t2-t1))
         for node in nodes:
             node.do_leak()
             node.do_propogate_funds(total_players_inflow)
             res.append(node)
+        t3 = time()
+        log.debug('propogate funds {:.2f}'.format(t3-t2))
         return res
 
     def top_players(self, max_num=20):
