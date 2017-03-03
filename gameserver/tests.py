@@ -2519,6 +2519,35 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(sorted(response.json.items()), sorted(expected.items()))
 
+    def testClaimBudget(self):
+        db_session.begin(subtransactions=True)
+
+        p1 = self.game.create_player('Matt')
+        p1.balance = 1000
+        p1.unclaimed_budget = 1500000
+
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/players/{}/claim_budget".format(p1.id),
+                                      headers=headers,
+                                      content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(p1.balance, 1500000)
+        self.assertEqual(p1.unclaimed_budget, 0)
+
+        # 2nd claim with no unclaimed budget should do no-op
+        p1.balance = 1400000
+        headers = {'X-USER-KEY': p1.token,
+                   'X-API-KEY': self.api_key}
+        response = self.client.put("/v1/players/{}/claim_budget".format(p1.id),
+                                      headers=headers,
+                                      content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(p1.balance, 1400000)
+        self.assertEqual(p1.unclaimed_budget, 0)
+
 
 
 class Utils(DBTestCase): # pragma: no cover
