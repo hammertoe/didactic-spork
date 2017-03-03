@@ -134,7 +134,7 @@ class Wallet:
         if type(other) not in [IntType, FloatType]:
             raise ValueError
 
-        new_wallet = Wallet()
+        new_wallet = self.__class__()
         for player,amount in self._entries.iteritems():
             new_wallet._add(player, amount * other)
 
@@ -147,7 +147,7 @@ class Wallet:
         total = self._total
         new_total = self._total + other
         factor = new_total / total
-        new_wallet = Wallet()
+        new_wallet = self.__class__()
         for player,amount in self._entries.iteritems():
             new_wallet._add(player, amount * factor)
 
@@ -162,7 +162,7 @@ class Wallet:
 
         a = self._entries
         b = other._entries
-        new_wallet = Wallet()
+        new_wallet = self.__class__()
 
         nwa = new_wallet._add
         aget = a.get
