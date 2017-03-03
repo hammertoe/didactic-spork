@@ -9,7 +9,7 @@ from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings, Message
 from gameserver.settings import APP_VERSION, GAME_ID
 
-from sqlalchemy.orm import joinedload, subqueryload, contains_eager
+from sqlalchemy.orm import joinedload, subqueryload, contains_eager, attributes
 from sqlalchemy import func, select
 
 log = logging.getLogger(__name__)
@@ -51,9 +51,26 @@ class Game:
             node.rank = node.calc_rank()
 
     def get_nodes(self):
-        return db_session.query(Node).with_polymorphic("*").options(
-            subqueryload('higher_edges'),
-            subqueryload('lower_edges')).order_by(Node.rank).all()
+        he = {}
+        le = {}
+        n = {}
+        nodes = db_session.query(Node).with_polymorphic("*").order_by(Node.rank).all()
+        n = { nx.id: nx for nx in nodes }
+        for edge in db_session.query(Edge).all():
+            he[edge.higher_id] = he.get(edge.higher_id, []) + [edge,]
+            le[edge.lower_id] = le.get(edge.lower_id, []) + [edge,]
+            attributes.set_committed_value(edge, 'lower_node', n[edge.lower_id])
+            attributes.set_committed_value(edge, 'higher_node', n[edge.higher_id])
+
+        for node in nodes:
+            attributes.set_committed_value(node, 'lower_edges', le.get(node.id))
+            attributes.set_committed_value(node, 'higher_edges', he.get(node.id))
+
+        return nodes
+
+#        return db_session.query(Node).with_polymorphic("*").options(
+#            subqueryload('higher_edges'),
+#            subqueryload('lower_edges')).order_by(Node.rank).all()
     
     def do_leak(self):
         for node in self.get_nodes():
