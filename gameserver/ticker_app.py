@@ -56,7 +56,7 @@ def scheduler():
                     queue_name='tickqueue',
                     method='PUT',
                     target='tickworker',
-                    name="tick-{}".format(int(time()) // TICKINTERVAL)
+                    name="tick-{}".format(int(time()) // settings.TICKINTERVAL)
                     )
                 log.info('Tick task added to queue')
             except (taskqueue.TaskAlreadyExistsError, taskqueue.TombstonedTaskError):
@@ -64,7 +64,7 @@ def scheduler():
         else:
             log.info('Tick skipped as game stopped')
         db_session.rollback()
-        sleep(TICKINTERVAL)
+        sleep(settings.TICKINTERVAL)
 
 def main(): # pragma: no cover
     app = create_app()

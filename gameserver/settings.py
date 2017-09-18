@@ -14,3 +14,4 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 APP_VERSION = "1.05"
 GAME_ID = "Global Festival of Ideas for Sustainable Development"
 
+TICKINTERVAL = 3
