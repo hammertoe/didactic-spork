@@ -17,7 +17,6 @@ from gameserver.app import app, create_app
 from flask_testing import TestCase
 
 from gameserver.utils import fake_memcache as memcache, checksum
-from gameserver.settings import GAME_ID
 
 db.app = app
 
@@ -91,7 +90,8 @@ class DBTestCase(TestCase):
 
     def setUp(self):
         db_session.begin_nested()
-        self.game = Game()
+        self.game = Game('78854855-8515-48cd-8a52-1eed3c6754b1')
+        self.game.start(2017, 2025, 10, 12000000)
         test_client = self.game.add_client('tests')
         self.api_key = test_client.id
         memcache.clear()
@@ -144,7 +144,7 @@ class CoreGameTests(DBTestCase):
         p = self.game.create_player('Matt')
 
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertAlmostEqual(p.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p.balance, self.game.settings.budget_per_cycle)
 
     def testPlayerSetBalance(self):
 
@@ -473,7 +473,7 @@ class CoreGameTests(DBTestCase):
 
     def testPlayerMaxOutflow(self):
         p1 = self.game.create_player('Matt')
-        self.assertEqual(p1.max_outflow, self.game.standard_max_player_outflow)
+        self.assertEqual(p1.max_outflow, self.game.settings.max_spend_per_tick)
         
     def testPlayerExceedMaxOutflow(self):
         p1 = self.game.create_player('Matt')
@@ -782,9 +782,9 @@ class CoreGameTests(DBTestCase):
 
         self.game.do_replenish_budget()
 
-        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p1.balance, self.game.settings.budget_per_cycle)
+        self.assertAlmostEqual(p2.balance, self.game.settings.budget_per_cycle)
+        self.assertAlmostEqual(p3.balance, self.game.settings.budget_per_cycle)
 
         n1 = self.game.add_policy('Policy 1', 1.0)
 
@@ -792,21 +792,21 @@ class CoreGameTests(DBTestCase):
         p2.transfer_funds_to_node(n1, 200)
         p3.transfer_funds_to_node(n1, 400)
 
-        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle-100)
-        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle-200)
-        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle-400)
+        self.assertAlmostEqual(p1.balance, self.game.settings.budget_per_cycle-100)
+        self.assertAlmostEqual(p2.balance, self.game.settings.budget_per_cycle-200)
+        self.assertAlmostEqual(p3.balance, self.game.settings.budget_per_cycle-400)
 
         self.assertAlmostEqual(n1.balance, 100+200+400)
 
         self.game.do_replenish_budget()
 
-        self.assertAlmostEqual(p1.balance, self.game.money_per_budget_cycle-100)
-        self.assertAlmostEqual(p2.balance, self.game.money_per_budget_cycle-200)
-        self.assertAlmostEqual(p3.balance, self.game.money_per_budget_cycle-400)
+        self.assertAlmostEqual(p1.balance, self.game.settings.budget_per_cycle-100)
+        self.assertAlmostEqual(p2.balance, self.game.settings.budget_per_cycle-200)
+        self.assertAlmostEqual(p3.balance, self.game.settings.budget_per_cycle-400)
 
-        self.assertAlmostEqual(p1.unclaimed_budget, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p2.unclaimed_budget, self.game.money_per_budget_cycle)
-        self.assertAlmostEqual(p3.unclaimed_budget, self.game.money_per_budget_cycle)
+        self.assertAlmostEqual(p1.unclaimed_budget, self.game.settings.budget_per_cycle)
+        self.assertAlmostEqual(p2.unclaimed_budget, self.game.settings.budget_per_cycle)
+        self.assertAlmostEqual(p3.unclaimed_budget, self.game.settings.budget_per_cycle)
 
 
         self.assertAlmostEqual(n1.balance, 100+200+400)
@@ -1513,11 +1513,6 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(buyer.balance, 1500000)
 
     def testGameStartStop(self):
-        self.assertFalse(self.game.is_running())
-
-        year = self.game.start(2017)
-        self.assertEqual(year, 2017)
-
         self.assertTrue(self.game.is_running())
 
         year = self.game.stop()
@@ -1760,22 +1755,8 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/nobody", headers=headers)
         self.assertEquals(response.status_code, 404)
 
-    def testCreateNewPlayerBadGameId(self):
-        data = dict(name='Matt', game_id='dummy')
-
-        num1 = db_session.query(Player).count()
-
-        headers = {'X-API-KEY': self.api_key}
-        response = self.client.post("/v1/players/", data=json.dumps(data),
-                                    headers=headers,
-                                    content_type='application/json')
-        self.assertEquals(response.status_code, 404)
-
-        num2 = db_session.query(Player).count()
-        self.assertEqual(num1, num2)
-
     def testCreateNewPlayer(self):
-        data = dict(name='Matt', game_id='Global Festival of Ideas for Sustainable Development')
+        data = dict(name='Matt')
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
@@ -1791,7 +1772,7 @@ class RestAPITests(DBTestCase):
 
     def testCreateThenGetNewPlayer(self):
         name = 'Matt {}'.format(time.time())
-        data = dict(name=name, game_id=GAME_ID)
+        data = dict(name=name)
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
@@ -1810,7 +1791,7 @@ class RestAPITests(DBTestCase):
 
         random.seed(0)
         name = 'Matt {}'.format(time.time())
-        data = dict(name=name, game_id=GAME_ID)
+        data = dict(name=name)
         db_session.begin(subtransactions=True)
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
@@ -1830,7 +1811,7 @@ class RestAPITests(DBTestCase):
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
-        data = dict(name=name, game_id=GAME_ID)
+        data = dict(name=name)
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
                                     content_type='application/json')
@@ -2302,8 +2283,8 @@ class RestAPITests(DBTestCase):
 
         self.assertIn(p1, buyer.children())
         self.assertIn(p1, seller.children())
-        self.assertEqual(seller.balance, 1500000+200000)
-        self.assertEqual(buyer.balance, 1500000-200000)
+        self.assertEqual(seller.balance, 1500000+300000)
+        self.assertEqual(buyer.balance, 1500000-300000)
         
     def testBuyPolicyFail(self):
         

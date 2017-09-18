@@ -7,7 +7,7 @@ from gameserver.utils import random, node_to_dict, update_node_from_dict
 
 from gameserver.database import db
 from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings, Message
-from gameserver.settings import APP_VERSION, GAME_ID
+from gameserver.settings import APP_VERSION, TICKINTERVAL
 
 from sqlalchemy.orm import joinedload, subqueryload, contains_eager, attributes
 from sqlalchemy import func, select
@@ -18,14 +18,22 @@ db_session = db.session
 
 class Game:
 
-    def __init__(self):
-        self.money_per_budget_cycle = 1500000
-        self.standard_max_player_outflow = 1000
-        self.default_offer_price = 200000
+    def __init__(self, id):
+        self.id = id
+
+    @property
+    def default_offer_price(self):
+        # set default offer price to 20% of max spend per year
+        return self.settings.budget_per_cycle * 0.2
 
     @property
     def settings(self):
-        return db_session.query(Settings).one()
+        s = db_session.query(Settings).filter(Settings.game_id == self.id).one_or_none()
+        if s is None:
+            s = Settings(game_id=self.id)
+            db_session.add(s)
+
+        return s
 
     def get_messages(self):
         return db_session.query(Message).all()
@@ -68,6 +76,24 @@ class Game:
 
         return nodes
 
+    def get_nodes_for_update(self):
+        he = {}
+        le = {}
+        n = {}
+        nodes = db_session.query(Node).with_polymorphic("*").with_for_update().order_by(Node.rank).all()
+        n = { nx.id: nx for nx in nodes }
+        for edge in db_session.query(Edge).with_for_update().all():
+            he[edge.higher_id] = he.get(edge.higher_id, []) + [edge,]
+            le[edge.lower_id] = le.get(edge.lower_id, []) + [edge,]
+            attributes.set_committed_value(edge, 'lower_node', n[edge.lower_id])
+            attributes.set_committed_value(edge, 'higher_node', n[edge.higher_id])
+
+        for node in nodes:
+            attributes.set_committed_value(node, 'lower_edges', le.get(node.id))
+            attributes.set_committed_value(node, 'higher_edges', he.get(node.id))
+
+        return nodes
+
 #        return db_session.query(Node).with_polymorphic("*").options(
 #            subqueryload('higher_edges'),
 #            subqueryload('lower_edges')).order_by(Node.rank).all()
@@ -96,7 +122,7 @@ class Game:
 
     def do_replenish_budget(self):
         for player in db_session.query(Player).all():
-            player.unclaimed_budget = self.money_per_budget_cycle
+            player.unclaimed_budget = self.settings.budget_per_cycle
 
     def tick(self):
         res = []
@@ -105,7 +131,7 @@ class Game:
             del self._needs_ranking
         total_players_inflow = self.total_active_players_inflow
         t1 = time()
-        nodes = self.get_nodes()
+        nodes = self.get_nodes_for_update()
         t2 = time()
         log.debug('get nodes {:.2f}'.format(t2-t1))
         for node in nodes:
@@ -149,8 +175,8 @@ class Game:
 
     def create_player(self, name):
         p = Player(name)
-        p.max_outflow = self.standard_max_player_outflow
-        p.balance = self.money_per_budget_cycle
+        p.max_outflow = self.settings.max_spend_per_tick
+        p.balance = self.settings.budget_per_cycle
         p.last_budget_claim = datetime.now()
         p.goal = self.get_random_goal()
         for policy in self.get_n_policies(5):
@@ -424,16 +450,22 @@ class Game:
 
         self.rank_nodes()
         
-    def start(self, year):
-        td = timedelta(hours=2)
+    def start(self, start_year, end_year, duration, budget_per_player):
+        years_to_play = end_year - start_year
+        budget_per_player_per_year = budget_per_player / years_to_play
+        seconds_per_year = duration*60*60 / years_to_play
+
+        td = timedelta(seconds=seconds_per_year)
         now = datetime.now()
         next_game_year_start = now + td
 
         self.settings.current_game_year_start = now
-        self.settings.current_game_year = year
+        self.settings.current_game_year = start_year
         self.settings.next_game_year_start = next_game_year_start
+        self.settings.budget_per_cycle = budget_per_player_per_year
+        self.settings.max_spend_per_tick = budget_per_player_per_year / (seconds_per_year / TICKINTERVAL)
 
-        return year
+        return start_year
 
     def stop(self):
         year = self.settings.current_game_year
