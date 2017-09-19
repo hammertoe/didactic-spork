@@ -22,7 +22,7 @@ except ImportError:
     from gameserver.utils import fake_memcache as memcache
 
 db_session = db.session
-game = Game()
+game = Game('78854855-8515-48cd-8a52-1eed3c6754b1')
 
 def app_version():
     return dict(version=APP_VERSION)
@@ -312,9 +312,6 @@ def create_player(player=None):
     Creates a new game player.
     """
     if player:
-        game_id = player.get('game_id')
-        if game_id != game.settings.game_id:
-            return "Game not found", 404
         player = game.create_player(player['name'])
         db_session.commit()
         d = player_to_dict(player)
@@ -534,6 +531,8 @@ def _get_metadata():
             'version': APP_VERSION,
             'total_players_inflow': game.total_players_inflow,
             'total_active_players_inflow': game.total_active_players_inflow,
+            'budget_per_cycle': settings.budget_per_cycle,
+            'max_spend_per_tick': settings.max_spend_per_tick,
             }
 
 # move to game class
@@ -545,7 +544,7 @@ def stop_game():
 
 @require_api_key
 def start_game(params):
-    year = game.start(params['year'])
+    year = game.start(params['start_year'], params['end_year'], params['duration'], params['budget_per_player'])
     game.do_replenish_budget()
     db_session.commit()
     return "game started, year {}".format(year), 200

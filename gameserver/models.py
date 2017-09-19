@@ -1,3 +1,4 @@
+import logging.config
 from sqlalchemy import Column, Integer, String, ForeignKey, \
     Float, CHAR, DateTime, create_engine, event, Table as SATable, inspect
 from sqlalchemy.orm import relationship, sessionmaker, backref
@@ -14,6 +15,8 @@ from gameserver.wallet_sqlalchemy import WalletType, Wallet
 
 from utils import random
 from datetime import datetime
+
+log = logging.getLogger(__name__)
 
 db_session = db.session
 
@@ -69,6 +72,7 @@ class Settings(Base):
     current_game_year_start = Column(DateTime)
     next_game_year_start = Column(DateTime)
     budget_per_cycle = Column(Float)
+    max_spend_per_tick = Column(Float)
 
 
 class Table(Base):
@@ -178,6 +182,8 @@ class Node(Base):
     @balance.setter
     def balance(self, amount):
         self.wallet = Wallet([(self.id, amount)])
+        self.wallet.changed()
+        log.debug("wallet marked changed")
 
     def do_leak(self):
         leak = self.get_leak()
@@ -429,7 +435,9 @@ class Player(Node):
     def claim_budget(self):
         if self.unclaimed_budget > 0:
             self.balance = self.unclaimed_budget
+            log.debug("set balance for {} to {}".format(self.id, self.balance))
             self.unclaimed_budget = 0
+            log.debug("set unclaimed budget for {} to {}".format(self.id, self.unclaimed_budget))
             self.last_budget_claim = datetime.now()
 
 class Edge(Base):
