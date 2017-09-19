@@ -531,6 +531,8 @@ def _get_metadata():
             'version': APP_VERSION,
             'total_players_inflow': game.total_players_inflow,
             'total_active_players_inflow': game.total_active_players_inflow,
+            'budget_per_cycle': settings.budget_per_cycle,
+            'max_spend_per_tick': settings.max_spend_per_tick,
             }
 
 # move to game class

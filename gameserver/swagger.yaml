@@ -76,6 +76,8 @@ paths:
       responses:
         200:
           description: "Success"
+          schema:
+            $ref: "#/definitions/GameMetadata"
       x-tags:
       - tag: "game"
   /game/start:
@@ -899,6 +901,35 @@ definitions:
         description: "event messages"
         items:
           $ref: "#/definitions/Message"
+  GameMetadata:
+    properties:
+      game_year:
+        type: "number"
+        description: "The start year of the game"
+      game_year_start:
+        type: "string"
+        description: "The real world time the game started"
+      next_game_year:
+        type: "number"
+        description: "The next year of the game"
+      next_game_year_start:
+        type: "number"
+        description: "The real world time the next year starts"
+      version:
+        type: "string"
+        description: "The version of the app"
+      total_players_inflow:
+        type: "number"
+        description: "The total money currently funding the policies from all players"
+      total_active_players_inflow:
+        type: "number"
+        description: "The total money currently funding from active players"
+      budget_per_cycle:
+        type: "number"
+        description: "The budget allocated to each player per year"
+      max_spend_per_tick:
+        type: "number"
+        description: "The maximum a player can fund per game tick"
   Message:
     properties:
       time:

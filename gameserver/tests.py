@@ -4,6 +4,7 @@ import os
 from gameserver.utils import random, pack_amount, unpack_amount, checksum
 import time
 from datetime import datetime, timedelta
+import dateutil.parser
 
 #if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
 #    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
@@ -14,6 +15,7 @@ from sqlalchemy import event
 from gameserver.database import db, default_uuid
 from gameserver.wallet_sqlalchemy import Wallet
 from gameserver.app import app, create_app
+from gameserver.settings import APP_VERSION
 from flask_testing import TestCase
 
 from gameserver.utils import fake_memcache as memcache, checksum
@@ -2529,6 +2531,25 @@ class RestAPITests(DBTestCase):
         self.assertEqual(p1.balance, 1400000)
         self.assertEqual(p1.unclaimed_budget, 0)
 
+
+    def testGetGameMetadata(self):
+        headers = {'X-API-KEY': self.api_key}
+        response = self.client.get("/v1/game",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json
+        self.assertEqual(data['game_year'], 2017)
+        game_year_start = dateutil.parser.parse(data['game_year_start']).replace(tzinfo=None)
+        self.assertLess((datetime.now() - game_year_start).seconds, 5)
+        self.assertEqual(data['next_game_year'], 2018)
+        next_game_year_start = dateutil.parser.parse(data['next_game_year_start']).replace(tzinfo=None)
+        self.assertEqual(next_game_year_start - game_year_start, timedelta(minutes=75))
+        self.assertEqual(data['version'], APP_VERSION)
+        self.assertEqual(data['total_players_inflow'], 0.0)
+        self.assertEqual(data['budget_per_cycle'], 1500000.0)
+        self.assertEqual(data['max_spend_per_tick'], 1000)
 
 
 class Utils(DBTestCase): # pragma: no cover
