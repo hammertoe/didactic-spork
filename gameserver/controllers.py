@@ -402,7 +402,7 @@ def get_policy_offer(player_id, policy_id, price=None):
     if price == None:
         price = game.default_offer_price
     try:
-        offer = game.offer_policy(player_id, policy_id, price)
+        offer = game.offer_policy(player_id, policy_id, int(price))
         if offer is None:
             return "Player of policy not found", 404
         log.info('get_policy_offer end')
