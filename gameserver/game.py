@@ -467,6 +467,12 @@ class Game:
 
         return start_year
 
+    def advance_year(self):
+        duration = self.settings.next_game_year_start - self.settings.current_game_year_start
+        self.settings.current_game_year_start = self.settings.next_game_year_start
+        self.settings.current_game_year += 1
+        self.settings.next_game_year_start = self.settings.current_game_year_start + duration
+
     def stop(self):
         year = self.settings.current_game_year
         self.settings.next_game_year_start = None

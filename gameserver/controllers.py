@@ -192,7 +192,7 @@ def _do_tick():
     # if we are passed the next year start then replenish funds
     if is_passed_year_end:
         year = game.current_year()
-        game.start(year+1)
+        game.advance_year()
         game.do_replenish_budget()
 
     t7 = time()
