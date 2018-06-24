@@ -29,8 +29,8 @@ def fake_get_n_policies(self, n=5):
         return []
     return sorted(policies, key=lambda x: x.name)[:n]
 
-goal_patcher = mock.patch('game.Game.get_random_goal', new=fake_get_random_goal)
-policy_patcher = mock.patch('game.Game.get_n_policies', new=fake_get_n_policies)
+goal_patcher = mock.patch('gameserver.game.Game.get_random_goal', new=fake_get_random_goal)
+policy_patcher = mock.patch('gameserver.game.Game.get_n_policies', new=fake_get_n_policies)
 goal_patcher.start()
 policy_patcher.start()
 
