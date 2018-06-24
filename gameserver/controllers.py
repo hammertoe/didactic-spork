@@ -232,13 +232,6 @@ def delete_player_table(player_id, table_id):
 
     return player_to_dict(game, p), 200
 
-def fundings_from_ids(fundings):
-    res = []
-    for d in fundings:
-        policy = yield Policy.get_by_id_async(d['to_id'])
-        res.append((policy, d['amount']))
-    raise ndb.Return(res)
-
 @require_api_key
 @require_user_key
 def set_funding(player_id, funding = None):
