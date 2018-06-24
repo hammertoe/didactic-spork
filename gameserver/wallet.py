@@ -43,6 +43,9 @@ class Wallet:
     def __len__(self):
         return len(self._entries)
 
+    def __repr__(self):
+        return "<Wallet total: {:.2f}>".format(self._total)
+
     def dumps(self):
         fmt = self.MSG_FMT
         return pack(self.HDR_FMT, self._total) + \
@@ -70,7 +73,7 @@ class Wallet:
         return self._entries.get(player_id, default)
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
+        if not isinstance(other, type(self)):
             return False
         if self._total != other._total:
             return False
@@ -157,7 +160,7 @@ class Wallet:
         return self.__add__(-other)
 
     def __and__(self, other):
-        if not isinstance(other, self.__class__):
+        if not isinstance(other, type(self)):
             raise ValueError
 
         a = self._entries

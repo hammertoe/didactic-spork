@@ -4,11 +4,11 @@ python:
 cache: pip
 install: 
  - pip install -U setuptools
- - pip install -r requirements.txt -r test-requirements.txt
+ - pip install -r requirements.txt
  - pip install coveralls
 # command to run tests
 script:
- - PYTHONPATH=${PYTHONPATH}:. py.test --cov gameserver gameserver/tests.py gameserver/wallet.py gameserver/wallet_sqlalchemy.py
+ - PYTHONPATH=${PYTHONPATH}:. py.test --cov gameserver gameserver/tests.py gameserver/wallet.py 
 notifications:
  - slack: quernus:FSJYjitrzrSX83EAcD8MyNuE
 after_success:

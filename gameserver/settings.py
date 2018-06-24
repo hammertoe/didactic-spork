@@ -7,11 +7,7 @@ RESTPLUS_VALIDATE = True
 RESTPLUS_MASK_SWAGGER = False
 RESTPLUS_ERROR_404_HELP = False
 
-# SQLAlchemy settings
-SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
-SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-APP_VERSION = "1.10"
+APP_VERSION = "2.0"
 #GAME_ID = "Global Festival of Ideas for Sustainable Development"
 
 TICKINTERVAL = 3
