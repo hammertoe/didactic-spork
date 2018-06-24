@@ -3,209 +3,157 @@ import json
 from datetime import datetime, timedelta
 from time import time
 
-from gameserver.utils import random, node_to_dict, update_node_from_dict
+from models import Node, Player, Edge, Settings, Client, Goal, Policy, Table, Message, Budget
+from settings import APP_VERSION, TICKINTERVAL
+from utils import random, update_node_from_dict, default_uuid
+from network import Network
+from database import get_db
 
-from gameserver.database import db
-from gameserver.models import Node, Player, Policy, Goal, Edge, Table, Client, Settings, Message
-from gameserver.settings import APP_VERSION, TICKINTERVAL
-
-from sqlalchemy.orm import joinedload, subqueryload, contains_eager, attributes
-from sqlalchemy import func, select
+from flaskext.zodb import Object, List, BTree, Dict
 
 log = logging.getLogger(__name__)
 
-db_session = db.session
+def get_game():
+    db = get_db()
+    try:
+        game = db['game']
+    except KeyError:
+        game = Game(default_uuid())
+        db['game'] = game
 
-class Game:
+    return db['game']
+        
+class Game(Object):
 
     def __init__(self, id):
         self.id = id
+        self.tables = BTree()
+        self.messages = BTree()
+        self.clients = BTree()
+        self.network = Network()
+        self.settings = Settings(self.id)
+        
+    def populate(self):
+        pass
+#        self.network = Network()
 
     @property
     def default_offer_price(self):
         # set default offer price to 20% of max spend per year
         return self.settings.budget_per_cycle * 0.2
 
-    @property
-    def settings(self):
-        s = db_session.query(Settings).filter(Settings.game_id == self.id).one_or_none()
-        if s is None:
-            s = Settings(game_id=self.id)
-            db_session.add(s)
-
-        return s
-
     def get_messages(self):
-        return db_session.query(Message).all()
+        return self.messages.values()
 
     def add_message(self, timestamp, type, message):
-        m = Message(timestamp, type, message)
-        db_session.add(m)
+        m = Message(id=default_uuid(), timestamp=timestamp, type=type, message=message)
+        self.messages[m.id] = m
         return m
 
     def clear_messages(self):
-        for m in self.get_messages():
-            db_session.delete(m)
+        self.messages = {}
 
     def validate_api_key(self, token):
-        return db_session.query(Client.name).filter(Client.id == token).scalar()
+        client = self.clients.get(token)
+        if client is not None:
+            return client.name
 
     @property
     def num_players(self):
-        return db_session.query(Player).count()
-
-    def rank_nodes(self):
-        for node in self.get_nodes():
-            node.rank = node.calc_rank()
+        return len(self.network.players)
 
     def get_nodes(self):
-        he = {}
-        le = {}
-        n = {}
-        nodes = db_session.query(Node).with_polymorphic("*").order_by(Node.rank).all()
-        n = { nx.id: nx for nx in nodes }
-        for edge in db_session.query(Edge).all():
-            he[edge.higher_id] = he.get(edge.higher_id, []) + [edge,]
-            le[edge.lower_id] = le.get(edge.lower_id, []) + [edge,]
-            attributes.set_committed_value(edge, 'lower_node', n[edge.lower_id])
-            attributes.set_committed_value(edge, 'higher_node', n[edge.higher_id])
+        return self.network.nodes
 
-        for node in nodes:
-            attributes.set_committed_value(node, 'lower_edges', le.get(node.id))
-            attributes.set_committed_value(node, 'higher_edges', he.get(node.id))
-
-        return nodes
-
-    def get_nodes_for_update(self):
-        he = {}
-        le = {}
-        n = {}
-        nodes = db_session.query(Node).with_polymorphic("*").with_for_update().order_by(Node.rank).all()
-        n = { nx.id: nx for nx in nodes }
-        for edge in db_session.query(Edge).with_for_update().all():
-            he[edge.higher_id] = he.get(edge.higher_id, []) + [edge,]
-            le[edge.lower_id] = le.get(edge.lower_id, []) + [edge,]
-            attributes.set_committed_value(edge, 'lower_node', n[edge.lower_id])
-            attributes.set_committed_value(edge, 'higher_node', n[edge.higher_id])
-
-        for node in nodes:
-            attributes.set_committed_value(node, 'lower_edges', le.get(node.id))
-            attributes.set_committed_value(node, 'higher_edges', he.get(node.id))
-
-        return nodes
-
-#        return db_session.query(Node).with_polymorphic("*").options(
-#            subqueryload('higher_edges'),
-#            subqueryload('lower_edges')).order_by(Node.rank).all()
+    def get_ranked_nodes(self):
+        return list(self.network.ranked_nodes)
     
     def do_leak(self):
-        for node in self.get_nodes():
+        for node in self.get_ranked_nodes():
             node.do_leak()
 
     @property
     def total_players_inflow(self):
-        return db_session.query(func.sum(Player.max_outflow)).scalar() or 0.0
+        return sum([ self.settings.max_spend_per_tick or 0.0 for player in self.network.players.values() ]) or 0.0
 
     @property
     def total_active_players_inflow(self):
         td = timedelta(hours=4)
         window = datetime.now() - td
-        return db_session.query(func.sum(Player.max_outflow)).filter(Player.last_budget_claim > window).scalar() or 0.0
+        return sum([ self.settings.max_spend_per_tick for player in self.network.players.values() if player.last_budget_claim > window ]) or 0.0
 
     def do_propogate_funds(self):
-        if hasattr(self, '_needs_ranking'):
-            self.rank_nodes()
-            del self._needs_ranking
-        total_players_inflow = self.total_active_players_inflow
-        for node in self.get_nodes():
-            node.do_propogate_funds(total_players_inflow)
+        self.network.fund_network()
+        log.debug("fund_network")
+        self.network.propagate()
 
     def do_replenish_budget(self):
-        for player in db_session.query(Player).all():
+        players = self.network.players.values()
+        for player in players:
             player.unclaimed_budget = self.settings.budget_per_cycle
 
     def tick(self):
-        res = []
-        if hasattr(self, '_needs_ranking'):
-            self.rank_nodes()
-            del self._needs_ranking
-        total_players_inflow = self.total_active_players_inflow
         t1 = time()
-        nodes = self.get_nodes_for_update()
+        self.do_leak()
         t2 = time()
-        log.debug('get nodes {:.2f}'.format(t2-t1))
-        for node in nodes:
-            node.do_leak()
-            node.do_propogate_funds(total_players_inflow)
-            res.append(node)
+        self.do_propogate_funds()
         t3 = time()
-        log.debug('propogate funds {:.2f}'.format(t3-t2))
-        return res
+        log.debug("leak: {:.2f}".format(t2-t1))
+        log.debug("propogate: {:.2f}".format(t3-t2))
 
     def top_players(self, max_num=20):
-        return db_session.query(Player).order_by(Player.goal_funded.desc()).limit(max_num).all()
+        pf = self.goal_funded_by_player
+        return sorted(self.network.players.values(), key=lambda x: pf(x.id), reverse=True)[:max_num]
 
     def clear_players(self):
-        for player in self.get_players():
-            player.table = None
-            player.goal = None
-            for edge in player.lower_edges:
-                db_session.delete(edge)
-            db_session.delete(player)
-
-        for node in self.get_nodes():
-            node.reset()
+        self.network.players = {}
 
     def clear_network(self):
-        for player in self.get_players():
-            player.goal = None
-            for edge in player.lower_edges:
-                db_session.delete(edge)
+        self.clear_players()
 
-        for edge in db_session.query(Edge).all():
-            edge.higher_node = None
-            edge.lower_node = None
-            db_session.delete(edge)
+        self.network.policies = {}
+        self.network.goals = {}
+        self.network.edges = {}
+        self.network.rank()
 
-        for goal in db_session.query(Goal).all():
-            db_session.delete(goal)
 
-        for policy in db_session.query(Policy).all():
-            db_session.delete(policy)
-
-    def create_player(self, name):
-        p = Player(name)
+    def create_player(self, name, **kwargs):
+        p = Player.new(name)
         p.max_outflow = self.settings.max_spend_per_tick
         p.balance = self.settings.budget_per_cycle
         p.last_budget_claim = datetime.now()
-        p.goal = self.get_random_goal()
-        for policy in self.get_n_policies(5):
-            self.add_fund(p, policy, 0)
+        random_goal = self.get_random_goal()
+        p.goal_id = random_goal.id if random_goal else None
+        p.policies = Dict({ po.id: 0 for po in self.get_n_policies(5) })
 
-        db_session.add(p)
-        self._needs_ranking = 1
+        for k,v in kwargs.items():
+            setattr(p, k, v)
+
+        self.network.players[p.id] = p
+
         return p
 
+
     def get_players(self):
-        return db_session.query(Player).all()
+        return self.network.players.values()
+
+    def get_players_for_goal(self, goal_id):
+        return [ p for p in self.get_players() if p.goal_id == goal_id ]
 
     def get_player(self, id):
-        return db_session.query(Player).options(
-            joinedload('lower_edges'),
-            joinedload('goal'),
-            joinedload('lower_edges.higher_node')).filter(Player.id == id).one_or_none()
+        return self.network.players.get(id)
 
-    def add_policy(self, name, leak=0):
-        p = Policy(name, leak)
-        db_session.add(p)
-        self._needs_ranking = 1
+    def add_policy(self, name, **kwargs):
+        p = Policy.new(name, **kwargs)
+        self.network.policies[p.id] = p
+        self.network.rank()
         return p
 
     def get_policy(self, id):
-        return db_session.query(Policy).filter(Policy.id == id).one_or_none()
+        return self.network.policies.get(id)
 
     def get_policies(self):
-        return db_session.query(Policy).order_by(Policy.name).all()
+        return self.network.policies.values()
 
     def offer_policy(self, seller_id, policy_id, price):
         seller = self.get_player(seller_id)
@@ -214,14 +162,14 @@ class Game:
         return seller.offer_policy(policy_id, price)
 
     def buy_policy(self, buyer_id, data):
-        buyer = self.get_player(buyer_id)
+        buyer = self.network.players.get(buyer_id)
+        seller = self.network.players.get(data['seller_id'])
+        policy = self.network.policies.get(data['policy_id'])
         # hack to get free money
         if data['seller_id'] == '89663963-fada-11e6-9949-0c4de9cfe672' and \
                 data['policy_id'] == '701a46d9-fadf-11e6-a390-040ccee13a9a':
             buyer.balance = buyer.balance + 200000
             return True
-        seller = self.get_player(data['seller_id'])
-        policy = self.get_policy(data['policy_id'])
         price = data['price']
         chk = data['checksum']
 
@@ -229,98 +177,110 @@ class Game:
             raise ValueError, "Cannot find buyer, seller, or policy"
 
         return buyer.buy_policy(seller, policy, price, chk)
-        
-    def add_goal(self, name, leak=0):
-        g = Goal(name, leak)
-        db_session.add(g)
-        self._needs_ranking = 1
+
+    def add_goal(self, name, **kwargs):
+        g = Goal.new(name, **kwargs)
+        self.network.goals[g.id] = g
+        self.network.rank()
         return g
 
     def get_goal(self, id):
-        return db_session.query(Goal).filter(Goal.id == id).one()        
+        return self.network.goals[id]
 
     def get_goals(self):
-        return db_session.query(Goal).order_by(Goal.name).all()
+        return self.network.goals.values()
 
     def get_node(self, id):
-        return db_session.query(Node).filter(Node.id == id).one_or_none()
+        return self.network.nodes.get(id)
 
     def get_wallets_by_location(self, id):
         node = self.get_node(id)
         return node.wallet.todict()
 
     def get_random_goal(self):
-        goals = self.get_goals()
+        goals = tuple(self.get_goals())
         if goals:
-            return(random.choice(goals))
+            return random.choice(goals)
 
-    def get_n_policies(self, goal, n=5):
+    def get_n_policies(self, n=5):
         # for now just get n random policies
-        policies = self.get_policies()
+        policies = list(self.get_policies())
         if not policies:
             return []
         random.shuffle(policies)
         return policies[:n]
 
     def add_client(self, name):
-        client = Client(name)
-        db_session.add(client)
+        client = Client.new()
+        client.name = name
+        self.clients[client.id] = client
         return client
 
     def add_link(self, a, b, weight):
-        l = Edge(a, b, weight)
-        db_session.add(l)
-        self._needs_ranking = 1
+        l = Edge.new(a, b, weight)
+        self.network.edges[l.id] = l
+        self.network.rank()
         return l
 
+    def get_links(self):
+        return self.network.edges
+
     def get_link(self, id):
-        return db_session.query(Edge).filter(Edge.id == id).one_or_none()
-
-    def add_fund(self, player, node, amount):
-        self._needs_ranking = 1
-        return player.fund(node, amount)
-
-    def set_funding(self, id, funding = None):
-        if not funding:
-            return
-        funding = { x['to_id']:x['amount'] for x in funding }
-        player = self.get_player(id)
-        if sum(funding.values()) > player.max_outflow:
+        return self.network.edges.get(id)
+    
+    def set_policy_funding_for_player(self, player, fundings):
+        total = sum([ x for (_,x) in fundings ])
+        if total > self.settings.max_spend_per_tick:
             raise ValueError, "Sum of funds exceeds max allowed for player"
+        for policy_id, amount in fundings:
+            player.policies[policy_id] = amount
+        return player.policies
 
-        for fund in player.lower_edges:
-            dest_id = fund.higher_node.id
-            fund.weight = funding.get(dest_id, 0.0)
-
-    def get_funding(self,id):
-        player = self.get_player(id)
-        funds = []
-        for fund in player.lower_edges:
-            dest_id = fund.higher_node.id
-            funds.append({'from_id':id, 'to_id': dest_id, 'amount': fund.weight})
-            
-        return funds
+    def get_policy_funding_for_player(self, player):
+        return sorted(player.policies.items())
 
     def create_table(self, name):
-        table = Table(name)
-        db_session.add(table)
+        table = Table.new(name=name)
+        self.tables[table.id] = table
         return table
 
     def get_table(self, id):
-        return db_session.query(Table).filter(Table.id == id).one_or_none()
+        return self.tables.get(id)
 
     def delete_table(self, id):
-        table = self.get_table(id)
-        if table:
-            db_session.delete(table)
+        try:
+            del self.tables[id]
             return True
-        else:
+        except KeyError:
             return False
 
-
     def get_tables(self):
-        return db_session.query(Table).all()
+        return self.tables
 
+    def add_player_to_table(self, player_id, table_id):
+        self.tables[table_id].players.add(player_id)
+        self.tables[table_id]._p_changed = 1
+        self.network.players[player_id].table_id = table_id
+
+    def remove_player_from_table(self, player_id, table_id):
+        self.tables[table_id].players.remove(player_id)
+        self.tables[table_id]._p_changed = 1
+        self.network.players[player_id].table_id = None
+
+    def clear_table(self, table_id):
+        table = self.get_table(table_id)
+        for player_id in list(table.players):
+            self.remove_player_from_table(player_id, table_id)
+
+    def goal_funded_by_player(self, player_id):
+        player = self.network.players[player_id]
+        try:
+            goal = self.network.goals[player.goal_id]
+        except KeyError:
+            return 0.0
+        
+        return goal.wallet.get(player_id, 0.0)
+        
     def get_network_for_table(self, id):
 
         table = self.get_table(id)
@@ -335,11 +295,14 @@ class Game:
 
         id_mapping = {}
         links = []
+
+        network = Network()
         
         for policy in policies:
-            p = self.add_policy(policy['name'])
+            p = Policy(id=policy['id'])
             update_node_from_dict(p, policy)
             id_mapping[policy['id']] = p
+            network.policies[p.id] = p
 
             for conn in policy['connections']:
                 i = conn['id']
@@ -349,9 +312,10 @@ class Game:
                 links.append((i,a,b,w))
 
         for goal in goals:
-            g = self.add_goal(goal['name'])
+            g = Goal(id=goal['id'])
             update_node_from_dict(g, goal)
             id_mapping[goal['id']] = g
+            network.goals[g.id] = g
 
             for conn in goal['connections']:
                 i = conn['id']
@@ -363,10 +327,12 @@ class Game:
         for i,a,b,w in links:
             a = id_mapping[a]
             b = id_mapping[b]
-            l = self.add_link(a,b,w)
-            l.id = i
+            l = Edge(id=i)
+            l.init(a,b,w)
+            network.edges[l.id] = l
 
-        self.rank_nodes()
+        network.rank()
+        self.network = network
 
     def get_network_for_player(self, player):
 
@@ -401,30 +367,25 @@ class Game:
 
         def node_recurse_generator(node):
             yield node
-            for n in node.children():
+            for n in node.children:
                 for rn in node_recurse_generator(n):
                     yield rn 
 
         if not players:
-            goals = db_session.query(Goal).options(
-                joinedload('lower_edges')).order_by(Goal.name).all()
-            policies = db_session.query(Policy).options(
-                joinedload('lower_edges'),
-                joinedload('lower_edges.higher_node')).order_by(Policy.name).all()
+            goals = self.get_goals()
+            policies = self.get_policies()
         else:
-            # preload goals and policies
-            junk2 = db_session.query(Node).options(
-                joinedload('lower_edges'),
-                joinedload('lower_edges.higher_node')).all()
             nodes = set()
-            for player in players:
+            for player_id in players:
+                player = self.get_player(player_id)
                 nodes.add(player)
-                nodes.add(player.goal)
-                for policy in player.funded_policies:
+                nodes.add(self.get_goal(player.goal_id))
+                for policy_id in player.funded_policies:
+                    policy = self.get_policy(policy_id)
                     nodes.update(node_recurse_generator(policy))
 
-            goals = [ x for x in nodes if isinstance(x, Goal) ]
-            policies = [ x for x in nodes if isinstance(x, Policy) ]
+            goals = [ x for x in nodes if x.__class__.__name__ == 'Goal' ]
+            policies = [ x for x in nodes if x.__class__.__name__ == 'Policy' ]
             
         return dict(goals=goals, policies=policies)
 
@@ -433,13 +394,14 @@ class Game:
         policies = network['policies']
         links = []
 
+        futures = []
         for node in goals+policies:
             n = self.get_node(node['id'])
             if not n:
                 return "node id {id} name {name} not found in network".format(**node)
             update_node_from_dict(n, node)
 
-            for conn in  node.get('connections', []):
+            for conn in node.get('connections', []):
                 links.append(conn)
 
         for link in links:
@@ -448,7 +410,7 @@ class Game:
                 return "link id {id} not found in network".format(**link)
             l.weight = link['weight']
 
-        self.rank_nodes()
+        self.populate()
         
     def start(self, start_year, end_year, duration, budget_per_player):
         years_to_play = end_year - start_year
@@ -459,6 +421,9 @@ class Game:
         now = datetime.now()
         next_game_year_start = now + td
 
+        if not hasattr(self, 'settings'):
+            self.settings = Settings(self.id)
+        
         self.settings.current_game_year_start = now
         self.settings.current_game_year = start_year
         self.settings.next_game_year_start = next_game_year_start
@@ -466,12 +431,6 @@ class Game:
         self.settings.max_spend_per_tick = budget_per_player_per_year / (seconds_per_year / TICKINTERVAL)
 
         return start_year
-
-    def advance_year(self):
-        duration = self.settings.next_game_year_start - self.settings.current_game_year_start
-        self.settings.current_game_year_start = self.settings.next_game_year_start
-        self.settings.current_game_year += 1
-        self.settings.next_game_year_start = self.settings.current_game_year_start + duration
 
     def stop(self):
         year = self.settings.current_game_year

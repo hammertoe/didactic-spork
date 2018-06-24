@@ -4,29 +4,21 @@ import os
 from flask import Flask, Blueprint, request
 
 import connexion
-from gameserver.database import db
 
-from gameserver import settings
+import settings
+from database import get_db
 
 log = logging.getLogger(__name__)
 
 def configure_app(flask_app):
-    flask_app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', settings.SQLALCHEMY_DATABASE_URI)
-    flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = settings.SQLALCHEMY_TRACK_MODIFICATIONS
     flask_app.config['SWAGGER_UI_DOC_EXPANSION'] = settings.RESTPLUS_SWAGGER_UI_DOC_EXPANSION
     flask_app.config['RESTPLUS_VALIDATE'] = settings.RESTPLUS_VALIDATE
     flask_app.config['RESTPLUS_MASK_SWAGGER'] = settings.RESTPLUS_MASK_SWAGGER
     flask_app.config['ERROR_404_HELP'] = settings.RESTPLUS_ERROR_404_HELP
-    flask_app.config['DEBUG'] = False
-    flask_app.config['SQLALCHEMY_ECHO'] = False
-
-def initialize_app(flask_app):
-    configure_app(flask_app)
-
-    db.init_app(flask_app)
-    with flask_app.app_context():
-        import models
-        models.Base.metadata.create_all(bind=db.engine)
+    flask_app.config['DEBUG'] = True
+    flask_app.config['TESTING'] = True
+    flask_app.config['ZODB_STORAGE'] = 'file://app.fs'
+    
 
 def cors_after_request(resp):
     headers_allow = request.headers.get('Access-Control-Request-Headers', '*')
@@ -39,7 +31,11 @@ def cors_after_request(resp):
 def create_app():
     app = connexion.App(__name__, specification_dir='./')
     app.add_api('swagger.yaml', arguments={'title': 'An API for the game server allowing mobile app to interact with players, etc'})
-    initialize_app(app.app)
+    configure_app(app.app)
+    with app.app.app_context():
+        db = get_db()
+        db.init_app(app.app)
+
     app.app.after_request(cors_after_request)
     return app.app
 

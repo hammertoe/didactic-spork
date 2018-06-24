@@ -1,153 +1,129 @@
 import logging.config
-from sqlalchemy import Column, Integer, String, ForeignKey, \
-    Float, CHAR, DateTime, create_engine, event, Table as SATable, inspect
-from sqlalchemy.orm import relationship, sessionmaker, backref
-from sqlalchemy.ext.declarative import declared_attr, as_declarative
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy import func
-from sqlalchemy.orm.attributes import instance_state
-
-from flask_sqlalchemy import SignallingSession
-
-from gameserver.database import default_uuid, db
-from gameserver.utils import pack_amount, checksum
-from gameserver.wallet_sqlalchemy import WalletType, Wallet
-
-from utils import random
 from datetime import datetime
+
+from utils import default_uuid
+from utils import pack_amount, checksum
+from wallet import Wallet
+
+from flaskext.zodb import Object, List, Dict
 
 log = logging.getLogger(__name__)
 
-db_session = db.session
+class Hashable:
+    def __hash__(self):
+        return hash(self.id)
 
-# define the temp table
-ledger = SATable("ledger", db.metadata,
-                 Column("node_id", CHAR(36), primary_key=True),
-                 Column("wallet", WalletType),
-                 )    
+class Base(Object, Hashable):
+    """ Base model """
+    @classmethod
+    def new(cls):
+        return cls(id=default_uuid())
 
-#@event.listens_for(SignallingSession, 'before_flush')
-def before_flush(session, flush_context, instances): # pragma: no cover
-    # Only do this on MySQL
-    if session.connection().engine.dialect.name != 'mysql':
-        return
-
-    temp_items = {}
-
-    if session.dirty:
-
-        for elem in session.dirty:
-            if ( session.is_modified(elem, include_collections=False) ):
-                state = inspect(elem)
-                if state.committed_state.keys() == ['wallet']:
-                    temp_items[elem.id] = elem.wallet
-                    session.expire(elem, ['wallet'])
-
-    if temp_items:
-
-        # insert the temp values
-        session.execute(ledger.insert().values([{"node_id": k, "wallet": v}
-                                           for k, v in temp_items.items()]))
-
-        # perform the update to the main table
-        session.execute(Node.__table__
-                        .update()
-                        .values(wallet=ledger.c.wallet)
-                        .where(Node.__table__.c.id == ledger.c.node_id))
-        
-        # drop temp table
-        session.execute(ledger.delete())
-
-@as_declarative()
-class Base(object):
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
-    id = Column(CHAR(36), primary_key=True, default=default_uuid)
-
+    def __init__(self, id, **kwargs):
+        self.id = id
+        for k,v in kwargs.items():
+            setattr(self, k, v)
 
 class Settings(Base):
-    game_id = Column(String(100), primary_key=True)
-    current_game_year = Column(Integer)
-    current_game_year_start = Column(DateTime)
-    next_game_year_start = Column(DateTime)
-    budget_per_cycle = Column(Float)
-    max_spend_per_tick = Column(Float)
+    game_id = None
+    current_game_year = None
+    current_game_year_start = None
+    next_game_year_start = None
+    budget_per_cycle = None
+    max_spend_per_tick = None
+
+
+class Funding:
+    policy_key = None
+    amount = None
+
+
+class Budget(Base):
+    player = None
+    fundings_ = []
+
+    @classmethod
+    def new(cls, player, fundings):
+        b = cls(id=default_uuid())
+        b.player = player
+        b.fundings = fundings
+        return b
+
+    @property
+    def fundings(self):
+        # XXX make async
+        return [ (x.policy_key.get(), x.amount) for x in self.fundings_ ]
+        
+    @fundings.setter
+    def fundings(self, fs):
+        self.fundings_ = [ Funding(policy_key=policy.key, amount=amount) for policy,amount in fs ]
+
+    @property
+    def total(self):
+        return sum([ x for _,x in self.fundings])
+
+class Client(Base):
+    name = None
 
 
 class Table(Base):
-    id = Column(CHAR(36),
-                primary_key=True, default=default_uuid)
+    """ Table model """
+    name = None
 
-    name = Column(String(200))
-
-    def __init__(self, name):
-        self.id = default_uuid()
-        self.name = name
-
-
-class Client(Base):
-    id = Column(CHAR(36),
-                primary_key=True, default=default_uuid)
-
-    name = Column(String(200))
-
-    def __init__(self, name):
-        self.id = default_uuid()
-        self.name = name
-
-class Message(Base):
-    id = Column(CHAR(36),
-                primary_key=True, default=default_uuid)
-
-    timestamp = Column(DateTime)
-    type = Column(String(30))
-    message = Column(String(256))
-
-    def __init__(self, timestamp, type, message):
-        self.id = default_uuid()
-        self.timestamp = timestamp
-        self.type = type
-        self.message = message
+    @classmethod
+    def new(cls, name, **kwargs):
+        t = cls(id=default_uuid())
+        t.name = name
+        t.players = set()
+        return t
 
 class Node(Base):
 
-    discriminator = Column(String(32))
-    __mapper_args__ = {"polymorphic_on": discriminator}
-    id = Column(CHAR(36),
-                primary_key=True, default=default_uuid)
-
-    name = Column(String(200))
-    short_name = Column(String(50))
-    group = Column(Integer)
-    leak = Column(Float)
-    node_type = Column(String(10))
-    activation = Column(Float)
-    max_level = Column(Integer)
-    active_level = Column(Float)
-    rank = Column(Integer)
-    wallet = Column(Wallet.as_mutable(WalletType))
+    name = None
+    short_name = None
+    group = None
+    leak = 0.0
+    activation = 0.0
+    max_level = 0.0
+    active_level = 0.0
+    wallet = None
     
-    def __init__(self, name, leak):
-        self.id = default_uuid()
-        self.name = name
-        self.short_name = ''
-        self.group = 0
-        self.leak = leak
-        self.activation = 0.0
-        self.max_level = 0.0
-        self.active_level = 0.0
-        self.rank = 0
+    def __eq__(self, other):
+        try:
+            return self.id == other.id and \
+                self.name == other.name and \
+                self.wallet == other.wallet
+        except:
+            return False
+
+    def __init__(self, id, **kwargs):
+        super(Node,self).__init__(id, **kwargs)
+        self.higher_edges = []
+        self.lower_edges = []
         self.wallet = Wallet()
+        
+    @classmethod
+    def new(cls, name, **kwargs):
+        n = cls(id=default_uuid())
+        n.name = name
+#        n.higher_edges = []
+#        n.lower_edges = []
+#        n.wallet = Wallet()
 
-    def higher_neighbors(self):
-        return [x.higher_node for x in self.lower_edges]
+        for k,v in kwargs.items():
+            setattr(n, k, v)
+        return n
 
+    @property
     def lower_neighbors(self):
-        return [x.lower_node for x in self.higher_edges]
+        return [x.lower_node for x in self.lower_edges]
 
-    children = higher_neighbors
-    parents = lower_neighbors
+    @property
+    def higher_neighbors(self):
+        return [x.higher_node for x in self.higher_edges]
+
+    children = lower_neighbors
+    parents = higher_neighbors
 
     def get_leak(self):
         leak = self.leak
@@ -182,8 +158,6 @@ class Node(Base):
     @balance.setter
     def balance(self, amount):
         self.wallet = Wallet([(self.id, amount)])
-        self.wallet.changed()
-        log.debug("wallet marked changed")
 
     def do_leak(self):
         leak = self.get_leak()
@@ -197,174 +171,75 @@ class Node(Base):
     def reset(self):
         self.wallet = Wallet()
 
-    def do_propogate_funds(self, total_player_inflow):
-        previous_balance = self.balance
-        for edge in self.higher_edges:
-            if getattr(edge, 'wallet', None):
-                self.wallet &= edge.wallet
-                # delete the wallet after we get from it
-                edge.wallet = None 
-        new_balance = self.balance
-        max_level = self.max_level or 0
-        if max_level and new_balance > max_level:
-            # if we are over out level then remove excess
-            self.wallet -= new_balance - max_level
-        # set the active level on the node
-        if total_player_inflow > 0:
-            self.active_level = (new_balance - previous_balance) / total_player_inflow
-        else:
-            self.active_level = 1.0
-        # check if we are active
-        if self.active_level < self.activation:
-            # not active so stop here
-            return
-        # yes we are active so distribute funds
-        if self.balance <= 0:
-            return # no balance to propogate
-
-        total_balance = self.balance
-        total_children_weight = self.total_children_weight
-
-        if not total_children_weight:
-            return # no children weight so return
-
-        # max we can distribute is our balance or what children need
-        current_outflow = min(total_children_weight, total_balance)
-
-        # calculate the factor to multiply each player amount by
-        total_out_factor = min(1.0, total_balance / total_children_weight)
-
-        for edge in self.lower_edges:
-            amount = edge.weight
-            if amount <= 0: # don't try to propogate negative values
-                continue
-            factored_amount = amount * total_out_factor
-
-            # due to rounding errors in floats this is needed
-            # otherwise we overdraw by like 5.10702591328e-15
-            if factored_amount > self.balance:
-                factored_amount = self.balance
-
-            # create a wallet on the edge and transfer to it
-            edge.wallet = Wallet()
-            self.wallet.transfer(edge.wallet, factored_amount)
-
-
-    def calc_rank(self):
+    @property
+    def rank(self):
         rank = 1
-        for parent in self.parents():
-            rank += parent.calc_rank()
+        for parent in self.parents:
+            rank += parent.rank
 
         return rank
 
+
+class Edge(Base):
+
+    @classmethod
+    def new(cls, n1, n2, weight):
+        e = cls(id=default_uuid())
+        return e.init(n1, n2, weight)
+
+    def init(self, n1, n2, weight):
+        self.higher_node = n1
+        self.lower_node = n2
+        n1.lower_edges.append(self)
+        n2.higher_edges.append(self)
+        
+        self.weight = weight
+        self.wallet = None
+        return self
+
+    @property
+    def current_flow(self):
+        return self.lower_node.current_outflow
+
+
 class Goal(Node):
-
-    __mapper_args__ = {
-      'polymorphic_identity': 'Goal'
-      }
-
-    id = Column(CHAR(36), ForeignKey(Node.id),
-                primary_key=True, default=default_uuid)
 
     @property
     def active(self):
         return self.balance >= self.activation
 
-
 class Policy(Node):
 
-    __mapper_args__ = {
-      'polymorphic_identity': 'Policy'
-      }
-
-    id = Column(CHAR(36), ForeignKey(Node.id),
-                primary_key=True, default=default_uuid)
-
+    pass
 
 
 class Player(Node):
 
-    __mapper_args__ = {
-      'polymorphic_identity': 'Player'
-      }
+    max_outflow = None
+    unclaimed_budget = None
+    last_budget_claim = None
+    token = None
+    budget_key = None
+    policies = None
+    
+    goal_id = None
+    table_id = None
+    
+    @property
+    def funded_policies(self):
+        return [ p for p,a in self.policies.items() if a>0 ]
 
-    id = Column(CHAR(36), ForeignKey(Node.id),
-                primary_key=True, default=default_uuid)
-
-    max_outflow = Column(Float)
-    goal_funded = Column(Float, default=0.0)
-    unclaimed_budget = Column(Float, default=0.0)
-    last_budget_claim = Column(DateTime)
-
-    goal_id = Column(
-        CHAR(36),
-        ForeignKey('goal.id')
-        )
-
-    goal = relationship(
-        Goal,
-        primaryjoin=goal_id == Goal.id,
-        order_by='Goal.id',
-        backref='players'
-        )
-
-    table_id = Column(
-        CHAR(36),
-        ForeignKey('table.id')
-        )
-
-    table = relationship(
-        Table,
-        primaryjoin=table_id == Table.id,
-        order_by='Table.id',
-        backref=backref('players', lazy='joined')
-        )
-
-    token = Column(CHAR(36),
-                index=True, default=default_uuid)
-
-    def __init__(self, name):
-        self.id = default_uuid()
-        self.name = name
-        self.leak = 0.0
-        self.max_outflow = 0.0
-        self.rank = 0
-        self.unclaimed_budget = 0.0
-        self.token = default_uuid()
-        self.wallet = Wallet()
-        self.group = 8
+    @classmethod
+    def new(cls, name, **kwargs):
+        p = cls(id=default_uuid())
+        p.name = name
+        p.reset()
+        for k,v in kwargs.items():
+            setattr(p, k, v)
+        return p
 
     def transfer_funds_to_node(self, node, amount):
         self.wallet.transfer(node.wallet, amount)
-
-    def fund(self, node, rate):
-        # do we already fund this node?
-        edge = None
-        for e in self.lower_edges:
-            if e.higher_node == node:
-                edge = e
-                break
-
-        # check not exceeded rate
-        current = edge.weight if edge is not None else 0
-        total = self.total_funding
-        if total - current + rate > self.max_outflow:
-            raise ValueError, "Exceeded max outflow rate"
-
-        # if so, change value
-        if edge is not None:
-            edge.weight = rate
-        else: # create new fund link
-            f = Edge(self, node, rate)
-            db_session.add(f)
-
-    @property
-    def funded_policies(self):
-        return [ e.higher_node for e in self.lower_edges if e.weight ]
-
-    @property
-    def policies(self):
-        return [ e.higher_node for e in self.lower_edges ]
 
     @property
     def active(self):
@@ -372,32 +247,18 @@ class Player(Node):
 
     @property
     def total_funding(self):
-        return sum([ x.weight for x in self.lower_edges ])
+        return sum(self.policies.values())
 
     def transfer_funds(self):
+        raise NotImplementedError
         for fund in self.lower_edges:
             self.transfer_funds_to_node(fund.higher_node, fund.weight)
 
-    def calc_goal_funded(self):
-        goal = self.goal
-        if not goal:
-            return 0.0
-        wallet = goal.wallet
-        self.goal_funded =  wallet.get(self.id, 0.0)
-
     def do_propogate_funds(self, total_player_inflow):
         Node.do_propogate_funds(self, total_player_inflow)
-        self.calc_goal_funded()
-                               
 
     def offer_policy(self, policy_id, price):
-        policy = None
-        for child in self.children():
-            if policy_id == child.id:
-                policy = child
-                break
-
-        if policy is None:
+        if policy_id not in self.policies:
             raise ValueError, "Seller doesn't have this policy"
         
         chk = checksum(self.id, policy_id, price, self.token)
@@ -420,7 +281,7 @@ class Player(Node):
             raise ValueError, "Not enough funds for sale"
 
         # check the buyer doesn't alreay have this policy
-        if policy in self.children():
+        if policy.id in self.policies:
             raise ValueError, "The buyer already has this policy"
 
         # sort out the money first
@@ -428,7 +289,7 @@ class Player(Node):
         self.balance -= price
         
         # then give the buyer the policy
-        self.fund(policy, 0.0)
+        self.policies[policy.id] = 0.0
 
         return True
 
@@ -440,43 +301,14 @@ class Player(Node):
             log.debug("set unclaimed budget for {} to {}".format(self.id, self.unclaimed_budget))
             self.last_budget_claim = datetime.now()
 
-class Edge(Base):
+    def reset(self):
+        self.wallet = Wallet()
+        self.token = default_uuid()
+        self.goal_id = None
+        self.policies = Dict()
 
-    lower_id = Column(
-        CHAR(36),
-        ForeignKey('node.id'),
-        primary_key=True)
-
-    higher_id = Column(
-        CHAR(36),
-        ForeignKey('node.id'),
-        primary_key=True)
-
-    lower_node = relationship(
-        Node,
-        primaryjoin=lower_id == Node.id,
-        order_by='Node.id',
-        backref='lower_edges')
-#        backref=backref('lower_edges', lazy='subquery'))
-
-    higher_node = relationship(
-        Node,
-        primaryjoin=higher_id == Node.id,
-        order_by='Node.id',
-#        lazy='joined',
-        backref='higher_edges')
-
-    weight = Column(Float())
-
-    def __init__(self, n1, n2, weight):
-        self.id = default_uuid()
-        self.lower_node = n1
-        self.higher_node = n2
-        self.weight = weight
-        self.wallet = None
-
-    @property
-    def current_flow(self):
-        return self.lower_node.current_outflow
-
+class Message(Base):
+    timestamp = None
+    type = None
+    message = None
 

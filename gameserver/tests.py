@@ -1,145 +1,178 @@
-import json
 import unittest
-import os
-from gameserver.utils import random, pack_amount, unpack_amount, checksum
-import time
 from datetime import datetime, timedelta
-import dateutil.parser
+import time
+import dateutil
+import mock
+import transaction
 
-#if not os.environ.has_key('SQLALCHEMY_DATABASE_URI'):
-#    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
-from gameserver.game import Game
-from gameserver.models import Base, Node, Player, Goal, Policy, Edge, Table
-from sqlalchemy import event
+import flask_testing
 
-from gameserver.database import db, default_uuid
-from gameserver.wallet_sqlalchemy import Wallet
-from gameserver.app import app, create_app
-from gameserver.settings import APP_VERSION
-from flask_testing import TestCase
+from models import Base, Edge, Node, Player, Goal, Policy, Funding, Budget
+from network import Network
+from game import Game, get_game
+from utils import random
+from wallet import Wallet
+from main import app
+from settings import APP_VERSION
+from database import get_db
 
-from gameserver.utils import fake_memcache as memcache, checksum
+import json
 
-db.app = app
+def fake_get_random_goal(self):
+    goals = tuple(self.get_goals())
+    if goals:
+        return sorted(goals, key=lambda x: x.name)[0]
 
-db_session = db.session
-engine = db.engine
+def fake_get_n_policies(self, n=5):
+    policies = list(self.get_policies())
+    if not policies:
+        return []
+    return sorted(policies, key=lambda x: x.name)[:n]
 
-@event.listens_for(engine, "connect")
-def do_connect(dbapi_connection, connection_record):
-    # disable pysqlite's emitting of the BEGIN statement entirely.
-    # also stops it from emitting COMMIT before any DDL.
-    dbapi_connection.isolation_level = None
+goal_patcher = mock.patch('game.Game.get_random_goal', new=fake_get_random_goal)
+policy_patcher = mock.patch('game.Game.get_n_policies', new=fake_get_n_policies)
+goal_patcher.start()
+policy_patcher.start()
 
-@event.listens_for(engine, "begin")
-def do_begin(conn):
-    # emit our own BEGIN
-    conn.execute("BEGIN")
-
-class UnitTests(unittest.TestCase):
-
-    def testPackAmount(self):
-        v = 1.4567
-        self.assertAlmostEqual(unpack_amount(pack_amount(v)), v, 3)
-
-    def testChecksum(self):
-        c1 = checksum('1', '2', 3.14, 'salt')
-        self.assertEqual(len(c1), 40)
-
-        c2 = checksum('1', '2', 3.14, 'salt')
-        self.assertEqual(c1, c2)
-
-        c3 = checksum('1', '2', 3.15, 'salt')
-        self.assertNotEqual(c1, c3)
-
-    def testFakeMemcache(self):
-        memcache.add('foo', 'bar', 100)
-        res = memcache.get('foo')
-        self.assertEqual(res, 'bar')
-
-        memcache.set('foo', 'baz', 100)
-        res = memcache.get('foo')
-        self.assertEqual(res, 'baz')
-
-        memcache.set_multi({'foo': 1, 'bar': 2}, 100)
-        res = memcache.get('foo')
-        self.assertEqual(res, 1)
-        res = memcache.get('bar')
-        self.assertEqual(res, 2)
-
-        memcache.clear()
-        res = memcache.get('bar')
-        self.assertEqual(res, None)
-
-class DBTestCase(TestCase):
-
-    SQLALCHEMY_DATABASE_URI = "sqlite://"
-    TESTING = True
-
-    def create_app(self):
-        # pass in test configuration
-        return app
-
-    @classmethod
-    def setUpClass(cls):
-        db_session.begin(subtransactions=True)
-        db.create_all()
-
-    @classmethod
-    def tearDownClass(cls):
-        db_session.rollback()
-        db_session.close()
+class ModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        db_session.begin_nested()
-        self.game = Game('78854855-8515-48cd-8a52-1eed3c6754b1')
+        pass
+    
+    def tearDown(self):
+        pass
+
+class SimpleModelTests(ModelTestCase):
+
+    def testNodeEdgeRelationship(self):
+
+        n1 = Node.new('node 1')
+        n2 = Node.new('node 2')
+        e1 = Edge.new(n1, n2, 1.0)
+
+        self.assertEqual(e1.higher_node, n1)
+        self.assertEqual(e1.lower_node, n2)
+
+    def testNodeEdgeBackRelationship(self):
+
+        n1 = Node.new('node 1')
+        n2 = Node.new('node 2')
+        e1 = Edge.new(n1, n2, 1.0)
+
+        self.assertEqual(n1.children, [n2,])
+        self.assertEqual(n2.parents, [n1,])
+
+    def testNodeSetBalance(self):
+
+        n1 = Node.new('node 1', balance=1000)
+        self.assertEqual(n1.balance, 1000.0)
+
+def setup_with_context_manager(testcase, cm):
+    """Use a contextmanager to setUp a test case."""
+    val = cm.__enter__()
+    testcase.addCleanup(cm.__exit__, None, None, None)
+    return val
+
+class ControllerTestCase(ModelTestCase):
+
+    def setUp(self):
+        ModelTestCase.setUp(self)
+
+        app.config['ZODB_STORAGE'] = 'memory://'
+        app.config['TESTING'] = True
+        setup_with_context_manager(self, app.test_request_context())
+        self.game = get_game()
         self.game.start(2017, 2025, 10, 12000000)
         test_client = self.game.add_client('tests')
         self.api_key = test_client.id
-        memcache.clear()
+        self.client = app.test_client()
 
     def tearDown(self):
-        db_session.rollback()
-        os.system('echo "select * from node;" | sqlite3 gameserver/database.db')
-
+        db = get_db()
+        del db['game']
+        
     def add_20_goals_and_policies(self):
         for x in range(20):
-            g = self.game.add_goal("G{}".format(x), 0.5)
-            g.id = "G{}".format(x)
-            p = self.game.add_policy("P{}".format(x), 0.5)
-            p.id = "P{}".format(x)
+            id = "G{}".format(x)
+            g = Goal(id=id)
+            g.name = id
+            self.game.network.goals[g.id] = g
+            id = "P{}".format(x)
+            p = Policy(id=id)
+            p.name = id
+            self.game.network.policies[p.id] = p
 
-class CoreGameTests(DBTestCase):
+
+class ViewTestCase(ControllerTestCase):
+    pass
+
+
+class CoreGameTests(ControllerTestCase):
+
+    def testRandomGoalIsRandom(self):
+        self.add_20_goals_and_policies()
+
+        g = self.game.get_random_goal()
+        self.assertEqual(g.id, 'G0')
+
+        goal_patcher.stop()
+
+        g1 = self.game.get_random_goal()
+        g2 = self.game.get_random_goal()
+        g3 = self.game.get_random_goal()
+        self.assertFalse(g1.id == g2.id == g3.id)
+
+        goal_patcher.start()
         
+
+    def testGetNPoliciesIsRandom(self):
+        self.add_20_goals_and_policies()
+
+        policies = self.game.get_n_policies()
+        self.assertEqual([p.name for p in policies], [u'P0', u'P1', u'P10', u'P11', u'P12'])
+
+        policy_patcher.stop()
+
+        policies1 = [p.name for p in self.game.get_n_policies()]
+        policies2 = [p.name for p in self.game.get_n_policies()]
+        policies3 = [p.name for p in self.game.get_n_policies()]
+        self.assertFalse(policies1 == policies2 == policies3)
+
+        policy_patcher.start()
+
     def testAddPlayer(self):
 
-        p = self.game.create_player('Matt')
-
-        self.assertEqual(self.game.get_player(p.id), p)
+        p1 = self.game.create_player('Matt')
+        
+        self.assertEqual(self.game.get_player(p1.id), p1)
         self.assertEqual(self.game.num_players, 1)
+
+        p2 = self.game.create_player('Simon')
+
+        self.assertEqual(self.game.get_player(p2.id), p2)
+        self.assertEqual(self.game.num_players, 2)
 
     def testGameCreatePlayer(self):
         
         self.add_20_goals_and_policies()
-        random.seed(1)
+
         p = self.game.create_player('Matt')
         self.assertEqual(self.game.get_player(p.id), p)
-        self.assertEqual(p.goal.name, 'G10')
-        self.assertEqual([x.name for x in p.children()], ['P13', 'P5', 'P10', 'P9', 'P2'])
+        self.assertEqual(self.game.get_goal(p.goal_id).name, 'G0')
+        policies = p.policies
+        self.assertEqual(sorted([x for x in policies]), sorted([u'P0', u'P1', u'P10', u'P11', u'P12']))
 
     def testGameClearPlayers(self):
         self.add_20_goals_and_policies()
-        random.seed(1)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
-        self.assertEqual(db_session.query(Player).count(), 2)
-        self.assertEqual(db_session.query(Edge).count(), 10)
+        self.assertEqual(len(self.game.network.players), 2)
+        self.assertEqual(len(self.game.network.goals), 20)
 
         self.game.clear_players()
-        db_session.flush()
         
-        self.assertEqual(db_session.query(Player).count(), 0)
-        self.assertEqual(db_session.query(Edge).count(), 0)        
+        self.assertEqual(len(self.game.network.players), 0)
+        self.assertEqual(len(self.game.network.goals), 20)
 
     def testPlayerHasWallet(self):
 
@@ -157,14 +190,14 @@ class CoreGameTests(DBTestCase):
 
     def testAddPolicy(self):
 
-        p = self.game.add_policy('Arms Embargo', 0.1)
+        p = self.game.add_policy('Arms Embargo', leak=0.1)
 
         self.assertEqual(self.game.get_policy(p.id), p)
         self.assertEqual(self.game.get_policy(p.id).leak, 0.1)
 
     def testAddWalletToPolicy(self):
 
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
         p1 = self.game.create_player('Matt')
         w1 = Wallet([(p1.id, 100)])
         po1.wallet = w1
@@ -175,8 +208,7 @@ class CoreGameTests(DBTestCase):
 
     def testAddGoal(self):
 
-        g = self.game.add_goal('World Peace', 0.5)
-
+        g = self.game.add_goal('World Peace', leak=0.5)
         self.assertEqual(self.game.get_goal(g.id), g)
         self.assertEqual(self.game.get_goal(g.id).leak, 0.5)
 
@@ -184,23 +216,18 @@ class CoreGameTests(DBTestCase):
         
         self.add_20_goals_and_policies()
 
-        random.seed(1)
-        self.assertEqual(self.game.get_random_goal().name, 'G10')
-        self.assertEqual(self.game.get_random_goal().name, 'G6')
-        
+        self.assertEqual(self.game.get_random_goal().name, 'G0')
 
     def testAddPlayerAndGoal(self):
-        
-        p1 = self.game.create_player('Matt')
-        g1 = self.game.add_goal('World Peace', 0.5)
-        p1.goal = g1
+        g1 = self.game.add_goal('World Peace')
+        p1 = self.game.create_player('Matt', goal_id=g1.id)
 
-        self.assertEqual(p1.goal, g1)
-        self.assertIn(p1, g1.players)
+        self.assertEqual(p1.goal_id, g1.id)
+        self.assertIn(p1, self.game.get_players_for_goal(g1.id))
 
     def testAddWalletToGoal(self):
 
-        g = self.game.add_goal('World Peace', 0.5)
+        g = self.game.add_goal('World Peace')
         p1 = self.game.create_player('Matt')
         w1 = Wallet([(p1.id, 100.0)])
         g.wallet = w1
@@ -208,17 +235,16 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g.wallet, w1)
 
     def testGetNPolicies(self):
-        g1 = self.game.add_goal('A', 0.5)
+        g1 = self.game.add_goal('A')
         self.add_20_goals_and_policies()
 
-        random.seed(1)
-        policies = ['P8', 'P19', 'P13', 'P5', 'P7']
-        self.assertEqual([x.name for x in self.game.get_n_policies(g1)], policies)
+        policies = [u'P0', u'P1', u'P10', u'P11', u'P12']
+        self.assertEqual([x.name for x in self.game.get_n_policies()], policies)
         
     def testModifyPolicies(self):
 
-        p1 = self.game.add_policy('Policy 1', 0.1)
-        p2 = self.game.add_policy('Policy 2', 0.2)
+        p1 = self.game.add_policy('Policy 1', leak=0.1)
+        p2 = self.game.add_policy('Policy 2', leak=0.2)
 
         self.assertEqual(self.game.get_policy(p1.id).leak, 0.1)
 
@@ -227,46 +253,44 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.get_policy(p2.id).leak, 0.2)
 
     def testChildParentRelationship(self):
-        a = Node('A', 0.1)
-        b = Node('B', 0.1)
+        a = Node.new('A')
+        b = Node.new('B')
 
         l = self.game.add_link(a, b, 1.0)
-        self.assertIn(a, b.parents())
-        self.assertIn(b, a.children())
+        self.assertIn(a, b.parents)
+        self.assertIn(b, a.children)
 
     def testPlayerFundedPolicies(self):
-        p1 = self.game.add_policy('Policy 1', 0.1)
-        p2 = self.game.add_policy('Policy 2', 0.2)
-        p3 = self.game.add_policy('Policy 3', 0.2)
+        p1 = self.game.add_policy('Policy 1')
+        p2 = self.game.add_policy('Policy 2')
+        p3 = self.game.add_policy('Policy 3')
         p = self.game.create_player('Matt')
 
-        p.fund(p1, 20)
-        p.fund(p2, 30)
-        p.fund(p3, 0)
+        self.game.set_policy_funding_for_player(p, [(p1.id,20), (p2.id,30), (p3.id, 0)])
 
-        self.assertEqual(sorted(p.policies), sorted([p1,p2,p3]))
-        self.assertEqual(sorted(p.funded_policies), sorted([p1,p2]))
+        self.assertEqual(sorted(p.policies), sorted([p1.id,p2.id,p3.id]))
+        self.assertEqual(sorted(p.funded_policies), sorted([p1.id,p2.id]))
 
     def testSimpleNetwork(self):
-        n1 = self.game.add_policy('Policy 1', 0.1)
-        n2 = self.game.add_goal('Goal 1', 0.2)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_goal('Goal 1')
         l1 = self.game.add_link(n1, n2, 0.5)
 
         self.assertEqual(self.game.get_link(l1.id), l1)
-        self.assertIn(n2, n1.children())
+        self.assertIn(n2, n1.children)
         
     def testMultiLevelNetwork(self):
-        n1 = self.game.add_policy('Policy 1', 0.1)
-        n2 = self.game.add_policy('Policy 2', 0.1)
-        n3 = self.game.add_goal('Goal 1', 0.2)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_policy('Policy 2')
+        n3 = self.game.add_goal('Goal 1')
         
         l1 = self.game.add_link(n1, n2, 0.5)
         l2 = self.game.add_link(n2, n3, 0.5)
 
-        self.assertEqual(n3, n1.children()[0].children()[0])
+        self.assertEqual(n3, n1.children[0].children[0])
 
     def testAddWallets(self):
-        n1 = self.game.add_policy('Policy 1', 0.1)
+        n1 = self.game.add_policy('Policy 1')
         p1 = self.game.create_player('Matt')
 
         self.assertEqual(n1.balance, 0)
@@ -282,7 +306,7 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 15.0)
 
     def testNodeLeak100(self):
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1 = self.game.add_policy('Policy 1', leak=1.0)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
         n1.wallet = Wallet([(p1.id, 5.0),
@@ -295,7 +319,7 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 0.0)
 
     def testNodeLeak0(self):
-        n1 = self.game.add_policy('Policy 1', 0.0)
+        n1 = self.game.add_policy('Policy 1', leak=0.0)
         p1 = self.game.create_player('Matt')
         n1.wallet = Wallet([(p1.id, 15.0)])
 
@@ -306,7 +330,7 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 15.0)
 
     def testNodeLeak20(self):
-        n1 = self.game.add_policy('Policy 1', 0.2)
+        n1 = self.game.add_policy('Policy 1', leak=0.2)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
         n1.wallet = Wallet([(p1.id, 5.0),
@@ -314,9 +338,9 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(n1.balance, 15.0)
         n1.do_leak()
-        self.assertAlmostEqual(n1.balance, 12.0)
+        self.assertAlmostEqual(n1.balance, 12.0, 5)
         n1.do_leak()
-        self.assertAlmostEqual(n1.balance, 9.6)
+        self.assertAlmostEqual(n1.balance, 9.6, 5)
 
         # Check the individual wallets
         d = n1.wallet.todict()
@@ -324,8 +348,8 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(d[p2.id], 6.4, 5)
 
     def testNodeLeakNegative20(self):
-        n1 = self.game.add_policy('Policy 1', 0.2)
-        g1 = self.game.add_goal('Goal 1', 0.2)
+        n1 = self.game.add_policy('Policy 1', leak=0.2)
+        g1 = self.game.add_goal('Goal 1', leak=0.2)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
         g1.wallet = Wallet([(p1.id, 5.0),
@@ -344,6 +368,7 @@ class CoreGameTests(DBTestCase):
         d = g1.wallet.todict()
         self.assertAlmostEqual(d[p1.id], 0.45, 5)
         self.assertAlmostEqual(d[p2.id], 0.9, 5)
+###
 
     def testTransferWalletToWallet(self):
         p1 = self.game.create_player('Matt')
@@ -359,10 +384,10 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(w2.total, 50.0)
 
     def testTransferToWalletInsufficientFunds(self):
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1 = self.game.add_policy('Policy 1')
         p1 = self.game.create_player('Matt')
         n1.wallet = Wallet([(p1.id, 100.0)])
-        n2 = self.game.add_policy('Policy 2', 1.0)
+        n2 = self.game.add_policy('Policy 2')
 
         self.assertAlmostEqual(n1.balance, 100.0)
         self.assertAlmostEqual(n2.balance, 0.0)
@@ -375,38 +400,38 @@ class CoreGameTests(DBTestCase):
 
 
     def testAllocateFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        n1 = self.game.add_policy('Policy 1', leak=1.0)
 
         self.assertEqual(p1.balance, 1000.0)
         self.assertEqual(n1.balance, 0.0)
 
-        p1.transfer_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 1000.0)
         self.assertEqual(n1.balance, 0.0)
 
-        self.game.add_fund(p1, n1, 100)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 100),])
 
-        p1.transfer_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
     def testAllocateDifferentFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        n1 = self.game.add_policy('Policy 1', leak=1.0)
 
-        self.game.add_fund(p1, n1, 60)
-        p1.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 60),])
+
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 940.0)
         self.assertEqual(n1.balance, 60.0)
 
-        self.game.add_fund(p1, n1, 80)
-        p1.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 80),])
+
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 860.0)
         self.assertEqual(n1.balance, 140.0)
@@ -414,30 +439,28 @@ class CoreGameTests(DBTestCase):
     def testDeleteFunds(self):
         p1 = self.game.create_player('Matt')
         p1.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1 = self.game.add_policy('Policy 1', leak=1.0)
 
-        self.game.add_fund(p1, n1, 100)
-        p1.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 100),])
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
-        self.game.add_fund(p1, n1, 0)
-        p1.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 0),])
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(n1.balance, 100.0)
 
         # test that we keep the link even when funding stopped
-        self.assertEqual(len(p1.children()), 1)
+        self.assertEqual(len(p1.policies), 1)
 
     def testGameTotalInflow(self):
         p1 = self.game.create_player('Matt')
         self.assertEqual(self.game.total_players_inflow, 1000)
         p2 = self.game.create_player('Simon')
         self.assertEqual(self.game.total_players_inflow, 2000)
-        p2.max_outflow = 50
-        self.assertEqual(self.game.total_players_inflow, 1050)
 
     def testGameTotalActiveInflow(self):
         p1 = self.game.create_player('Matt')
@@ -445,32 +468,27 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(self.game.total_active_players_inflow, 1000)
         p2 = self.game.create_player('Simon')
         self.assertEqual(self.game.total_active_players_inflow, 2000)
-        p2.max_outflow = 50
-        self.assertEqual(self.game.total_active_players_inflow, 1050)
 
         p1.last_budget_claim = datetime.now()-timedelta(hours=6)
-        self.assertEqual(self.game.total_active_players_inflow, 50)
+        self.assertEqual(self.game.total_active_players_inflow, 1000)
 
         p1.claim_budget()
-        self.assertEqual(self.game.total_active_players_inflow, 1050)
+        self.assertEqual(self.game.total_active_players_inflow, 2000)
 
 
     def testPlayerTotalFunding(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        po1 = self.game.add_policy('Policy 1', 1.0)
-        self.game.add_fund(p1, po1, 10)
-        po2 = self.game.add_policy('Policy 2', 1.0)
-        self.game.add_fund(p1, po2, 20)
-        po3 = self.game.add_policy('Policy 3', 1.0)
-        self.game.add_fund(p1, po3, 30)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Policy 1', leak=1.0)
+        po2 = self.game.add_policy('Policy 2', leak=1.0)
+        po3 = self.game.add_policy('Policy 3', leak=1.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10), (po2.id, 20), (po3.id, 30)])
 
         self.assertEqual(p1.total_funding, 60)
 
-        self.game.add_fund(p1, po3, 10)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10), (po2.id, 20), (po3.id, 10)])
         self.assertEqual(p1.total_funding, 40)
 
-        self.game.add_fund(p1, po2, 0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10), (po2.id, 0), (po3.id, 10)])
         self.assertEqual(p1.total_funding, 20)
 
     def testPlayerMaxOutflow(self):
@@ -478,35 +496,39 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p1.max_outflow, self.game.settings.max_spend_per_tick)
         
     def testPlayerExceedMaxOutflow(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        po1 = self.game.add_policy('Policy 1', 1.0)
-        self.game.add_fund(p1, po1, 100)
-        po2 = self.game.add_policy('Policy 2', 1.0)
-        self.game.add_fund(p1, po2, 200)
-        po3 = self.game.add_policy('Policy 3', 1.0)
+        p1 = self.game.create_player('Matt', balance=1000, max_outflow=1000)
+        po1 = self.game.add_policy('Policy 1', leak=1.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100),])
+        po2 = self.game.add_policy('Policy 2', leak=1.0)
+        self.game.set_policy_funding_for_player(p1, [(po2.id, 200),])
+        po3 = self.game.add_policy('Policy 3', leak=1.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100), (po2.id, 200)])
 
         with self.assertRaises(ValueError):
-            self.game.add_fund(p1, po3, 800)
+            self.game.set_policy_funding_for_player(p1, [(po1.id, 100), (po2.id, 200), (po3.id, 800)])
 
         self.assertEqual(p1.total_funding, 300)
 
-        self.game.add_fund(p1, po3, 700)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100), (po2.id, 200), (po3.id, 700)])
         self.assertEqual(p1.total_funding, 1000)
 
     def testGoalActive(self):
-        p1 = self.game.create_player('Player 1')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Policy 1', 0.0)
-        g1 = self.game.add_goal('Goal 1', 0.0)
-        g1.activation = 400
+        p1 = self.game.create_player('Player 1', balance=1000)
+        po1 = self.game.add_policy('Policy 1')
+        g1 = self.game.add_goal('Goal 1', activation=400)
         l1 = self.game.add_link(po1, g1, 200.0)
-        self.game.add_fund(p1, po1, 200.0)
+        p1.goal_id = g1.id
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 200.0),])
+
+
+        self.assertAlmostEqual(self.game.goal_funded_by_player(p1.id), 0.0)        
         self.game.do_propogate_funds()
 
         self.assertAlmostEqual(p1.balance, 800)
 
         self.assertAlmostEqual(g1.balance, 200)
+        self.assertAlmostEqual(self.game.goal_funded_by_player(p1.id), 200)
+
         self.assertFalse(g1.active)
 
         self.game.do_propogate_funds()
@@ -514,35 +536,30 @@ class CoreGameTests(DBTestCase):
 
 
     def testNodeActivationFromPlayer(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        po1 = self.game.add_policy('Policy 1', 1.0)
-        po1.activation = 0.2
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Policy 1', activation=0.2)
 
         self.assertFalse(po1.active)
         self.assertAlmostEqual(po1.active_level, 0)
-        self.game.add_fund(p1, po1, 200.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 200.0),])
         self.game.do_propogate_funds()
         
         self.assertTrue(po1.active)
 
     def testNodeActivationFromNode(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 10000.0
-        po1 = self.game.add_policy('Policy 1', 1.0)
-        po1.activation = 0.1
+        p1 = self.game.create_player('Matt', balance=10000)
+        po1 = self.game.add_policy('Policy 1', activation=0.1)
 
         self.assertAlmostEqual(po1.active_level, 0)
         self.assertFalse(po1.active)
 
-        po2 = self.game.add_policy('Policy 2', 1.0)
-        po2.activation = 0.2
+        po2 = self.game.add_policy('Policy 2', activation=0.2)
         l1 = self.game.add_link(po1, po2, 50.0)
 
         self.assertAlmostEqual(po1.active, 0.0)
         self.assertFalse(po1.active)
 
-        self.game.add_fund(p1, po1, 200.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 200.0),])
         for x in range(5):
             self.game.do_propogate_funds()
         
@@ -551,7 +568,7 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
 
-        self.game.add_fund(p1, po1, 400.0)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 400.0),])
         self.assertTrue(po1.active)
         self.assertAlmostEqual(po1.active_percent, 2.0)
         self.assertFalse(po2.active)
@@ -563,40 +580,30 @@ class CoreGameTests(DBTestCase):
         self.assertTrue(po2.active)
         self.assertAlmostEqual(po2.active_percent, 2.0)
 
-
     def testTwoPlayersFundPolicy(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
+        n1 = self.game.add_policy('Policy 1')
 
-        self.game.add_fund(p1, n1, 100)
-        self.game.add_fund(p2, n1, 90)
-        p1.transfer_funds()
-        p2.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 100),])
+        self.game.set_policy_funding_for_player(p2, [(n1.id, 90),])
+
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(p2.balance, 910.0)
         self.assertEqual(n1.balance, 190.0)
 
-        self.assertEqual(len(n1.parents()), 2)
-
     def testGameTransferFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
-        p3 = self.game.create_player('Rich')
-        p3.balance = 1000.0
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
+        p3 = self.game.create_player('Rich', balance=1000)
     
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1 = self.game.add_policy('Policy 1')
 
-        self.game.add_fund(p1, n1, 10)
-        self.game.add_fund(p2, n1, 20)
-        self.game.add_fund(p3, n1, 50)
-
-        
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10),])
+        self.game.set_policy_funding_for_player(p2, [(n1.id, 20),])
+        self.game.set_policy_funding_for_player(p3, [(n1.id, 50),])
 
         self.game.do_propogate_funds()
 
@@ -605,15 +612,11 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p3.balance, 950.0)
         self.assertEqual(n1.balance, 80.0)
 
-        self.assertEqual(len(n1.parents()), 3)
-
     def testGameTransferFundsNoMaxLevel(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
+        p1 = self.game.create_player('Matt', balance=1000)
     
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n1.max_level = 0
-        self.game.add_fund(p1, n1, 10)
+        n1 = self.game.add_policy('Policy 1', max_level=0)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10),])
 
         self.game.do_propogate_funds()
 
@@ -621,12 +624,10 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 10.0)
 
     def testGameTransferFundsMaxLevel(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
+        p1 = self.game.create_player('Matt', balance=1000)
     
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n1.max_level = 5.0
-        self.game.add_fund(p1, n1, 10)
+        n1 = self.game.add_policy('Policy 1', leak=1.0, max_level=5.0)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10),])
 
         self.game.do_propogate_funds()
 
@@ -634,16 +635,12 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 5.0)
 
     def testGameTransferFundsMaxLevelMultiplePlayers(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-    
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
 
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n1.max_level = 5.0
-        self.game.add_fund(p1, n1, 10)
-        self.game.add_fund(p2, n1, 5)
+        n1 = self.game.add_policy('Policy 1', max_level=5.0)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10),])
+        self.game.set_policy_funding_for_player(p2, [(n1.id, 5),])
 
         self.game.do_propogate_funds()
 
@@ -652,22 +649,16 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 5.0)
 
     def testGameTransferFundsComplex(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
-        p3 = self.game.create_player('Rich')
-        p3.balance = 1000.0
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
+        p3 = self.game.create_player('Rich', balance=1000)
     
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n2 = self.game.add_policy('Policy 2', 1.0)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_policy('Policy 2')
 
-        self.game.add_fund(p1, n1, 10)
-        self.game.add_fund(p2, n1, 20)
-        self.game.add_fund(p3, n1, 50)
-
-        self.game.add_fund(p2, n2, 50)
-        self.game.add_fund(p3, n2, 40)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10),])
+        self.game.set_policy_funding_for_player(p2, [(n1.id, 20),(n2.id, 50)])
+        self.game.set_policy_funding_for_player(p3, [(n1.id, 50),(n2.id, 40)])
 
         self.game.do_propogate_funds()
 
@@ -677,38 +668,32 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n1.balance, 80.0)
         self.assertEqual(n2.balance, 90.0)
 
-        self.assertEqual(len(n1.parents()), 3)
-        self.assertEqual(len(n2.parents()), 2)
-
-
     def testAllocateFundsMultiplePolicies(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n2 = self.game.add_policy('Policy 2', 1.0) 
+        p1 = self.game.create_player('Matt', balance=1000)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_policy('Policy 2')
 
         self.assertEqual(p1.balance, 1000.0)
         self.assertEqual(n1.balance, 0.0)
         self.assertEqual(n2.balance, 0.0)
 
-        p1.transfer_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 1000.0)
         self.assertEqual(n1.balance, 0.0)
         self.assertEqual(n2.balance, 0.0)
 
-        self.game.add_fund(p1, n1, 10)
-        self.game.add_fund(p1, n2, 30)
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 10), (n2.id, 30)])
 
-        p1.transfer_funds()
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 960.0)
         self.assertEqual(n1.balance, 10.0)
         self.assertEqual(n2.balance, 30.0)
 
     def testGameLeak100(self):
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n2 = self.game.add_policy('Policy 2', 1.0)
+        n1 = self.game.add_policy('Policy 1', leak=1.0)
+        n2 = self.game.add_policy('Policy 2', leak=1.0)
         p1 = self.game.create_player('Matt')
         n1.wallet = Wallet([(p1.id, 100.0)])
         n2.wallet = Wallet([(p1.id, 100.0)])
@@ -721,8 +706,8 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n2.balance, 0.0)
 
     def testGameLeak0_100(self):
-        n1 = self.game.add_policy('Policy 1', 0.0)
-        n2 = self.game.add_policy('Policy 2', 1.0)
+        n1 = self.game.add_policy('Policy 1', leak=0.0)
+        n2 = self.game.add_policy('Policy 2', leak=1.0)
         p1 = self.game.create_player('Matt')
         n1.wallet = Wallet([(p1.id, 100.0)])
         n2.wallet = Wallet([(p1.id, 100.0)])
@@ -735,8 +720,8 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(n2.balance, 0.0)
 
     def testGameLeak50(self):
-        n1 = self.game.add_policy('Policy 1', 0.5)
-        n2 = self.game.add_policy('Policy 2', 0.2)
+        n1 = self.game.add_policy('Policy 1', leak=0.5)
+        n2 = self.game.add_policy('Policy 2', leak=0.2)
         p1 = self.game.create_player('Matt')
         n1.wallet = Wallet([(p1.id, 100.0)])
         n2.wallet = Wallet([(p1.id, 100.0)])
@@ -753,22 +738,17 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(n2.balance, 64.0)
 
     def testGameGetWallets(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000.0
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
+        n1 = self.game.add_policy('Policy 1')
 
-        self.game.add_fund(p1, n1, 100)
-        self.game.add_fund(p2, n1, 90)
-        p1.transfer_funds()
-        p2.transfer_funds()
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 100),])
+        self.game.set_policy_funding_for_player(p2, [(n1.id, 90),])
+        self.game.do_propogate_funds()
 
         self.assertEqual(p1.balance, 900.0)
         self.assertEqual(p2.balance, 910.0)
         self.assertEqual(n1.balance, 190.0)
-
-        self.assertEqual(len(n1.parents()), 2)
 
         expected = {p1.id: 100.0,
                     p2.id: 90.0,}
@@ -788,7 +768,7 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(p2.balance, self.game.settings.budget_per_cycle)
         self.assertAlmostEqual(p3.balance, self.game.settings.budget_per_cycle)
 
-        n1 = self.game.add_policy('Policy 1', 1.0)
+        n1 = self.game.add_policy('Policy 1')
 
         p1.transfer_funds_to_node(n1, 100)
         p2.transfer_funds_to_node(n1, 200)
@@ -815,13 +795,15 @@ class CoreGameTests(DBTestCase):
         
 
     def testGameTransfer15_30(self):
-        n1 = self.game.add_policy('Policy 1', 0.5)
-        n2 = self.game.add_policy('Policy 2', 0.5)
-        n3 = self.game.add_policy('Policy 3', 0.5)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_policy('Policy 2')
+        n3 = self.game.add_policy('Policy 3')
         p1 = self.game.create_player('Matt')
         l1 = self.game.add_link(n1, n2, 15.0)
         l2 = self.game.add_link(n1, n3, 30.0)
 
+        self.game.network.rank()
+        
         self.game.do_replenish_budget()
 
         p1.transfer_funds_to_node(n1, 100)
@@ -843,13 +825,46 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(n3.balance, 60.0)
 
 
+    def testRankNodes(self):
+        n1 = self.game.add_policy('Policy 1', leak=0.5)
+        n2 = self.game.add_policy('Policy 2', leak=0.5)
+        n3 = self.game.add_policy('Policy 3', leak=0.5)
+        n4 = self.game.add_policy('Policy 4', leak=0.5)
+        n5 = self.game.add_policy('Policy 5', leak=0.5)
+        g1 = self.game.add_goal('Goal 1', leak=0.5)
+        g2 = self.game.add_goal('Goal 2', leak=0.5)
+        g3 = self.game.add_goal('Goal 3', leak=0.5)
+        p1 = self.game.create_player('Matt')
+
+        l1 = self.game.add_link(n1, n2, 4.0)
+        l2 = self.game.add_link(n1, n3, 3.0)
+        l3 = self.game.add_link(n3, n5, 3.0)
+        l4 = self.game.add_link(n5, n4, 3.0)
+
+        l5 = self.game.add_link(n2, g1, 1.0)
+        l6 = self.game.add_link(n4, g2, 3.0)
+        l7 = self.game.add_link(n3, g3, 5.0)
+
+        self.game.do_replenish_budget()
+
+        self.assertEqual(n1.balance, 0)
+        self.assertEqual(n2.balance, 0)
+        self.assertEqual(n3.balance, 0)
+
+        self.assertEqual(g1.balance, 0)
+        self.assertEqual(g2.balance, 0)
+        self.assertEqual(g3.balance, 0)
+
+        self.game.network.rank()
+        self.assertEqual(self.game.get_ranked_nodes(), [ n1, n2, n3, n5, g1, g3, n4, g2 ])
+
     def testGameTransfer50_goal(self):
-        n1 = self.game.add_policy('Policy 1', 0.5)
-        n2 = self.game.add_policy('Policy 2', 0.5)
-        n3 = self.game.add_policy('Policy 3', 0.5)
-        g1 = self.game.add_goal('Goal 1', 0.5)
-        g2 = self.game.add_goal('Goal 2', 0.5)
-        g3 = self.game.add_goal('Goal 3', 0.5)
+        n1 = self.game.add_policy('Policy 1', leak=0.5)
+        n2 = self.game.add_policy('Policy 2', leak=0.5)
+        n3 = self.game.add_policy('Policy 3', leak=0.5)
+        g1 = self.game.add_goal('Goal 1', leak=0.5)
+        g2 = self.game.add_goal('Goal 2', leak=0.5)
+        g3 = self.game.add_goal('Goal 3', leak=0.5)
         p1 = self.game.create_player('Matt')
 
         l1 = self.game.add_link(n1, n2, 4.0)
@@ -885,16 +900,13 @@ class CoreGameTests(DBTestCase):
 
 
     def testSimpleNetwork(self):
-        p1 = self.game.create_player('Player 1')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Policy 1', 0.0)
-        g1 = self.game.add_goal('Goal 1', 0.0)
-        g2 = self.game.add_goal('Goal 2', 0.0)
+        p1 = self.game.create_player('Player 1', balance=1000)
+        po1 = self.game.add_policy('Policy 1')
+        g1 = self.game.add_goal('Goal 1')
+        g2 = self.game.add_goal('Goal 2')
 
         l1 = self.game.add_link(po1, g1, 3.0)
         l2 = self.game.add_link(po1, g2, 4.0)
-
-        
 
         p1.transfer_funds_to_node(po1, 10)
 
@@ -906,11 +918,10 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(g2.balance, 4.0)
 
     def testSimpleNetworkLessThanBalance(self):
-        p1 = self.game.create_player('Player 1')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Policy 1', 0.0)
-        g1 = self.game.add_goal('Goal 1', 0.0)
-        g2 = self.game.add_goal('Goal 2', 0.0)
+        p1 = self.game.create_player('Player 1', balance=1000)
+        po1 = self.game.add_policy('Policy 1')
+        g1 = self.game.add_goal('Goal 1')
+        g2 = self.game.add_goal('Goal 2')
 
         l1 = self.game.add_link(po1, g1, 10.0)
         l2 = self.game.add_link(po1, g2, 40.0)
@@ -925,13 +936,11 @@ class CoreGameTests(DBTestCase):
         self.assertAlmostEqual(g2.balance, 8.0)
 
     def testSimpleNetworkTwoWallets(self):
-        p1 = self.game.create_player('Player 1')
-        p1.balance = 1000
-        p2 = self.game.create_player('Player 2')
-        p2.balance = 1000
-        po1 = self.game.add_policy('Policy 1', 0.0)
-        g1 = self.game.add_goal('Goal 1', 0.0)
-        g2 = self.game.add_goal('Goal 2', 0.0)
+        p1 = self.game.create_player('Player 1', balance=1000)
+        p2 = self.game.create_player('Player 2', balance=1000)
+        po1 = self.game.add_policy('Policy 1')
+        g1 = self.game.add_goal('Goal 1',)
+        g2 = self.game.add_goal('Goal 2')
 
         l1 = self.game.add_link(po1, g1, 3.0)
         l2 = self.game.add_link(po1, g2, 5.0)
@@ -953,13 +962,11 @@ class CoreGameTests(DBTestCase):
                                                p2.id: 3.75})
 
     def testSimpleNetworkTwoWalletsLessThanBalance(self):
-        p1 = self.game.create_player('Player 1')
-        p1.balance = 1000
-        p2 = self.game.create_player('Player 2')
-        p2.balance = 1000
-        po1 = self.game.add_policy('Policy 1', 0.0)
-        g1 = self.game.add_goal('Goal 1', 0.0)
-        g2 = self.game.add_goal('Goal 2', 0.0)
+        p1 = self.game.create_player('Player 1', balance=1000)
+        p2 = self.game.create_player('Player 2', balance=1000)
+        po1 = self.game.add_policy('Policy 1')
+        g1 = self.game.add_goal('Goal 1')
+        g2 = self.game.add_goal('Goal 2')
 
         l1 = self.game.add_link(po1, g1, 3.0)
         l2 = self.game.add_link(po1, g2, 5.0)
@@ -983,10 +990,9 @@ class CoreGameTests(DBTestCase):
         
 
     def testSimplePlayerCoinsNetwork(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 50)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 50),])
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
@@ -998,15 +1004,12 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(po1.balance, 60)
 
     def testTransferPartialFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 100.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo')
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100.0),])
 
-        g1 = self.game.add_goal('World Peace', 1.0)
+        g1 = self.game.add_goal('World Peace')
         l1 = self.game.add_link(po1, g1, 1.0)
-
-        
 
         self.game.do_propogate_funds()
         
@@ -1015,15 +1018,12 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g1.balance, 1.0)
 
     def testTransferFullFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 100.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100),])
 
-        g1 = self.game.add_goal('World Peace', 1.0)
+        g1 = self.game.add_goal('World Peace', leak=1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
-
-        
 
         self.game.do_propogate_funds()
         
@@ -1033,10 +1033,9 @@ class CoreGameTests(DBTestCase):
         
 
     def testTransferGreaterThan100_300(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 3.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 3.0),])
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
@@ -1049,15 +1048,12 @@ class CoreGameTests(DBTestCase):
 
 
     def testTransferSlowFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 1.0)])
 
-        g1 = self.game.add_goal('World Peace', 1.0)
+        g1 = self.game.add_goal('World Peace', leak=1.0)
         l1 = self.game.add_link(po1, g1, 2.0)
-
-        
 
         self.game.do_propogate_funds()
         
@@ -1090,15 +1086,12 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g1.balance, 5.0)
         
     def testTransferFastFunds(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_link(p1, po1, 3.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 3.0),])
 
-        g1 = self.game.add_goal('World Peace', 1.0)
+        g1 = self.game.add_goal('World Peace', leak=1.0)
         l1 = self.game.add_link(po1, g1, 1.0)
-
-        
 
         self.game.do_propogate_funds()
         
@@ -1132,19 +1125,15 @@ class CoreGameTests(DBTestCase):
         
 
     def testMoreComplexPlayerCoinsNetwork(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 0.5)
-        po2 = self.game.add_policy('Pollution control', 0.1)
-        self.game.add_fund(p1, po2, 1.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo')
+        po2 = self.game.add_policy('Pollution control')
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 0.5), (po2.id, 1.0)])
 
-        g1 = self.game.add_goal('World Peace', 0.5)
-        g2 = self.game.add_goal('Clean Water', 0.5)
+        g1 = self.game.add_goal('World Peace')
+        g2 = self.game.add_goal('Clean Water')
         l3 = self.game.add_link(po1, g1, 1.0)
         l4 = self.game.add_link(po2, g2, 2.0)
-
-        
 
         self.assertEqual(p1.balance, 1000)
         self.assertEqual(po1.balance, 0)
@@ -1160,15 +1149,13 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g2.balance, 100)
 
     def testMoreComplexPlayerCoinsNetworkWithFullTick(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 5000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 10.0)
-        po2 = self.game.add_policy('Pollution control', 0.1)
-        self.game.add_fund(p1, po2, 15.0)
+        p1 = self.game.create_player('Matt', balance=5000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        po2 = self.game.add_policy('Pollution control', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10.0), (po2.id, 15.0)])
 
-        g1 = self.game.add_goal('World Peace', 0.5)
-        g2 = self.game.add_goal('Clean Water', 0.5)
+        g1 = self.game.add_goal('World Peace', leak=0.5)
+        g2 = self.game.add_goal('Clean Water', leak=0.5)
         l3 = self.game.add_link(po1, g1, 5.0)
         l4 = self.game.add_link(po2, g2, 9.0)
 
@@ -1186,15 +1173,11 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(g2.balance, 18.0)
 
     def testTwoPlayersFundAPolicyEqually(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        p2 = self.game.create_player('Simon')
-        p2.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 1.0)
-        self.game.add_fund(p2, po1, 1.0)
-
-        
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 1.0),])
+        self.game.set_policy_funding_for_player(p2, [(po1.id, 1.0),])
 
         self.assertEqual(po1.balance, 0)
 
@@ -1208,12 +1191,11 @@ class CoreGameTests(DBTestCase):
 
 
     def testActivationLevelLow(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        po1.activation = 0.2
-        g1 = self.game.add_goal('World Peace', 0.5)
-        self.game.add_fund(p1, po1, 5.0)
+        p1 = self.game.create_player('Matt', balance=1000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1, activation=0.2)
+        g1 = self.game.add_goal('World Peace', leak=0.5)
+
+        f = self.game.set_policy_funding_for_player(p1, [(po1.id, 5.0),])
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
@@ -1223,15 +1205,14 @@ class CoreGameTests(DBTestCase):
 
         self.assertEqual(p1.balance, 500.0)
         self.assertEqual(po1.balance, 500.0)
-        self.assertEqual(g1.balance, 0.0)
+        self.assertEqual(g1.balance, 0)
 
     def testActivationLevelHigh(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 10000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        po1.activation = 0.2
-        g1 = self.game.add_goal('World Peace', 0.5)
-        self.game.add_fund(p1, po1, 250.0)
+        p1 = self.game.create_player('Matt', balance=10000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1, activation=0.2)
+        g1 = self.game.add_goal('World Peace', leak=0.5)
+
+        f = self.game.set_policy_funding_for_player(p1, [(po1.id, 250.0),])
         l2 = self.game.add_link(po1, g1, 1.0)
 
         self.assertEqual(po1.balance, 0)
@@ -1243,69 +1224,57 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(po1.balance, 2490)
         self.assertEqual(g1.balance, 10)
 
-    def testGetFunding(self):
+    def testGetBudget(self):
         self.add_20_goals_and_policies()
-        random.seed(0)
-        name = 'Matt'
-        player = self.game.create_player(name)
-        id = player.id
-
-        funding = []
+        player = self.game.create_player('Matt', balance=1000)
         
-        for amount,edge in enumerate(player.lower_edges):
-            edge.weight = amount
-            dest_id = edge.higher_node.id
-            funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
+        budget = self.game.get_policy_funding_for_player(player)
+        actual = sorted([ {'policy_id': p, 'amount': amount} for (p,amount) in budget ])
+        expected = sorted([{'amount': 0.0, 'policy_id': 'P0'}, 
+                   {'amount': 0.0, 'policy_id': 'P1'}, 
+                   {'amount': 0.0, 'policy_id': 'P10'}, 
+                   {'amount': 0.0, 'policy_id': 'P11'}, 
+                   {'amount': 0.0, 'policy_id': 'P12'}])
 
-        data = self.game.get_funding(id)
-        self.assertEqual(funding, data)
+        self.assertEqual(expected, actual)
 
-    def testSetFunding(self):
+    def testSetBudget(self):
+        self.add_20_goals_and_policies()
+        player = self.game.create_player('Matt', balance=1000)
+        
+        fundings = [ ('P0', 10),
+                     ('P1', 20),
+                     ('P2', 30),
+                     ]
+                   
+        self.game.set_policy_funding_for_player(player, fundings)
 
-        for x in range(5):
-            p = self.game.add_policy("P{}".format(x), 0.5)
-            p.id = "P{}".format(x)
+        budget = self.game.get_policy_funding_for_player(player)
+        actual = sorted([ {'policy_id': p, 'amount': amount} for (p,amount) in budget if amount > 0])
+        expected = sorted([{'amount': 10.0, 'policy_id': 'P0'}, 
+                           {'amount': 20.0, 'policy_id': 'P1'}, 
+                           {'amount': 30.0, 'policy_id': 'P2'}])
 
-        random.seed(0)
-
-        name = 'Matt'
-        player = self.game.create_player(name)
-        id = player.id
-
-        funding = []
-        data = self.game.get_funding(id)
-
-        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
-
-        for x in range(5):
-            data[x]['amount'] = x
-            
-        self.game.set_funding(id, data)
-
-        data2 = self.game.get_funding(id)
-
-        self.assertEqual(data, data2)
+        self.assertEqual(expected, actual)
 
     def testCreateTable(self):
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
         table = self.game.create_table('table a')
 
-        self.assertEqual(table.players, [])
+        self.assertEqual(list(table.players), [])
 
-        table.players.append(p1)
+        self.game.add_player_to_table(p1.id, table.id)
         
-        self.assertEqual(table.players, [p1,])
-        self.assertEqual(p1.table.id, table.id)
+        self.assertEqual(list(table.players), [p1.id,])
 
-        p2.table = table
+        self.game.add_player_to_table(p2.id, table.id)
+        
+        self.assertEqual(sorted(list(table.players)), sorted([p1.id,p2.id]))
 
-        self.assertEqual(table.players, [p1,p2])
-        self.assertEqual(p2.table.id, table.id)
-
-        p1.table = None
-
-        self.assertEqual(table.players, [p2,])
+        self.game.remove_player_from_table(p1.id, table.id)
+        
+        self.assertEqual(list(table.players), [p2.id,])
         
 
     @unittest.skip("needs fixing after network re-jig")
@@ -1313,7 +1282,6 @@ class CoreGameTests(DBTestCase):
 
         data = json.load(open('examples/network.json', 'r'))
         self.game.create_network(data)
-        random.seed(0)
         
         t1 = self.game.create_table('T1')
 
@@ -1348,21 +1316,22 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(len(table['policies']), 5)
 
     def testTopPlayers(self):
-        random.seed(0)
-        g1 = self.game.add_goal('G1', 0.0)
-        g2 = self.game.add_goal('G2', 0.0)
+        g1 = self.game.add_goal('G1')
+        g2 = self.game.add_goal('G2')
 
-        p1 = self.game.create_player('Matt')
-        p1.goal = g1
-        p2 = self.game.create_player('Simon')
-        p2.goal = g1
-        p3 = self.game.create_player('Richard')
-        p3.goal = g2
+        po1 = self.game.add_policy('Po1')
+        po2 = self.game.add_policy('Po2')
 
-        self.game.add_fund(p1, g1, 10)
-        self.game.add_fund(p2, g1, 20)
-        self.game.add_fund(p2, g2, 40)
-        self.game.add_fund(p3, g2, 15)
+        self.game.add_link(po1, g1, 100)
+        self.game.add_link(po2, g2, 100)
+
+        p1 = self.game.create_player('Matt', goal_id=g1.id)
+        p2 = self.game.create_player('Simon', goal_id=g1.id)
+        p3 = self.game.create_player('Richard', goal_id=g2.id)
+
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10),])
+        self.game.set_policy_funding_for_player(p2, [(po1.id, 20),(po2.id, 40),])
+        self.game.set_policy_funding_for_player(p3, [(po2.id, 15),])
 
         self.game.tick()
 
@@ -1370,51 +1339,47 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p2.balance, 1499940)
         self.assertEqual(p3.balance, 1499985)
 
-        p1.calc_goal_funded()
-        p2.calc_goal_funded()
-        p3.calc_goal_funded()
-
         top = self.game.top_players()
         self.assertEqual(top, [p2,p3,p1])
 
-        self.game.add_fund(p1, g1, 100)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 100),])
 
         self.game.tick()
-
-        p1.calc_goal_funded()
-        p2.calc_goal_funded()
-        p3.calc_goal_funded()
 
         top = self.game.top_players()
         self.assertEqual(top, [p1,p2,p3])
 
     def testGoalFunded(self):
-        g1 = self.game.add_goal('G1', 0.0)
-        g2 = self.game.add_goal('G2', 0.0)
+        g1 = self.game.add_goal('G1')
+        g2 = self.game.add_goal('G2')
 
-        p1 = self.game.create_player('Matt')
-        p1.goal = g1
+        po1 = self.game.add_policy('Po1')
+        po2 = self.game.add_policy('Po2')
+
+        l1 = self.game.add_link(po1, g1, 100)
+        l2 = self.game.add_link(po2, g2, 100)
+
+        p1 = self.game.create_player('Matt', balance=1000, goal_id=g1.id)
         
-        self.assertEqual(p1.goal_funded, 0)
+        self.assertEqual(self.game.goal_funded_by_player(p1.id), 0)
 
-        self.game.add_fund(p1, g1, 10)
-        self.game.add_fund(p1, g2, 30)
-
-        self.game.tick()
-        p1.calc_goal_funded()
-
-        self.assertEqual(p1.balance, 1499960)
-        self.assertEqual(p1.goal_funded, 10)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10), (po2.id, 30)])
 
         self.game.tick()
-        p1.calc_goal_funded()
 
-        self.assertEqual(p1.goal_funded, 20)
+        self.assertEqual(p1.balance, 960)
+        self.assertEqual(self.game.goal_funded_by_player(p1.id), 10)
+
+        self.game.tick()
+
+        self.assertEqual(p1.balance, 920)
+        self.assertEqual(self.game.goal_funded_by_player(p1.id), 20)
+        self.assertEqual(g2.balance, 60)
 
     def testOfferPolicy(self):
         p1 = self.game.create_player('Matt')
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        p1.fund(po1, 0)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 0),])
 
         data = self.game.offer_policy(p1.id, po1.id, 5000)
 
@@ -1431,17 +1396,17 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
-        self.assertNotIn(p1, buyer.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+        self.assertNotIn(p1.id, buyer.policies)
 
         offer = self.game.offer_policy(seller.id, p1.id, 20000)
         self.game.buy_policy(buyer.id, offer)
 
-        self.assertIn(p1, buyer.children())
-        self.assertIn(p1, seller.children())
+        self.assertIn(p1.id, buyer.policies)
+        self.assertIn(p1.id, seller.policies)
         self.assertEqual(seller.balance, 1500000+20000)
         self.assertEqual(buyer.balance, 1500000-20000)
         
@@ -1453,19 +1418,19 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        buyer.fund(p1, 0)
-        self.assertIn(p1, seller.children())
-        self.assertIn(p1, buyer.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.game.set_policy_funding_for_player(buyer, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+        self.assertIn(p1.id, buyer.policies)
 
         offer = self.game.offer_policy(seller.id, p1.id, 20000)
         with self.assertRaises(ValueError):
             self.game.buy_policy(buyer.id, offer)
 
-        self.assertIn(p1, buyer.children())
-        self.assertIn(p1, seller.children())
+        self.assertIn(p1.id, buyer.policies)
+        self.assertIn(p1.id, seller.policies)
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
         
@@ -1477,18 +1442,18 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
-        self.assertNotIn(p1, buyer.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+        self.assertNotIn(p1.id, buyer.policies)
 
         offer = self.game.offer_policy(seller.id, p1.id, 2000000)
         with self.assertRaises(ValueError):
             self.game.buy_policy(buyer.id, offer)
 
-        self.assertNotIn(p1, buyer.children())
-        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1.id, buyer.policies)
+        self.assertIn(p1.id, seller.policies)
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
         
@@ -1500,17 +1465,17 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        self.assertNotIn(p1, seller.children())
-        self.assertNotIn(p1, buyer.children())
+        self.assertNotIn(p1, seller.policies)
+        self.assertNotIn(p1, buyer.policies)
 
         with self.assertRaises(ValueError):
             offer = self.game.offer_policy(seller.id, p1.id, 20000)
             self.game.buy_policy(buyer.id, offer)
 
-        self.assertNotIn(p1, buyer.children())
-        self.assertNotIn(p1, seller.children())
+        self.assertNotIn(p1, buyer.policies)
+        self.assertNotIn(p1, seller.policies)
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
@@ -1523,13 +1488,13 @@ class CoreGameTests(DBTestCase):
         self.assertFalse(self.game.is_running())
 
     def testMessages(self):
-        messages = self.game.get_messages()
+        messages = tuple(self.game.get_messages())
         self.assertEqual(len(messages), 0)
         
         t1 = datetime.now()
         m1 = self.game.add_message(t1, "policy", "message 1")
 
-        messages = self.game.get_messages()
+        messages = tuple(self.game.get_messages())
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0].timestamp, t1)
         self.assertEqual(messages[0].message, "message 1")
@@ -1537,12 +1502,12 @@ class CoreGameTests(DBTestCase):
 
         t2 = datetime.now()
         m2 = self.game.add_message(t2, "event", "message 2")
-        messages = self.game.get_messages()
+        messages = tuple(self.game.get_messages())
 
         self.assertEqual(len(messages), 2)
         
         self.game.clear_messages()
-        messages = self.game.get_messages()
+        messages = tuple(self.game.get_messages())
         self.assertEqual(len(messages), 0)
         
     def testClaimBudget(self):
@@ -1563,27 +1528,31 @@ class CoreGameTests(DBTestCase):
         self.assertEqual(p1.unclaimed_budget, 0)
         
 
-class DataLoadTests(DBTestCase):
+        
+class DataLoadTests(ControllerTestCase):
 
     def testCreateNetwork(self):
         json_file = open('examples/example-network.json', 'r')
         self.game.create_network(json.load(json_file))
-        self.assertEqual(80, db_session.query(Edge).count())
-        self.assertEqual(44, db_session.query(Node).count())
-        self.assertEqual(37, db_session.query(Policy).count())
-        self.assertEqual(7, db_session.query(Goal).count())
+        self.assertEqual(80, len(self.game.network.edges))
+        self.assertEqual(44, len(self.game.network.ranked_nodes))
+        self.assertEqual(37, len(self.game.network.policies))
+        self.assertEqual(7, len(self.game.network.goals))
+
+        self.assertEqual(80, len(self.game.network.edges))
+        self.assertEqual(37, len(self.game.network.policies))
+        self.assertEqual(7, len(self.game.network.goals))
+
 
     def testGetNetwork(self):
-        p1 = self.game.create_player('Matt')
-        p1.balance = 5000
-        po1 = self.game.add_policy('Arms Embargo', 0.1)
-        self.game.add_fund(p1, po1, 10.0)
-        po2 = self.game.add_policy('Pollution control', 0.1)
-        self.game.add_fund(p1, po2, 15.0)
+        p1 = self.game.create_player('Matt', balance=5000)
+        po1 = self.game.add_policy('Arms Embargo', leak=0.1)
+        po2 = self.game.add_policy('Pollution control', leak=0.1)
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10.0), (po2.id, 15.0),])
 
-        g1 = self.game.add_goal('World Peace', 0.5)
-        g2 = self.game.add_goal('Clean Water', 0.5)
-        g3 = self.game.add_goal('Equal Rights', 0.2)
+        g1 = self.game.add_goal('World Peace', leak=0.5)
+        g2 = self.game.add_goal('Clean Water', leak=0.5)
+        g3 = self.game.add_goal('Equal Rights', leak=0.2)
         l3 = self.game.add_link(po1, g1, 5.0)
         l4 = self.game.add_link(po2, g2, 9.0)
 
@@ -1595,8 +1564,8 @@ class DataLoadTests(DBTestCase):
         
         network = self.game.get_network()
 
-        policies = network['policies']
-        goals = network['goals']
+        policies = tuple(network['policies'])
+        goals = tuple(network['goals'])
 
         self.assertEqual(len(policies), 2)
         self.assertEqual(len(goals), 3)
@@ -1606,92 +1575,91 @@ class DataLoadTests(DBTestCase):
     def testClearNetwork(self):
         json_file = open('examples/example-network.json', 'r')
         self.game.create_network(json.load(json_file))
-        self.assertEqual(80, db_session.query(Edge).count())
-        self.assertEqual(44, db_session.query(Node).count())
-        self.assertEqual(37, db_session.query(Policy).count())
-        self.assertEqual(7, db_session.query(Goal).count())
+        n = self.game.network
+        self.assertEqual(80, len(n.edges))
+        self.assertEqual(44, len(n.ranked_nodes))
+        self.assertEqual(37, len(n.policies))
+        self.assertEqual(7, len(n.goals))
 
         self.game.clear_network()
-        self.assertEqual(0, db_session.query(Edge).count())
-        self.assertEqual(0, db_session.query(Node).count())
-        self.assertEqual(0, db_session.query(Policy).count())
-        self.assertEqual(0, db_session.query(Goal).count())
+        n = self.game.network
+        self.assertEqual(0, len(n.edges))
+        self.assertEqual(0, len(n.ranked_nodes))
+        self.assertEqual(0, len(n.policies))
+        self.assertEqual(0, len(n.goals))
 
 
     def testGetWallets(self):
         self.add_20_goals_and_policies()
 
-        random.seed(0)
-
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
 
-        data = self.game.get_funding(p1.id)
-        for x in range(5):
-            data[x]['amount'] = x
-        self.game.set_funding(p1.id, data)
+        new_fundings = []
+        fundings = self.game.get_policy_funding_for_player(p1)
+        for i,(p_id,a) in enumerate(fundings):
+            new_fundings.append((p_id,i))
+        self.game.set_policy_funding_for_player(p1, new_fundings)
 
-        data = self.game.get_funding(p2.id)
-        for x in range(5):
-            data[x]['amount'] = x
-        self.game.set_funding(p2.id, data)
+        new_fundings = []
+        fundings = self.game.get_policy_funding_for_player(p2)
+        for i,(p_id,a) in enumerate(fundings):
+            new_fundings.append((p_id,i))
+        self.game.set_policy_funding_for_player(p2, new_fundings)
+
+        self.game.network.rank()
 
         self.game.do_propogate_funds()
-
-        nodes = set(p1.children() + p2.children())
+        nodes = [ self.game.network.policies[x] for x in
+                  set(p1.policies.keys() + p2.policies.keys()) ]
 
         wallets = []
         for n in nodes:
             for player_id,amount in n.wallet.todict().items():
                 wallets.append(dict(location=n.id,
-                                    owner=self.game.get_player(player_id).name,
+                                    owner=self.game.get_player(player_id).id,
                                     balance=float("{:.2f}".format(amount))))
-                
-        expected = [{'balance': 3.0, 'location': u'P11', 'owner': 'Matt'},
-                    {'balance': 1.0, 'location': u'P18', 'owner': 'Matt'},
-                    {'balance': 1.0, 'location': u'P12', 'owner': 'Simon'},
-                    {'balance': 4.0, 'location': u'P15', 'owner': 'Simon'},
-                    {'balance': 3.0, 'location': u'P5', 'owner': 'Simon'},
-                    {'balance': 2.0, 'location': u'P6', 'owner': 'Matt'},
-                    {'balance': 4.0, 'location': u'P4', 'owner': 'Matt'},
-                    {'balance': 2.0, 'location': u'P17', 'owner': 'Simon'}]
+
+        expected = [{'owner': p1.id, 'balance': 1.0, 'location': 'P1'}, 
+                    {'owner': p2.id, 'balance': 1.0, 'location': 'P1'}, 
+                    {'owner': p1.id, 'balance': 2.0, 'location': 'P10'}, 
+                    {'owner': p2.id, 'balance': 2.0, 'location': 'P10'}, 
+                    {'owner': p2.id, 'balance': 3.0, 'location': 'P11'}, 
+                    {'owner': p1.id, 'balance': 3.0, 'location': 'P11'}, 
+                    {'owner': p1.id, 'balance': 4.0, 'location': 'P12'}, 
+                    {'owner': p2.id, 'balance': 4.0, 'location': 'P12'}]
 
         self.assertEqual(sorted(expected), sorted(wallets))
 
 
-class GameTests(DBTestCase):
-    
-    def testGetNonexistantPlayer(self):
-        player = self.game.get_player('nonexistant')
-        self.assertIsNone(player)
-
-class RestAPITests(DBTestCase):
+class RestAPITests(ViewTestCase):
 
     def testTick(self):
+        transaction.commit()
         headers = {'X-API-KEY': self.api_key}
         response = self.client.put("/v1/game/tick",
                                    headers=headers,
                                    content_type='application/json')
         self.assertEquals(response.status_code, 200)
 
+
     def testPlayerFunding(self):
         headers = {'X-API-KEY': self.api_key}
 
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000.0
-        p2 = self.game.create_player('Simon')
-        p2.balance = 0
-        n1 = self.game.add_policy('Policy 1', 1.0)
-        n2 = self.game.add_policy('Policy 2', 1.0)
-        self.game.add_fund(p1, n1, 100)
-        self.game.add_fund(p1, n2, 100)
-        self.game.add_fund(p2, n2, 200)
+        p1 = self.game.create_player('Matt', balance=1000)
+        p2 = self.game.create_player('Simon', balance=0)
+        n1 = self.game.add_policy('Policy 1')
+        n2 = self.game.add_policy('Policy 2')
+        self.game.set_policy_funding_for_player(p1, [(n1.id, 100), (n2.id, 100),])
+        self.game.set_policy_funding_for_player(p2, [(n2.id, 200),])
 
+        transaction.commit()
+        
         # temp unavailable as not computed yet
         response = self.client.get("/v1/game/player_fundings",
                                    headers=headers,
                                    content_type='application/json')
-        self.assertEquals(response.status_code, 503)
+        self.assertEquals(response.status_code, 200)
 
         response = self.client.put("/v1/game/tick",
                                    headers=headers,
@@ -1722,30 +1690,13 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(sorted(expected), sorted(response.json))
 
-
-    @unittest.skip("not implemented")
-    def testGetEmptyPlayersList(self):
-        headers = {'X-API-KEY': self.api_key}
-        response = self.client.get("/v1/players/", headers=headers)
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json, [])
-
-    @unittest.skip("not implemented")
-    def testGetNonEmptyPlayersList(self):
-        names = ['Matt', 'Simon', 'Richard']
-        cp = self.game.create_player
-        players = [ cp(name) for name in names ]
-        data = [ dict(name=p.name, id=p.id) for p in players ]
-
-        headers = {'X-API-KEY': self.api_key}
-        response = self.client.get("/v1/players/", headers=headers)
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json, data)
-
     def testGetSpecificPlayer(self):
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
+
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -1753,6 +1704,7 @@ class RestAPITests(DBTestCase):
         self.assertFalse(response.json.has_key('token'))
 
     def testGetNonExistentPlayer(self):
+        transaction.commit()
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/nobody", headers=headers)
         self.assertEquals(response.status_code, 404)
@@ -1760,6 +1712,8 @@ class RestAPITests(DBTestCase):
     def testCreateNewPlayer(self):
         data = dict(name='Matt')
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
@@ -1773,6 +1727,7 @@ class RestAPITests(DBTestCase):
         self.assertEquals(token, player.token)
 
     def testCreateThenGetNewPlayer(self):
+        transaction.commit()
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
         headers = {'X-API-KEY': self.api_key}
@@ -1786,15 +1741,15 @@ class RestAPITests(DBTestCase):
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
         self.assertFalse(response.json.has_key('token'))
-
+        
     def testCreateThenGetNewPlayerWithNodes(self):
         # create some nodes first
         self.add_20_goals_and_policies()
 
-        random.seed(0)
+        transaction.commit()
+
         name = 'Matt {}'.format(time.time())
         data = dict(name=name)
-        db_session.begin(subtransactions=True)
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/players/", data=json.dumps(data),
                                     headers=headers,
@@ -1805,11 +1760,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G6')
+        self.assertEquals(response.json['goal']['id'], 'G0')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P0', 'P11', 'P18', 'P4', 'P6'])
+        self.assertEquals(policies, [u'P0', u'P1', u'P10', u'P11', u'P12'])
         self.assertFalse(response.json.has_key('token'))
 
         name = 'Simon {}'.format(time.time())
@@ -1823,11 +1778,11 @@ class RestAPITests(DBTestCase):
         response = self.client.get("/v1/players/{}".format(id), headers=headers)
         self.assertEquals(response.status_code, 200)
         self.assertDictContainsSubset(dict(name=name, id=id), response.json)
-        self.assertEquals(response.json['goal']['id'], 'G14')
+        self.assertEquals(response.json['goal']['id'], 'G0')
         policies = response.json['policies']
         policies = [ x['id'] for x in policies ] 
         policies.sort()
-        self.assertEquals(policies, ['P12', 'P15', 'P17', 'P18','P5'])
+        self.assertEquals(policies, [u'P0', u'P1', u'P10', u'P11', u'P12'])
         self.assertFalse(response.json.has_key('token'))
 
     @unittest.skip("needs fixing after network re-jig")
@@ -1860,16 +1815,24 @@ class RestAPITests(DBTestCase):
     def testCreateNetwork(self):
         data = json.load(open('examples/example-network.json', 'r'))
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/network/", data=json.dumps(data),
                                     headers=headers,
                                     content_type='application/json')
         self.assertEquals(response.status_code, 201)
 
-        self.assertEqual(80, db_session.query(Edge).count())
-        self.assertEqual(44, db_session.query(Node).count())
-        self.assertEqual(37, db_session.query(Policy).count())
-        self.assertEqual(7, db_session.query(Goal).count())
+        self.game.populate()
+
+        self.assertEqual(80, len(self.game.network.edges))
+        self.assertEqual(44, len(self.game.network.ranked_nodes))
+        self.assertEqual(37, len(self.game.network.policies))
+        self.assertEqual(7, len(self.game.network.goals))
+
+        self.assertEqual(80, len(self.game.network.edges))
+        self.assertEqual(37, len(self.game.network.policies))
+        self.assertEqual(7, len(self.game.network.goals))
 
     @unittest.skip("needs fixing after network re-jig")
     def testCreateThenGetNetwork(self):
@@ -1894,11 +1857,13 @@ class RestAPITests(DBTestCase):
         self.game.create_network(data)
         self.game.tick()
 
-        self.assertEqual(80, db_session.query(Edge).count())
-        self.assertEqual(44, db_session.query(Node).count())
-        self.assertEqual(37, db_session.query(Policy).count())
-        self.assertEqual(7, db_session.query(Goal).count())
+        self.assertEqual(80, len(self.game.network.edges))
+        self.assertEqual(44, len(self.game.network.ranked_nodes))
+        self.assertEqual(37, len(self.game.network.policies))
+        self.assertEqual(7, len(self.game.network.goals))
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/network/", headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -1928,6 +1893,7 @@ class RestAPITests(DBTestCase):
         self.assertEqual(sorted(expected), sorted(response2.json))
 
     def testCreateTable(self):
+        transaction.commit()
         data = {'name': 'Table A'}
         headers = {'X-API-KEY': self.api_key}
         response = self.client.post("/v1/tables/", data=json.dumps(data),
@@ -1944,6 +1910,8 @@ class RestAPITests(DBTestCase):
         table = self.game.create_table('Table A')
         id = table.id
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.delete("/v1/tables/{}".format(id),
                                     headers=headers,
@@ -1957,6 +1925,8 @@ class RestAPITests(DBTestCase):
 
         table = self.game.create_table('Table A')
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -1971,13 +1941,14 @@ class RestAPITests(DBTestCase):
         data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
-        random.seed(0)
         p1 = self.game.create_player('Matt')
-        p1.fund(p1.policies[0], 10)
+        self.game.set_policy_funding_for_player(p1, [(sorted(p1.policies)[0], 10)],)
 
         table = self.game.create_table('Table A')
-        table.players.append(p1)
+        self.game.add_player_to_table(p1.id, table.id)
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -1985,22 +1956,23 @@ class RestAPITests(DBTestCase):
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
         self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['nodes']), 4)
+        self.assertEquals(len(result['network']['nodes']), 5)
         self.assertEquals(len(result['network']['links']), 2)
 
     def testGetTableWithTwoPlayers(self):
         data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
-        random.seed(0)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
-        p1.fund(p1.policies[0], 10)
-        p2.fund(p2.policies[0], 10)
+        self.game.set_policy_funding_for_player(p1, [(sorted(p1.policies)[0], 10)],)
+        self.game.set_policy_funding_for_player(p2, [(sorted(p2.policies)[1], 10)],)
 
         table = self.game.create_table('Table A')
-        table.players.append(p1)
-        table.players.append(p2)
+        self.game.add_player_to_table(p1.id, table.id)
+        self.game.add_player_to_table(p2.id, table.id)
+
+        transaction.commit()
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
@@ -2008,25 +1980,27 @@ class RestAPITests(DBTestCase):
         result = response.json
         self.assertEquals(result['id'], table.id)
         self.assertEquals(result['name'], 'Table A')
-        self.assertEquals(result['players'][0]['name'], 'Matt')
-        self.assertEquals(len(result['network']['nodes']), 8)
-        self.assertEquals(len(result['network']['links']), 7)
+        self.assertEquals(sorted(result['players'])[0]['name'], 'Matt')
+        self.assertEquals(len(result['network']['nodes']), 7)
+        self.assertEquals(len(result['network']['links']), 3)
 
     def testGetTableChecksum(self):
         data = json.load(open('examples/example-network.json', 'r'))
         self.game.create_network(data)
 
-        random.seed(0)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
-        p1.fund(p1.policies[0], 10)
-        p2.fund(p2.policies[0], 10)
+        self.game.set_policy_funding_for_player(p1, [(sorted(p1.policies)[0], 10), (sorted(p1.policies)[1], 0)])
+        self.game.set_policy_funding_for_player(p2, [(sorted(p2.policies)[1], 10), (sorted(p2.policies)[2], 0)])
 
         table = self.game.create_table('Table A')
-        table.players.append(p1)
+#        table.players.append(p1)
+        self.game.add_player_to_table(p1.id, table.id)
 
         self.game.tick()
-
+        
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -2038,17 +2012,24 @@ class RestAPITests(DBTestCase):
         result = response.json
         self.assertEqual(chksum1, result['layout_checksum'])
 
-        p1.policies[0].lower_edges[0].weight = 0.5
+#        p1.policies[0].lower_edges[0].weight = 0.5
+        fundings = self.game.get_policy_funding_for_player(p1)
+        fundings = [(fundings[0][0], 0.5), (fundings[1][0], 0)]
+        self.game.set_policy_funding_for_player(p1, fundings)
 
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
         result = response.json
         self.assertEqual(chksum1, result['layout_checksum'])
 
-        p1.fund(p1.policies[1], 10)
+#        p1.fund(p1.policies[1], 10)
+        fundings = self.game.get_policy_funding_for_player(p1)
+        fundings = [(fundings[0][0], 10), (fundings[1][0], 10)]
+        self.game.set_policy_funding_for_player(p1, fundings)
 
-        memcache.clear()
         self.game.tick()
+
+        transaction.commit()
 
         response = self.client.get("/v1/tables/{}".format(table.id), headers=headers)
         self.assertEquals(response.status_code, 200)
@@ -2059,27 +2040,30 @@ class RestAPITests(DBTestCase):
 
     def testGetFunding(self):
         self.add_20_goals_and_policies()
-        random.seed(0)
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
 
-        funding = []
-        for amount,edge in enumerate(player.lower_edges):
-            edge.weight = amount
-            dest_id = edge.higher_node.id
-            funding.append({'from_id':id, 'to_id': dest_id, 'amount': amount})
+        self.game.set_policy_funding_for_player(player, [(p_id,a) for a,p_id in enumerate(player.policies)])
 
+        funding = []
+        for amount,policy in enumerate(player.policies):
+            funding.append({u'to_id': policy, 
+                            u'amount': amount, 
+                            u'from_id': id})
+
+        transaction.commit()
+            
         headers = {'X-USER-KEY': player.token,
                    'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/funding".format(id),
                                    headers=headers)
+
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(funding, response.json)
+        self.assertEquals(sorted(funding), sorted(response.json))
         
     def testGetFundingFailAuth(self):
         self.add_20_goals_and_policies()
-        random.seed(0)
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
@@ -2099,59 +2083,52 @@ class RestAPITests(DBTestCase):
     def testSetFunding(self):
 
         for x in range(5):
-            p = self.game.add_policy("P{}".format(x), 0.5)
-            p.id = "P{}".format(x)
-
-        random.seed(0)
+            p = self.game.add_policy("P{}".format(x))
 
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
 
-        funding = []
-        data = self.game.get_funding(id)
+        fundings = self.game.get_policy_funding_for_player(player)
 
-        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
+        self.assertEqual([ amount for (_,amount) in fundings ], [0,0,0,0,0])
 
-        for x in range(5):
-            data[x]['amount'] = x
+        new_fundings = [ {"from_id": player.id, "to_id": policy_id, "amount": i} for (i,(policy_id,amount)) in enumerate(fundings) ]
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': player.token,
                    'X-API-KEY': self.api_key}
         response = self.client.put("/v1/players/{}/funding".format(id),
-                                   data=json.dumps(data),
+                                   data=json.dumps(new_fundings),
                                    headers=headers,
                                    content_type='application/json')
         self.assertEquals(response.status_code, 200)
 
-        data2 = self.game.get_funding(id)
-
-        self.assertEqual(data, data2)
+        actual = self.game.get_policy_funding_for_player(player)
+        self.assertEqual([ amount for (_,amount) in actual ], [0,1,2,3,4])
 
     def testSetFundingMaxOverflow(self):
 
         for x in range(5):
-            p = self.game.add_policy("P{}".format(x), 0.5)
-            p.id = "P{}".format(x)
-
-        random.seed(0)
+            p = self.game.add_policy("P{}".format(x))
 
         name = 'Matt'
         player = self.game.create_player(name)
         id = player.id
 
-        funding = []
-        data = self.game.get_funding(id)
+        fundings = self.game.get_policy_funding_for_player(player)
 
-        self.assertEqual([ x['amount'] for x in data ], [0,0,0,0,0])
+        self.assertEqual([ amount for (_,amount) in fundings ], [0,0,0,0,0])
 
-        for x in range(5):
-            data[x]['amount'] = x*200
+        new_fundings = [ {"from_id": player.id, "to_id": policy_id, "amount": i*200} for (i,(policy_id,amount)) in enumerate(fundings) ]
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key,
                    'X-USER-KEY': player.token}
         response = self.client.put("/v1/players/{}/funding".format(id),
-                                   data=json.dumps(data),
+                                   data=json.dumps(new_fundings),
                                    headers=headers,
                                    content_type='application/json')
         self.assertEquals(response.status_code, 400)
@@ -2159,62 +2136,49 @@ class RestAPITests(DBTestCase):
     def testGetWallets(self):
         self.add_20_goals_and_policies()
 
-        random.seed(0)
-
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
 
-        data = self.game.get_funding(p1.id)
-        for x in range(5):
-            data[x]['amount'] = x
-        self.game.set_funding(p1.id, data)
+        new_fundings = []
+        fundings = self.game.get_policy_funding_for_player(p1)
+        for i,(p_id,a) in enumerate(fundings):
+            new_fundings.append((p_id,i))
+        self.game.set_policy_funding_for_player(p1, new_fundings)
 
-        data = self.game.get_funding(p2.id)
-        for x in range(5):
-            data[x]['amount'] = x
-        self.game.set_funding(p2.id, data)
+        new_fundings = []
+        fundings = self.game.get_policy_funding_for_player(p2)
+        for i,(p_id,a) in enumerate(fundings):
+            new_fundings.append((p_id,i))
+        self.game.set_policy_funding_for_player(p2, new_fundings)
 
-        self.game.do_propogate_funds()        
+        self.game.network.rank()
+        self.game.do_propogate_funds()
 
-        nodes = set(p1.children() + p2.children())
-
+        transaction.commit()
+        
         wallets = []
+        nodes = set(p1.policies.keys() + p2.policies.keys())
         for n in nodes:
             headers = {'X-API-KEY': self.api_key}
-            response = self.client.get("/v1/network/{}/wallets".format(n.id), headers=headers)
+            response = self.client.get("/v1/network/{}/wallets".format(n), headers=headers)
             if response.status_code == 200:
                 wallets.extend(response.json)
 
-        expected = [{u'balance': 1.0,
-                     u'location': u'P12',
-                     u'owner': p2.id},
-                    {u'balance': 2.0,
-                     u'location': u'P6',
-                     u'owner': p1.id},
-                    {u'balance': 3.0,
-                     u'location': u'P5',
-                     u'owner': p2.id},
-                    {u'balance': 2.0,
-                     u'location': u'P17',
-                     u'owner': p2.id},
-                    {u'balance': 1.0,
-                     u'location': u'P18',
-                     u'owner': p1.id},
-                    {u'balance': 4.0,
-                     u'location': u'P15',
-                     u'owner': p2.id},
-                    {u'balance': 4.0,
-                     u'location': u'P4',
-                     u'owner': p1.id},
-                    {u'balance': 3.0,
-                     u'location': u'P11',
-                     u'owner': p1.id}]
+        expected = [{'owner': p1.id, 'balance': 1.0, 'location': 'P1'}, 
+                    {'owner': p2.id, 'balance': 1.0, 'location': 'P1'}, 
+                    {'owner': p1.id, 'balance': 2.0, 'location': 'P10'}, 
+                    {'owner': p2.id, 'balance': 2.0, 'location': 'P10'}, 
+                    {'owner': p2.id, 'balance': 3.0, 'location': 'P11'}, 
+                    {'owner': p1.id, 'balance': 3.0, 'location': 'P11'}, 
+                    {'owner': p1.id, 'balance': 4.0, 'location': 'P12'}, 
+                    {'owner': p2.id, 'balance': 4.0, 'location': 'P12'}]
 
         self.assertEqual(sorted(expected), sorted(wallets))
 
     def testGetNode(self):
-        n1 = self.game.add_policy('A', 0.5)
-
+        n1 = self.game.add_policy('A')
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/network/{}".format(n1.id), headers=headers)
         self.assertEqual(response.status_code, 200)
@@ -2222,12 +2186,14 @@ class RestAPITests(DBTestCase):
         self.assertEqual(response.json['name'], 'A')
 
     def testGetOfferDefaultPrice(self):
-        seller = self.game.create_player('Matt')
+        seller = self.game.create_player('Matt', balance=1500000)
         self.assertEqual(seller.balance, 1500000)
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+
+        transaction.commit()
 
         headers = {'X-USER-KEY': seller.token,
                    'X-API-KEY': self.api_key}
@@ -2238,13 +2204,15 @@ class RestAPITests(DBTestCase):
         self.assertEqual(offer['price'], self.game.default_offer_price)
 
     def testGetOfferCustomPrice(self):
-        seller = self.game.create_player('Matt')
+        seller = self.game.create_player('Matt', balance=1500000)
         self.assertEqual(seller.balance, 1500000)
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': seller.token,
                    'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/policies/{}/offer?price={}".format(seller.id, p1.id, 0), 
@@ -2261,12 +2229,14 @@ class RestAPITests(DBTestCase):
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1500000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
-        self.assertNotIn(p1, buyer.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+        self.assertNotIn(p1.id, buyer.policies)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': seller.token,
                    'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
@@ -2283,26 +2253,27 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        self.assertIn(p1, buyer.children())
-        self.assertIn(p1, seller.children())
+        self.assertIn(p1.id, buyer.policies)
+        self.assertIn(p1.id, seller.policies)
         self.assertEqual(seller.balance, 1500000+300000)
         self.assertEqual(buyer.balance, 1500000-300000)
         
     def testBuyPolicyFail(self):
         
         seller = self.game.create_player('Matt')
-        buyer = self.game.create_player('Simon')
-        buyer.balance = 1000
+        buyer = self.game.create_player('Simon', balance=1000)
 
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1000)
 
-        p1 = self.game.add_policy('Policy 1', 0)
+        p1 = self.game.add_policy('Policy 1')
         
-        seller.fund(p1, 0)
-        self.assertIn(p1, seller.children())
-        self.assertNotIn(p1, buyer.children())
+        self.game.set_policy_funding_for_player(seller, [(p1.id, 0),])
+        self.assertIn(p1.id, seller.policies)
+        self.assertNotIn(p1.id, buyer.policies)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': seller.token,
                    'X-API-KEY': self.api_key}
         response = self.client.get("/v1/players/{}/policies/{}/offer".format(seller.id, p1.id), 
@@ -2319,26 +2290,28 @@ class RestAPITests(DBTestCase):
 
         self.assertEqual(response.status_code, 400)
 
-        self.assertNotIn(p1, buyer.children())
-        self.assertIn(p1, seller.children())
+        self.assertNotIn(p1.id, buyer.policies)
+        self.assertIn(p1.id, seller.policies)
         self.assertEqual(seller.balance, 1500000)
         self.assertEqual(buyer.balance, 1000)
 
     def testLeagueTable(self):
-        random.seed(0)
-        g1 = self.game.add_goal('G1', 0.0)
-        g2 = self.game.add_goal('G2', 0.0)
+        g1 = self.game.add_goal('G1')
+        g2 = self.game.add_goal('G2')
 
-        p1 = self.game.create_player('Matt')
-        p1.goal = g1
-        p2 = self.game.create_player('Simon')
-        p2.goal = g1
-        p3 = self.game.create_player('Richard')
-        p3.goal = g2
+        p1 = self.game.create_player('Matt', goal_id=g1.id)
+        p2 = self.game.create_player('Simon', goal_id=g1.id)
+        p3 = self.game.create_player('Richard', goal_id=g2.id)
 
-        self.game.add_fund(p1, g1, 10)
-        self.game.add_fund(p2, g1, 20)
-        self.game.add_fund(p3, g2, 15)
+        po1 = self.game.add_policy('po1')
+        po2 = self.game.add_policy('po2')
+
+        self.game.add_link(po1, g1, 100)
+        self.game.add_link(po2, g2, 100)
+
+        self.game.set_policy_funding_for_player(p1, [(po1.id, 10),])
+        self.game.set_policy_funding_for_player(p2, [(po1.id, 20),])
+        self.game.set_policy_funding_for_player(p3, [(po2.id, 15),])
 
         self.game.tick()
 
@@ -2346,26 +2319,28 @@ class RestAPITests(DBTestCase):
         self.assertEqual(p2.balance, 1499980)
         self.assertEqual(p3.balance, 1499985)
 
-        p1.calc_goal_funded()
-        p2.calc_goal_funded()
-        p3.calc_goal_funded()
+#        p1.calc_goal_funded()
+#        p2.calc_goal_funded()
+#        p3.calc_goal_funded()
+
+        transaction.commit()
 
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/game/league_table", headers=headers)
         self.assertEqual(response.status_code, 200)
         expected = {'rows': [{'id': p2.id,
                               'name': p2.name,
-                              'goal': p2.goal.name,
+                              'goal': 'G1',
                               'goal_total': '30.00',
                               'goal_contribution': '20.00',},
                              {'id': p3.id,
                               'name': p3.name,
-                              'goal': p3.goal.name,
+                              'goal': 'G2',
                               'goal_total': '15.00',
                               'goal_contribution': '15.00',},
                              {'id': p1.id,
                               'name': p1.name,
-                              'goal': p1.goal.name,
+                              'goal': 'G1',
                               'goal_total': '30.00',
                               'goal_contribution': '10.00',}
                              ]}
@@ -2373,12 +2348,13 @@ class RestAPITests(DBTestCase):
         self.assertEqual(response.json, expected)
 
     def testAddPlayerToTable(self):
-        random.seed(0)
         p1 = self.game.create_player('Matt')
 
         table = self.game.create_table('Table A')
         self.assertNotIn(p1, table.players)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
         response = self.client.put("/v1/players/{}/table/{}".format(p1.id, table.id),
@@ -2386,15 +2362,16 @@ class RestAPITests(DBTestCase):
                                      content_type='application/json')
 
         self.assertEquals(response.status_code, 200)
-        self.assertIn(p1, table.players)
+        self.assertIn(p1.id, table.players)
 
     def testAddPlayerToNonexistantTable(self):
-        random.seed(0)
         p1 = self.game.create_player('Matt')
 
         table = self.game.create_table('Table A')
         self.assertNotIn(p1, table.players)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
         response = self.client.put("/v1/players/{}/table/{}".format(p1.id, 'bogus'),
@@ -2405,14 +2382,16 @@ class RestAPITests(DBTestCase):
         self.assertNotIn(p1, table.players)
 
     def testAddNonexistantPlayerToTable(self):
-        random.seed(0)
         p1 = self.game.create_player('Matt')
 
         table = self.game.create_table('Table A')
         self.assertNotIn(p1, table.players)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
+
         response = self.client.put("/v1/players/{}/table/{}".format('bogus', table.id),
                                      headers=headers,
                                      content_type='application/json')
@@ -2421,13 +2400,14 @@ class RestAPITests(DBTestCase):
         self.assertNotIn(p1, table.players)
 
     def testRemovePlayerFromTable(self):
-        random.seed(0)
         p1 = self.game.create_player('Matt')
 
         table = self.game.create_table('Table A')
-        p1.table = table
-        self.assertIn(p1, table.players)
+        self.game.add_player_to_table(p1.id, table.id)
+        self.assertIn(p1.id, table.players)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
         response = self.client.delete("/v1/players/{}/table/{}".format(p1.id, table.id),
@@ -2435,19 +2415,20 @@ class RestAPITests(DBTestCase):
                                       content_type='application/json')
 
         self.assertEquals(response.status_code, 200)
-        self.assertNotIn(p1, table.players)
+        self.assertNotIn(p1.id, tuple(table.players))
 
     def testRemoveAllPlayersFromTable(self):
-        random.seed(0)
         p1 = self.game.create_player('Matt')
         p2 = self.game.create_player('Simon')
 
         table = self.game.create_table('Table A')
-        p1.table = table
-        p2.table = table
-        self.assertIn(p1, table.players)
-        self.assertIn(p2, table.players)
+        self.game.add_player_to_table(p1.id, table.id)
+        self.game.add_player_to_table(p2.id, table.id)
+        self.assertIn(p1.id, table.players)
+        self.assertIn(p2.id, table.players)
 
+        transaction.commit()
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
         response = self.client.put("/v1/tables/{}/clear".format(table.id),
@@ -2455,11 +2436,12 @@ class RestAPITests(DBTestCase):
                                    content_type='application/json')
 
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(table.players, [])
-        self.assertEquals(p1.table, None)
-        self.assertEquals(p2.table, None)
+        self.assertEquals(tuple(table.players), ())
+        self.assertEquals(p1.table_id, None)
+        self.assertEquals(p2.table_id, None)
 
     def testSetMessages(self):
+        transaction.commit()
         headers = {'X-API-KEY': self.api_key}
         data = {'budgets': [{'time': '2017-02-22T12:50:00',
                              'message': 'message 1',
@@ -2481,7 +2463,7 @@ class RestAPITests(DBTestCase):
 
         self.assertEquals(response.status_code, 200)
         messages = self.game.get_messages()
-        self.assertEqual(len(messages), 4)
+        self.assertEqual(len(tuple(messages)), 4)
 
     def testGetMessages(self):
         t1 = datetime(2017,02,22,12,50)
@@ -2489,6 +2471,8 @@ class RestAPITests(DBTestCase):
         t2 = datetime(2017,02,22,13,50)
         m2 = self.game.add_message(t2, "event", "message 2")
 
+        transaction.commit()
+        
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/game/messages", headers=headers)
         self.assertEqual(response.status_code, 200)
@@ -2503,11 +2487,9 @@ class RestAPITests(DBTestCase):
         self.assertEqual(sorted(response.json.items()), sorted(expected.items()))
 
     def testClaimBudget(self):
-        db_session.begin(subtransactions=True)
+        p1 = self.game.create_player('Matt', balance=1000, unclaimed_budget=1500000)
 
-        p1 = self.game.create_player('Matt')
-        p1.balance = 1000
-        p1.unclaimed_budget = 1500000
+        transaction.commit()
 
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
@@ -2521,6 +2503,9 @@ class RestAPITests(DBTestCase):
 
         # 2nd claim with no unclaimed budget should do no-op
         p1.balance = 1400000
+        
+        transaction.commit()        
+        
         headers = {'X-USER-KEY': p1.token,
                    'X-API-KEY': self.api_key}
         response = self.client.put("/v1/players/{}/claim_budget".format(p1.id),
@@ -2533,6 +2518,7 @@ class RestAPITests(DBTestCase):
 
 
     def testGetGameMetadata(self):
+        transaction.commit()
         headers = {'X-API-KEY': self.api_key}
         response = self.client.get("/v1/game",
                                    headers=headers,
@@ -2551,75 +2537,94 @@ class RestAPITests(DBTestCase):
         self.assertEqual(data['budget_per_cycle'], 1500000.0)
         self.assertEqual(data['max_spend_per_tick'], 1000)
 
+    def testMissingAPIKey(self):
+        response = self.client.get("/v1/game",
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 401)
 
-class Utils(DBTestCase): # pragma: no cover
-
-    def createDB(self):
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
-
-    def createSuperUser(self):
-        p = Player('Super User')
-        p.id = '89663963-fada-11e6-9949-0c4de9cfe672'
-        p.token = '89663b3a-fada-11e6-be7e-0c4de9cfe672'
-        db_session.add(p)
-        for policy in self.game.get_policies():
-            self.game.add_fund(p, policy, 0)
-
-        db_session.commit()
-        db_session.commit()
-        db_session.commit()
-
-    def genFreebiePolicyCodes(self):
-        # [checksum] [policy_id] [price] [seller_id]
-        id = '89663963-fada-11e6-9949-0c4de9cfe672'
-        token = '89663b3a-fada-11e6-be7e-0c4de9cfe672'
-        for policy in self.game.get_policies():
-            chk = checksum(id, policy.id, 0, token)
-
-            img = """"<img src='https://chart.googleapis.com/chart?cht=qr&chl={}%20{}%200%20{}&chs=280x280&choe=UTF-8&chld=L|2' alt=''>""".format(chk.upper(), policy.id.upper(), id.upper(), policy.name)
-            print "<h1>{}</h1>".format(policy.name)
-            print img
-            print "<hr />"
-#            print "{} {} {} {} {}".format(chk.upper(), policy.id.upper(), 0, id.upper(), policy.name)
-
-    def GenNetFile(self):
-        json_file = open('examples/example-graph.json', 'r')
-        self.game.load_json(json_file)
-
-        response = self.client.get("/v1/network/")
-
-        outfile = open('examples/network.json', 'w')
-        outfile.write(response.data)
-        outfile.close()
-    
-    def loadNet2(self):
-        self.createDB()
-        f = open('example-network.json')
-        network = json.load(f)
-        game = self.game
-        nodes = {}
-        for g in network['goals']:
-            goal = game.add_goal(g['name'], 0.0)
-            goal.id = g['id']
-            nodes[goal.id] = goal
-
-        for p in network['policies']:
-            policy = game.add_policy(p['name'], 0.0)
-            policy.id = p['id']
-            nodes[policy.id] = policy
+    def testBadAPIKey(self):
+        headers = {'X-API-KEY': "boguskey"}
+        response = self.client.get("/v1/game",
+                                   headers=headers,
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 401)
 
 
-        for e in network['edges']:
-            game.add_link(nodes[e['source']],
-                          nodes[e['target']],
-                          e['weight'],
-                          )
+class NetworkTests(ModelTestCase):
 
-        db_session.commit()
-        db_session.commit()
-        db_session.commit()
+    def testPlayerFunding(self):
+
+        p1 = Player.new('Matt', balance=1000)
+        p2 = Player.new('Simon', balance=0)
+        n1 = Policy.new('Policy 1')
+        n2 = Policy.new('Policy 2')
+        p1.policies = {n1.id: 100, n2.id: 100}
+        p2.policies = {n2.id: 200}
+
+        policies = [n1, n2]
+        players = [p1, p2]
+        
+        network = Network(policies, [], [], players)
+
+        self.assertEqual(p1.balance, 1000)
+        self.assertEqual(p2.balance, 0)
+
+        network.fund_network()
+
+        self.assertEqual(p1.balance, 800)
+        self.assertEqual(p2.balance, 0)
+
+    def testPolicyGoalPropogation(self):
+
+        n1 = Policy.new('Policy 1', balance=100)
+        g1 = Goal.new('Goal 1') 
+        e1 = Edge.new(n1, g1, 1.0)
+
+        policies = [n1,]
+        goals = [g1,]
+        edges = [e1,]
+
+        network = Network(policies, goals, edges, [])
+
+        self.assertEqual(n1.balance, 100)
+        self.assertEqual(g1.balance, 0)
+
+        network.propagate()
+
+        self.assertEqual(n1.balance, 99)
+        self.assertEqual(g1.balance, 1)
+
+
+    def testAddWalletToPolicy(self):
+
+        po1 = Policy.new('Arms Embargo')
+        p1 = Player.new('Matt')
+        w1 = Wallet([(p1.id, 100)])
+        po1.wallet = w1
+
+        self.assertIn(p1.id, w1.todict())
+        self.assertEqual(po1.wallet, w1)
+
+    def testNodeActivationFromPlayer(self):
+        p1 = Player.new('Matt', balance=1000)
+        po1 = Policy.new('Policy 1', activation=0.2)
+
+        self.assertFalse(po1.active)
+        self.assertAlmostEqual(po1.active_level, 0)
+        p1.policies = {po1: 200.0}
+        
+        policies = [po1,]
+        players = [p1,]
+
+        network = Network(policies, [], [], players)
+
+        self.assertFalse(po1.active)
+
+        network.propagate()
+        
+        self.assertTrue(po1.active)
 
 
 if __name__ == '__main__':
     unittest.main()
+
