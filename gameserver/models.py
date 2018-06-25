@@ -173,9 +173,20 @@ class Node(Base):
 
     @property
     def rank(self):
+        return self._rank()
+
+    def _rank(self, seen=None):
         rank = 1
-        for parent in self.parents:
-            rank += parent.rank
+        if seen is None:
+            seen = set()
+        try:
+            for parent in self.parents:
+                if parent.id not in seen:
+                    seen.add(parent.id)
+                    rank += parent._rank(seen)
+        except RuntimeError:
+            print "Max recursion detected. Current node: ", self.id
+            raise
 
         return rank
 
